@@ -1,5 +1,5 @@
 // MAPBOX_TOKEN richiesto per Mapbox GL JS
-export const MAPBOX_TOKEN = 'pk.eyJ1IjoiaW9ub25ob3Byb2JsZW1pIiwiYSI6ImNrcWwwODhtaTBoaGoycW5zZXZmazQzcnkifQ.Se_zXpy-1Ls-I5Pt0QpiYg';
+export const MAPBOX_TOKEN = 'pk.eyJ1IjoiaW9ub25ob3Byb2JsZW1pIiwiYSI6ImNtYnFtb2dhazAxMmUyanM3bzEzdDc4bXQifQ.rmY4WI_G8YqBMpuuIsDV-A';
 
 export const KML_URL = 'https://gist.githubusercontent.com/grazianoEnzoMarchesani/aad5e543d62ffd2478b0152348f39e0d/raw/305653b7b40f5858e0d8f83e11a99e921ac500a8/cityrhythm_blimp_areas.kml';
 export const POI_CSV_URL = 'https://gist.githubusercontent.com/grazianoEnzoMarchesani/0ac7cac113479e704e2af0865e7f516d/raw/adb569636698d58b16a610dbc82f1b4936f9b2ad/cityrhythm_blimp.csv';
