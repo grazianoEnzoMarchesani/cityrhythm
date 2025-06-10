@@ -45,6 +45,38 @@
                 <input type="checkbox" id="toggle-synthetic-crowded" name="synthetic-crowded">
                 <label for="toggle-synthetic-crowded">Synthetic Crowded Points</label>
               </div>
+              <!-- NEW: Toggle for LCZ Vitality -->
+              <div class="layer-toggle">
+                <input type="checkbox" id="toggle-lcz-vitality" name="lcz-vitality">
+                <label for="toggle-lcz-vitality">LCZ Vitality</label>
+              </div>
+              <!-- NEW: LCZ visualization options -->
+              <div class="lcz-visualization-selector" id="lcz-visualization-selector" style="display: none; margin-left: 20px;">
+                <div class="radio-group">
+                  <input type="radio" id="lcz-type-lcz" name="lcz-visualization" value="LCZ" checked>
+                  <label for="lcz-type-lcz">LCZ Types</label>
+                </div>
+                <div class="radio-group">
+                  <input type="radio" id="lcz-type-uhi" name="lcz-visualization" value="UHI">
+                  <label for="lcz-type-uhi">UHI Risk</label>
+                </div>
+                <!-- NEW: LCZ Opacity Control -->
+                <div class="opacity-control" style="margin-top: 10px;">
+                  <label for="lcz-opacity-slider" style="font-size: 12px;">LCZ Opacity:</label>
+                  <input type="range" id="lcz-opacity-slider" min="0" max="100" value="70" style="width: 100%; margin-top: 5px;">
+                  <span id="lcz-opacity-value" style="font-size: 11px;">70%</span>
+                </div>
+                <!-- NEW: UHI Dynamic Visibility Control -->
+                <div class="uhi-dynamic-control" style="margin-top: 10px;">
+                  <div class="checkbox-group">
+                    <input type="checkbox" id="uhi-dynamic-visibility" name="uhi-dynamic">
+                    <label for="uhi-dynamic-visibility" style="font-size: 12px;">UHI Dynamic Visibility</label>
+                  </div>
+                  <div style="font-size: 10px; color: #666; margin-top: 2px;">
+                    Mostra aree UHI Risk in base alla densità di presence points
+                  </div>
+                </div>
+              </div>
               <div class="layer-toggle">
                 <input type="checkbox" id="toggle-3d-terrain" name="3d-terrain">
                 <label for="toggle-3d-terrain">3D Terrain</label>

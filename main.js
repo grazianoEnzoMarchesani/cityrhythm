@@ -1,13 +1,13 @@
 // main.js
 import { initializeMap } from './src/map/map-setup.js';
 import {
-    loadPoiData, loadKMLLayer, loadCrowdedData, loadSpotMapperData,
+    loadPoiData, loadKMLLayer, loadCrowdedData, loadSpotMapperData, loadLczVitalityData,
     getFullKmlGeoJson,
     getPoiDateRange
 } from './src/data/data-loader.js';
 import {
     addKmlLayer, updateAllPresencePoints, addCrowdedPointsLayer,
-    updateCrowdedPointsLayerStyle, getCrowdednessColumnName, addSpotsLayer
+    updateCrowdedPointsLayerStyle, getCrowdednessColumnName, addSpotsLayer, addLczVitalityLayer
 } from './src/map/map-layers.js';
 import { fitMapToBounds } from './src/utils/utils.js';
 import { updateStatusMessage, initializeSidebar } from './src/ui/ui-sidebar.js';
@@ -154,7 +154,7 @@ async function startApp() {
             if(loadingIndicator) loadingIndicator.style.display = 'block';
             updateStatusMessage("Loading initial data...");
 
-            let poiData, crowdedData, kmlGeoJson, spotsData;
+            let poiData, crowdedData, kmlGeoJson, spotsData, lczVitalityData;
 
             try {
                 updateStatusMessage("Loading POI data...");
@@ -168,6 +168,9 @@ async function startApp() {
                 
                 updateStatusMessage("Loading Spots data...");
                 spotsData = await loadSpotMapperData();
+                
+                updateStatusMessage("Loading LCZ Vitality data...");
+                lczVitalityData = await loadLczVitalityData();
 
                 if (!poiData) { }
                 if (!crowdedData) { }
@@ -196,6 +199,13 @@ async function startApp() {
                     addSpotsLayer(spotsVisible);
                     // Inizializza il selettore di tipi di POI
                     initializeSpotTypeFilter();
+                } else {
+                }
+                
+                // Imposta LCZ Vitality layer a non visibile
+                const lczVisible = false;
+                if (lczVitalityData?.length > 0) {
+                    addLczVitalityLayer(lczVisible, 'LCZ');
                 } else {
                 }
 
