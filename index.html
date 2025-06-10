@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Data Map</title>
+    <!-- MODIFICATO: Mapbox GL JS CSS -->
+    <link href='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css' rel='stylesheet' />
+    <link rel="stylesheet" href="style.css">
+    <!-- Litepicker CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/litepicker/dist/litepicker.css" />
+</head>
+<body>
+
+    <div class="container">
+        <div id='map'>
+            <!-- Layer Control Panel -->
+            <div id="layer-controls" class="layer-controls">
+              <h4>Map Layers</h4>
+              <div class="layer-toggle">
+                <input type="checkbox" id="toggle-kml" name="kml" checked>
+                <label for="toggle-kml">KML Areas</label>
+              </div>
+              <div class="layer-toggle" id="crowded-toggle-container">
+                <input type="checkbox" id="toggle-crowded" name="crowded" checked>
+                <label for="toggle-crowded">Crowded Points</label>
+              </div>
+              <!-- NEW: Toggle for presence points -->
+              <div class="layer-toggle">
+                <input type="checkbox" id="toggle-presence" name="presence" checked>
+                <label for="toggle-presence">Presence Density</label>
+              </div>
+              <!-- NEW: Toggle for spots points -->
+              <div class="layer-toggle">
+                <input type="checkbox" id="toggle-spots" name="spots" checked>
+                <label for="toggle-spots">POI Spots</label>
+              </div>
+              <!-- NEW: Type selector for POI spots -->
+              <div class="spot-type-selector">
+                <select id="spot-type-filter">
+                  <option value="all">All types</option>
+                </select>
+              </div>
+              <div class="layer-toggle">
+                <input type="checkbox" id="toggle-synthetic-crowded" name="synthetic-crowded">
+                <label for="toggle-synthetic-crowded">Synthetic Crowded Points</label>
+              </div>
+              <div class="layer-toggle">
+                <input type="checkbox" id="toggle-3d-terrain" name="3d-terrain">
+                <label for="toggle-3d-terrain">3D Terrain</label>
+              </div>
+              <div class="layer-toggle">
+                <input type="checkbox" id="toggle-3d-buildings" name="3d-buildings" checked>
+                <label for="toggle-3d-buildings">3D Buildings</label>
+              </div>
+            </div>
+        </div>
+        <div id='sidebar'>
+            <h2>Place Information</h2>
+            <div id="loading-indicator" class="loading-spinner" style="display: none;"></div>
+            <div id="status-message">
+                <p>Initializing map...</p>
+            </div>
+            <div id="info-content">
+                <!-- Content will be populated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <div class="timeline-container">
+        <div class="timeline-upper-row">
+             <div class="timeline-controls">
+                 <button id="playButton" class="control-button" title="Play/Pause">
+                     <svg class="play-icon" viewBox="0 0 24 24">
+                         <path d="M8 5v14l11-7z"/>
+                     </svg>
+                     <svg class="pause-icon" viewBox="0 0 24 24" style="display: none;">
+                         <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                     </svg>
+                 </button>
+                 <button id="directionButton" class="control-button" title="Reverse Direction">
+                     <svg class="direction-icon" viewBox="0 0 24 24">
+                          <path d="M8 4L16 12l-8 8"/>
+                     </svg>
+                 </button>
+             </div>
+             <div id="timeDisplay"></div>
+        </div>
+        <div id="calendar-container" style="margin: 10px 0; display: flex; justify-content: center; gap: 10px;"></div>
+        <input type="range" id="timeSlider" min="0" max="167" value="0" class="timeline-slider" title="Select hour">
+        <!-- Cluster toggle element removed -->
+    </div>
+
+    <!-- MODIFICATO: Mapbox GL JS -->
+    <script src='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js'></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <script src='https://unpkg.com/@turf/turf@latest/turf.min.js'></script>
+    <!-- D3.js e d3-cloud per la word cloud -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-cloud@1.2.5/build/d3.layout.cloud.min.js"></script>
+    <!-- GPU.js -->
+    <script src="https://cdn.jsdelivr.net/npm/gpu.js@latest/dist/gpu-browser.min.js"></script>
+    <!-- Il tuo main.js -->
+    <script type="module" src="main.js"></script>
+    <!-- Litepicker JS -->
+    <script src="https://cdn.jsdelivr.net/npm/litepicker/dist/litepicker.js"></script>
+</body>
+</html>
