@@ -1,5 +1,5 @@
 // data-loader.js
-import { POI_CSV_URL, KML_URL, CROWDED_CSV_URL, SPOTS_CSV_URL, DEBUG_MODE } from './config.js';
+import { POI_CSV_URL, KML_URL, CROWDED_CSV_URL, SPOTS_CSV_URL, LCZ_VITALITY_CSV_URL, DEBUG_MODE } from './config.js';
 import { updateStatusMessage } from '../ui/ui-sidebar.js';
 
 // Data structure for POIs: { "poi_name_normalized": [record1, record2, ...], ... }
@@ -10,6 +10,8 @@ let fullKmlGeoJson = null;
 let crowdedDataStore = [];
 // Data store for spot mapper points
 let spotMapperDataStore = [];
+// Data store for LCZ vitality polygons
+let lczVitalityDataStore = [];
 
 // --- FUNZIONI ESPORTATE ---
 
@@ -529,4 +531,256 @@ export function getPoiDateRange() {
         });
     });
     return { min: minDate, max: maxDate };
+}
+
+/**
+ * Loads and parses LCZ Vitality data from the specified CSV URL.
+ * Converts WKT polygon strings to GeoJSON and processes LCZ/UHI risk data.
+ * @returns {Promise<Array<object>>} A promise that resolves with the lczVitalityDataStore array.
+ */
+export function loadLczVitalityData() {
+    return new Promise((resolve, reject) => {
+        updateStatusMessage("Loading LCZ Vitality data...");
+        Papa.parse(LCZ_VITALITY_CSV_URL, {
+            download: true,
+            header: true,
+            delimiter: ';', // CSV uses semicolon as delimiter
+            skipEmptyLines: true,
+            worker: true,
+            complete: results => {
+                // Manual trim of header fields and data keys
+                if (results.meta?.fields && results.data) {
+                    const trimmedFields = results.meta.fields.map(f => f.trim());
+                    results.meta.fields = trimmedFields;
+                    results.data = results.data.map(row => {
+                        const newRow = {};
+                        for (const key in row) {
+                            newRow[key.trim()] = row[key];
+                        }
+                        return newRow;
+                    });
+                }
+                
+                if (DEBUG_MODE) {
+                    console.log("LCZ Vitality CSV parsing completed:", results);
+                    console.log("LCZ Vitality CSV headers found:", results.meta?.fields);
+                }
+
+                if (results.errors.length > 0) {
+                    if (DEBUG_MODE) {
+                        console.error("Errors during LCZ Vitality CSV parsing:", results.errors);
+                        const firstError = results.errors[0];
+                        const errMsg = `LCZ Vitality CSV parsing error: ${firstError.message} (row ${firstError.row + 2})`;
+                        updateStatusMessage(errMsg, true);
+                    }
+                    reject(new Error("LCZ Vitality CSV parsing error"));
+                    return;
+                }
+                
+                if (!results.data || results.data.length === 0) {
+                    updateStatusMessage("LCZ Vitality CSV file is empty or invalid.", true);
+                    reject(new Error("Empty LCZ Vitality CSV file"));
+                    return;
+                }
+
+                lczVitalityDataStore = []; // Reset store
+                let loadedCount = 0;
+                let processedCount = 0;
+                let wktErrorCount = 0;
+
+                results.data.forEach((row, index) => {
+                    loadedCount++;
+                    
+                    // Validate essential fields: WKT, LCZ, and UHI risk
+                    if (row && typeof row.WKT === 'string' && row.WKT.trim() && 
+                        row.LCZ && row['UHI risk']) {
+                        
+                        try {
+                            // Parse WKT to create GeoJSON-like structure
+                            const wktString = row.WKT.trim();
+                            const coordinates = parseWKTPolygon(wktString);
+                            
+                            if (coordinates) {
+                                // Create GeoJSON feature
+                                                        // Clean and validate LCZ value
+                        let lczValue = row.LCZ.trim();
+                        
+                        // Log suspicious LCZ values for debugging
+                        if (lczValue.startsWith('#') || lczValue.length > 10) {
+                            console.warn(`Suspicious LCZ value found at row ${index + 2}: "${lczValue}" - replacing with default`);
+                            lczValue = 'UNKNOWN'; // Use a safe default value
+                        }
+                        
+                        // Validate that LCZ value is one of the expected values
+                        const validLczValues = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'A', 'B', 'C', 'D', 'E', 'F', 'G'];
+                        if (!validLczValues.includes(lczValue)) {
+                            console.warn(`Invalid LCZ value found at row ${index + 2}: "${lczValue}" - replacing with default`);
+                            lczValue = 'UNKNOWN';
+                        }
+                        
+                        const feature = {
+                            type: 'Feature',
+                            id: `lcz_${index}`,
+                            properties: {
+                                SVF: parseFloat(row.SVF) || 0,
+                                H_W: parseFloat(row.H_W) || 0,
+                                BLD_PC: parseFloat(row.BLD_PC) || 0,
+                                IMPER_PC: parseFloat(row.IMPER_PC) || 0,
+                                PER_PC: parseFloat(row.PER_PC) || 0,
+                                H_MEAN: parseFloat(row.H_MEAN) || 0,
+                                ROUG_CLASS: parseFloat(row.ROUG_CLASS) || 0,
+                                SURFACE_AL: parseFloat(row.SURFACE_AL) || 0,
+                                ANTHROPOGE: parseFloat(row.ANTHROPOGE) || 0,
+                                LCZ: lczValue,
+                                'UHI risk': row['UHI risk'].trim()
+                            },
+                            geometry: {
+                                type: 'Polygon',
+                                coordinates: coordinates
+                            }
+                        };
+                                
+                                lczVitalityDataStore.push(feature);
+                                processedCount++;
+                            } else {
+                                wktErrorCount++;
+                                if (DEBUG_MODE) {
+                                    console.warn(`Skipping LCZ row ${index + 2} due to invalid WKT:`, wktString);
+                                }
+                            }
+                        } catch (error) {
+                            wktErrorCount++;
+                            if (DEBUG_MODE) {
+                                console.warn(`Skipping LCZ row ${index + 2} due to WKT parsing error:`, error.message);
+                            }
+                        }
+                    } else {
+                        wktErrorCount++;
+                        if (DEBUG_MODE) {
+                            console.warn(`Skipping LCZ row ${index + 2} due to missing essential fields:`, row);
+                        }
+                    }
+                });
+
+                if (DEBUG_MODE) {
+                    console.log(`Read ${loadedCount} LCZ Vitality CSV rows.`);
+                    console.log(`- Processed ${processedCount} rows with valid data.`);
+                    console.log(`- Skipped ${wktErrorCount} rows for invalid data.`);
+                }
+
+                if (processedCount === 0 && loadedCount > 0) {
+                    updateStatusMessage("No valid rows found in LCZ Vitality CSV file.", true);
+                    if (DEBUG_MODE) {
+                        console.warn("Warning: No valid LCZ Vitality data loaded.");
+                    }
+                } else {
+                    updateStatusMessage(`Loaded ${processedCount} LCZ vitality polygons.`);
+                }
+
+                resolve(lczVitalityDataStore);
+            },
+            error: error => {
+                if (DEBUG_MODE) {
+                    console.error("PapaParse LCZ Vitality CSV error:", error);
+                    const errMsg = `Error loading/parsing LCZ Vitality CSV: ${error.message || error}`;
+                    updateStatusMessage(errMsg, true);
+                }
+                reject(new Error("Error loading LCZ Vitality CSV"));
+            }
+        });
+    });
+}
+
+/**
+ * Returns the stored LCZ Vitality data.
+ * @returns {Array<object>} The lczVitalityDataStore array.
+ */
+export function getLczVitalityData() {
+    return lczVitalityDataStore;
+}
+
+/**
+ * Parses a WKT POLYGON string to GeoJSON coordinates format.
+ * @param {string} wktString - The WKT POLYGON string
+ * @returns {Array|null} GeoJSON coordinates array or null if parsing fails
+ */
+function parseWKTPolygon(wktString) {
+    try {
+        if (DEBUG_MODE) {
+            console.log("Parsing WKT:", wktString);
+        }
+        
+        // Remove POLYGON and outer parentheses
+        const coordsString = wktString.replace(/^POLYGON\s*\(\s*\(\s*|\s*\)\s*\)$/gi, '');
+        
+        if (DEBUG_MODE) {
+            console.log("Coordinates string:", coordsString);
+        }
+        
+        // Handle the specific format: lon,lat lon,lat where comma is decimal separator
+        // First, let's identify coordinate pairs by looking for patterns like "number,number space"
+        const coordPairs = [];
+        
+        // Use regex to match coordinate pairs in the format: number,decimal_part space number,decimal_part
+        const coordRegex = /(\d+,\d+)\s+(\d+,\d+)/g;
+        let match;
+        
+        while ((match = coordRegex.exec(coordsString)) !== null) {
+            const lonStr = match[1].replace(',', '.');  // Convert decimal comma to dot
+            const latStr = match[2].replace(',', '.');  // Convert decimal comma to dot
+            
+            const lon = parseFloat(lonStr);
+            const lat = parseFloat(latStr);
+            
+            if (!isNaN(lon) && !isNaN(lat)) {
+                coordPairs.push([lon, lat]);
+                if (DEBUG_MODE && coordPairs.length <= 3) {
+                    console.log(`Parsed coordinate pair: [${lon}, ${lat}] from "${match[1]} ${match[2]}"`);
+                }
+            } else {
+                if (DEBUG_MODE) {
+                    console.warn("Failed to parse coordinate pair:", match[1], match[2]);
+                }
+            }
+        }
+        
+        if (DEBUG_MODE) {
+            console.log(`Parsed ${coordPairs.length} coordinate pairs`);
+            if (coordPairs.length > 0) {
+                console.log("First coordinate:", coordPairs[0]);
+                console.log("Last coordinate:", coordPairs[coordPairs.length - 1]);
+            }
+        }
+        
+        if (coordPairs.length >= 3) {
+            // Ensure the polygon is closed (first and last coordinates are the same)
+            const firstCoord = coordPairs[0];
+            const lastCoord = coordPairs[coordPairs.length - 1];
+            
+            if (firstCoord[0] !== lastCoord[0] || firstCoord[1] !== lastCoord[1]) {
+                coordPairs.push([...firstCoord]);
+                if (DEBUG_MODE) {
+                    console.log("Polygon closed by adding first coordinate");
+                }
+            }
+            
+            const result = [coordPairs]; // GeoJSON polygon coordinates are an array of rings
+            
+            if (DEBUG_MODE) {
+                console.log("Final polygon coordinates:", result);
+            }
+            
+            return result;
+        }
+        
+        if (DEBUG_MODE) {
+            console.warn("Not enough coordinate pairs for a polygon:", coordPairs.length);
+        }
+        return null;
+    } catch (error) {
+        if (DEBUG_MODE) {
+            console.error("Error parsing WKT polygon:", error);
+        }
+        return null;
+    }
 }

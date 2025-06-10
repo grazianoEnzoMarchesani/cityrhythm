@@ -1,6 +1,6 @@
 // ui-layer-controls.js
-import { setLayerVisibility, addSyntheticCrowdedPointsLayer, removeSyntheticCrowdedPointsLayer, updateAllPresencePoints } from '../map/map-layers.js';
-import { KML_LAYER_ID, CROWDED_LAYER_ID, PRESENCE_POINTS_LAYER_ID, SPOTS_LAYER_ID, DEBUG_MODE } from '../data/config.js';
+import { setLayerVisibility, addSyntheticCrowdedPointsLayer, removeSyntheticCrowdedPointsLayer, updateAllPresencePoints, addLczVitalityLayer, removeLczVitalityLayer, updateLczVitalityVisualization, setLczLayerOpacity, setUhiDynamicVisibility } from '../map/map-layers.js';
+import { KML_LAYER_ID, CROWDED_LAYER_ID, PRESENCE_POINTS_LAYER_ID, SPOTS_LAYER_ID, LCZ_VITALITY_LAYER_ID, DEBUG_MODE } from '../data/config.js';
 import { getMapInstance } from '../map/map-setup.js';
 import { getSpotMapperData } from '../data/data-loader.js';
 
@@ -10,6 +10,12 @@ let presenceToggle = null;
 let spotsToggle = null;
 let spotTypeFilter = null;
 let syntheticCrowdedToggle = null;
+let lczVitalityToggle = null;
+let lczVisualizationSelector = null;
+let lczVisualizationRadios = null;
+let lczOpacitySlider = null;
+let lczOpacityValue = null;
+let uhiDynamicVisibilityToggle = null;
 
 // --- FUNZIONI ESPORTATE ---
 export function setupLayerControls() {
@@ -19,6 +25,12 @@ export function setupLayerControls() {
     spotsToggle = document.getElementById('toggle-spots');
     spotTypeFilter = document.getElementById('spot-type-filter');
     syntheticCrowdedToggle = document.getElementById('toggle-synthetic-crowded');
+    lczVitalityToggle = document.getElementById('toggle-lcz-vitality');
+    lczVisualizationSelector = document.getElementById('lcz-visualization-selector');
+    lczVisualizationRadios = document.querySelectorAll('input[name="lcz-visualization"]');
+    lczOpacitySlider = document.getElementById('lcz-opacity-slider');
+    lczOpacityValue = document.getElementById('lcz-opacity-value');
+    uhiDynamicVisibilityToggle = document.getElementById('uhi-dynamic-visibility');
 
     if (kmlToggle && DEBUG_MODE) {
         kmlToggle.checked = true;
@@ -93,6 +105,58 @@ export function setupLayerControls() {
         syntheticCrowdedToggle.checked = false;
         syntheticCrowdedToggle.addEventListener('change', (event) => handleToggleChange(event, 'synthetic-crowded'));
     }
+    
+    // LCZ Vitality toggle
+    if (lczVitalityToggle) {
+        lczVitalityToggle.checked = false;
+        lczVitalityToggle.addEventListener('change', (event) => {
+            const isChecked = event.target.checked;
+            if (isChecked) {
+                const selectedType = document.querySelector('input[name="lcz-visualization"]:checked').value;
+                addLczVitalityLayer(true, selectedType);
+                if (lczVisualizationSelector) {
+                    lczVisualizationSelector.style.display = 'block';
+                }
+            } else {
+                removeLczVitalityLayer();
+                if (lczVisualizationSelector) {
+                    lczVisualizationSelector.style.display = 'none';
+                }
+            }
+        });
+    }
+    
+    // LCZ visualization type radio buttons
+    if (lczVisualizationRadios) {
+        lczVisualizationRadios.forEach(radio => {
+            radio.addEventListener('change', (event) => {
+                if (lczVitalityToggle && lczVitalityToggle.checked) {
+                    updateLczVitalityVisualization(event.target.value);
+                }
+            });
+        });
+    }
+    
+    // LCZ Opacity Slider
+    if (lczOpacitySlider && lczOpacityValue) {
+        lczOpacitySlider.addEventListener('input', (event) => {
+            const opacity = parseInt(event.target.value);
+            lczOpacityValue.textContent = opacity + '%';
+            if (lczVitalityToggle && lczVitalityToggle.checked) {
+                setLczLayerOpacity(opacity / 100);
+            }
+        });
+    }
+    
+    // UHI Dynamic Visibility Toggle
+    if (uhiDynamicVisibilityToggle) {
+        uhiDynamicVisibilityToggle.addEventListener('change', (event) => {
+            const isEnabled = event.target.checked;
+            if (lczVitalityToggle && lczVitalityToggle.checked) {
+                setUhiDynamicVisibility(isEnabled);
+            }
+        });
+    }
     // --- 3D Terrain toggle ---
     const terrainToggle = document.getElementById('toggle-3d-terrain');
     if (terrainToggle) {
@@ -154,6 +218,9 @@ export function getLayerToggleState(layerName) {
         case 'synthetic-crowded':
             toggleElement = syntheticCrowdedToggle || document.getElementById('toggle-synthetic-crowded');
             break;
+        case 'lcz-vitality':
+            toggleElement = lczVitalityToggle || document.getElementById('toggle-lcz-vitality');
+            break;
         default:
             return false;
     }
@@ -178,6 +245,8 @@ function handleToggleChange(event, layerId) {
         setLayerVisibility(KML_LAYER_ID + '-base-outline', isChecked);
     } else if (layerId === SPOTS_LAYER_ID) {
         setLayerVisibility(SPOTS_LAYER_ID + '-labels', isChecked);
+    } else if (layerId === LCZ_VITALITY_LAYER_ID) {
+        setLayerVisibility(LCZ_VITALITY_LAYER_ID + '-stroke', isChecked);
     }
     setLayerVisibility(layerId, isChecked);
 }

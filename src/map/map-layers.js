@@ -6,12 +6,13 @@ import {
     CROWDED_SOURCE_ID, CROWDED_LAYER_ID,
     SPOTS_SOURCE_ID, SPOTS_LAYER_ID,
     SYNTHETIC_CROWDED_SOURCE_ID, SYNTHETIC_CROWDED_LAYER_ID, // Assicurati sia definito in config.js
+    LCZ_VITALITY_SOURCE_ID, LCZ_VITALITY_LAYER_ID,
     ATTRACTION_MIN_CROWDEDNESS,
     MAP_STYLES,
     DEBUG_MODE // <-- aggiunto
 } from '../data/config.js';
 import { calculateAveragePresenceForFeature, generatePointsForFeature, perlin2d } from '../utils/utils.js';
-import { getFullKmlGeoJson, getPoiData, getCrowdedData, getSpotMapperData } from '../data/data-loader.js';
+import { getFullKmlGeoJson, getPoiData, getCrowdedData, getSpotMapperData, getLczVitalityData } from '../data/data-loader.js';
 import { addMapInteraction } from './map-interaction.js';
 
 let fullCrowdedGeoJson = null;
@@ -20,6 +21,9 @@ let fullSpotsGeoJson = null;
 export let fullSyntheticCrowdedGeoJson = null; // Cache per punti 'attractor' sintetici
 let currentPresencePoints = null; // GeoJSON dei punti generati (con seed)
 let animationFrameId = null;
+let currentLczVisualizationType = 'LCZ'; // 'LCZ' or 'UHI'
+let uhiDynamicVisibilityEnabled = false; // Flag per la visibilità dinamica UHI
+let currentLczOpacity = 0.7; // Opacità corrente del layer LCZ
 
 // --- CAMPO DI FORZE STATICO (GRIGLIA) ---
 // Risoluzione della griglia in metri (es: 250 = 250m tra i punti della griglia)
@@ -659,6 +663,7 @@ export function updateAllPresencePoints(timelineHourIndex, currentCrowdednessMap
         ? turf.featureCollection(allFinalPointsFeatures)
         : null;
     addOrUpdatePresencePointsLayer(currentPresencePoints, initialVisibility);
+    
     if (animationFrameId) cancelAnimationFrame(animationFrameId);
     if (DEBUG_MODE) addForceGridDebugLayer(map);
 }
@@ -1081,4 +1086,454 @@ export function addSpotsLayer(initialVisibility = true) {
         console.error("Error adding spots source or layer:", error);
         removeSpotsLayer();
     }
+}
+
+// --- LAYER LCZ VITALITY ---
+
+/**
+ * Rimuove il layer LCZ Vitality dalla mappa.
+ */
+export function removeLczVitalityLayer() {
+    const map = getMapInstance();
+    if (!map) return;
+    
+    try { if (map.getLayer(LCZ_VITALITY_LAYER_ID + '-stroke')) map.removeLayer(LCZ_VITALITY_LAYER_ID + '-stroke'); } catch (e) { /* ignore */ }
+    try { if (map.getLayer(LCZ_VITALITY_LAYER_ID)) map.removeLayer(LCZ_VITALITY_LAYER_ID); } catch (e) { /* ignore */ }
+    try { if (map.getSource(LCZ_VITALITY_SOURCE_ID)) map.removeSource(LCZ_VITALITY_SOURCE_ID); } catch (e) { /* ignore */ }
+}
+
+/**
+ * Aggiunge il layer LCZ Vitality alla mappa.
+ * @param {boolean} initialVisibility - Visibilità iniziale del layer.
+ * @param {string} visualizationType - Tipo di visualizzazione: 'LCZ' o 'UHI'
+ */
+export function addLczVitalityLayer(initialVisibility = true, visualizationType = 'LCZ') {
+    const map = getMapInstance();
+    if (!map || !map.isStyleLoaded()) {
+        map.once('idle', () => addLczVitalityLayer(initialVisibility, visualizationType));
+        return;
+    }
+
+    const lczData = getLczVitalityData();
+    if (DEBUG_MODE) {
+        console.log("addLczVitalityLayer: LCZ data received:", lczData);
+        console.log("LCZ data length:", lczData?.length);
+        
+        // Log unique LCZ values found in the data
+        if (lczData?.length) {
+            const uniqueLczValues = [...new Set(lczData.map(feature => feature.properties?.LCZ))];
+            console.log("Unique LCZ values in data:", uniqueLczValues);
+        }
+    }
+    
+    if (!lczData?.length) {
+        console.warn("addLczVitalityLayer: No LCZ vitality data available.");
+        removeLczVitalityLayer();
+        return;
+    }
+
+    // Converti i dati in formato GeoJSON
+    const geoJsonData = {
+        type: 'FeatureCollection',
+        features: lczData
+    };
+
+    if (DEBUG_MODE) {
+        console.log("GeoJSON data for LCZ layer:", geoJsonData);
+        console.log("First feature:", geoJsonData.features[0]);
+        if (geoJsonData.features[0]) {
+            console.log("First feature geometry:", geoJsonData.features[0].geometry);
+            console.log("First feature properties:", geoJsonData.features[0].properties);
+        }
+    }
+
+    // Rimuovi layer esistente se presente
+    removeLczVitalityLayer();
+
+    try {
+        // Determina dove inserire il layer (sotto gli altri layer di punti)
+        let beforeLayerId;
+        const pointLayers = [PRESENCE_POINTS_LAYER_ID, CROWDED_LAYER_ID, SPOTS_LAYER_ID, SYNTHETIC_CROWDED_LAYER_ID];
+        for (const pointLayer of pointLayers) {
+            if (map.getLayer(pointLayer)) {
+                beforeLayerId = pointLayer;
+                break;
+            }
+        }
+
+        // Aggiungi la sorgente
+        map.addSource(LCZ_VITALITY_SOURCE_ID, {
+            type: 'geojson',
+            data: geoJsonData,
+            promoteId: 'id'
+        });
+
+        // Determina i colori in base al tipo di visualizzazione
+        const fillColor = visualizationType === 'LCZ' ? 
+            MAP_STYLES.LCZ_VITALITY.LCZ_COLORS : 
+            MAP_STYLES.LCZ_VITALITY.UHI_COLORS;
+            
+        if (DEBUG_MODE) {
+            console.log("Fill color expression type:", visualizationType);
+            console.log("Fill color expression length:", fillColor?.length);
+        }
+
+        // Aggiungi il layer fill
+        map.addLayer({
+            id: LCZ_VITALITY_LAYER_ID,
+            type: 'fill',
+            source: LCZ_VITALITY_SOURCE_ID,
+            layout: { 'visibility': initialVisibility ? 'visible' : 'none' },
+            paint: {
+                'fill-color': fillColor,
+                'fill-opacity': currentLczOpacity
+            }
+        }, beforeLayerId);
+
+        // Aggiungi il layer stroke
+        map.addLayer({
+            id: LCZ_VITALITY_LAYER_ID + '-stroke',
+            type: 'line',
+            source: LCZ_VITALITY_SOURCE_ID,
+            layout: { 'visibility': initialVisibility ? 'visible' : 'none' },
+            paint: {
+                'line-color': MAP_STYLES.LCZ_VITALITY.STROKE_COLOR,
+                'line-width': MAP_STYLES.LCZ_VITALITY.STROKE_WIDTH,
+                'line-opacity': MAP_STYLES.LCZ_VITALITY.STROKE_OPACITY
+            }
+        }, beforeLayerId);
+
+        // Salva il tipo di visualizzazione corrente
+        currentLczVisualizationType = visualizationType;
+
+        if (DEBUG_MODE) {
+            console.log(`LCZ Vitality layer added with ${geoJsonData.features.length} features using ${visualizationType} visualization.`);
+            console.log("Layer visibility:", initialVisibility);
+            console.log("Fill color expression:", fillColor);
+            
+            // Verify layer was added
+            setTimeout(() => {
+                if (map.getLayer(LCZ_VITALITY_LAYER_ID)) {
+                    console.log("✅ LCZ layer successfully added to map");
+                    console.log("Layer style:", map.getLayoutProperty(LCZ_VITALITY_LAYER_ID, 'visibility'));
+                } else {
+                    console.error("❌ LCZ layer not found on map");
+                }
+                
+                if (map.getSource(LCZ_VITALITY_SOURCE_ID)) {
+                    console.log("✅ LCZ source successfully added to map");
+                } else {
+                    console.error("❌ LCZ source not found on map");
+                }
+            }, 100);
+        }
+    } catch (error) {
+        console.error("Error adding LCZ vitality source or layer:", error);
+        removeLczVitalityLayer();
+    }
+}
+
+/**
+ * Cambia il tipo di visualizzazione del layer LCZ Vitality.
+ * @param {string} visualizationType - Tipo di visualizzazione: 'LCZ' o 'UHI'
+ */
+export function updateLczVitalityVisualization(visualizationType) {
+    const map = getMapInstance();
+    if (!map || !map.isStyleLoaded() || !map.getLayer(LCZ_VITALITY_LAYER_ID)) {
+        return;
+    }
+
+    try {
+        const fillColor = visualizationType === 'LCZ' ? 
+            MAP_STYLES.LCZ_VITALITY.LCZ_COLORS : 
+            MAP_STYLES.LCZ_VITALITY.UHI_COLORS;
+
+        map.setPaintProperty(LCZ_VITALITY_LAYER_ID, 'fill-color', fillColor);
+        currentLczVisualizationType = visualizationType;
+
+        // Se stiamo passando a UHI e la visualizzazione dinamica è attiva, aggiorna
+        if (visualizationType === 'UHI' && uhiDynamicVisibilityEnabled) {
+            updateUhiDynamicVisualization();
+        } else if (visualizationType === 'LCZ') {
+            // Se stiamo passando a LCZ, ripristina l'opacità normale
+            setLczLayerOpacity(currentLczOpacity);
+        }
+
+        if (DEBUG_MODE) {
+            console.log(`LCZ Vitality visualization updated to: ${visualizationType}`);
+        }
+    } catch (error) {
+        console.error("Error updating LCZ vitality visualization:", error);
+    }
+}
+
+/**
+ * Restituisce il tipo di visualizzazione attualmente attiva per LCZ Vitality.
+ * @returns {string} Il tipo di visualizzazione corrente ('LCZ' o 'UHI')
+ */
+export function getCurrentLczVisualizationType() {
+    return currentLczVisualizationType;
+}
+
+/**
+ * Imposta l'opacità del layer LCZ Vitality.
+ * @param {number} opacity - Valore di opacità tra 0 e 1
+ */
+export function setLczLayerOpacity(opacity) {
+    const map = getMapInstance();
+    if (!map || !map.isStyleLoaded() || !map.getLayer(LCZ_VITALITY_LAYER_ID)) {
+        return;
+    }
+
+    try {
+        currentLczOpacity = opacity;
+        map.setPaintProperty(LCZ_VITALITY_LAYER_ID, 'fill-opacity', opacity);
+        
+        if (DEBUG_MODE) {
+            console.log(`LCZ layer opacity set to: ${opacity}`);
+        }
+    } catch (error) {
+        console.error("Error setting LCZ layer opacity:", error);
+    }
+}
+
+/**
+ * Attiva/disattiva la visibilità dinamica UHI basata sulla densità di presence points.
+ * @param {boolean} enabled - True per attivare, false per disattivare
+ */
+export function setUhiDynamicVisibility(enabled) {
+    uhiDynamicVisibilityEnabled = enabled;
+    
+    if (DEBUG_MODE) {
+        console.log(`UHI dynamic visibility ${enabled ? 'enabled' : 'disabled'}`);
+    }
+    
+    // Se è attivato e siamo in modalità UHI, aggiorna immediatamente la visualizzazione
+    if (enabled && currentLczVisualizationType === 'UHI') {
+        updateUhiDynamicVisualization();
+    } else if (!enabled) {
+        // Ripristina l'opacità normale
+        setLczLayerOpacity(currentLczOpacity);
+    }
+}
+
+/**
+ * Aggiorna la visualizzazione dinamica UHI basata sulla densità di presence points.
+ */
+export function updateUhiDynamicVisualization() {
+    const map = getMapInstance();
+    if (!map || !map.isStyleLoaded() || !map.getLayer(LCZ_VITALITY_LAYER_ID)) {
+        return;
+    }
+    
+    if (!uhiDynamicVisibilityEnabled || currentLczVisualizationType !== 'UHI') {
+        return;
+    }
+
+    try {
+        const lczData = getLczVitalityData();
+        
+        if (!lczData?.length || !currentPresencePoints?.features?.length) {
+            return;
+        }
+
+        // Calcola le metriche avanzate di presenza per ogni poligono UHI
+        const updatedFeatures = lczData.map((feature, index) => {
+            const presenceMetrics = calculatePresenceMetrics(feature, currentPresencePoints.features);
+            const uhiRisk = feature.properties['UHI risk'];
+            
+            // Calcola l'opacità usando il sistema ibrido
+            let opacity = getUhiDynamicOpacityHybrid(uhiRisk, presenceMetrics);
+            
+            return {
+                ...feature,
+                properties: {
+                    ...feature.properties,
+                    dynamicOpacity: opacity,
+                    presenceCount: presenceMetrics.count,
+                    presenceDensity: presenceMetrics.density,
+                    presenceConcentration: presenceMetrics.concentration,
+                    presenceHybridScore: presenceMetrics.hybridScore
+                }
+            };
+        });
+
+        // Crea una nuova espressione di opacità dinamica
+        const dynamicOpacityExpression = [
+            'case',
+            ['has', 'dynamicOpacity'],
+            ['get', 'dynamicOpacity'],
+            currentLczOpacity // fallback all'opacità normale
+        ];
+
+        // Aggiorna la sorgente con i nuovi dati
+        const updatedGeoJson = {
+            type: 'FeatureCollection',
+            features: updatedFeatures
+        };
+
+        map.getSource(LCZ_VITALITY_SOURCE_ID).setData(updatedGeoJson);
+        map.setPaintProperty(LCZ_VITALITY_LAYER_ID, 'fill-opacity', dynamicOpacityExpression);
+
+        if (DEBUG_MODE) {
+            console.log('UHI dynamic visualization updated');
+            console.log('Features with presence points:', updatedFeatures.filter(f => f.properties.presenceCount > 0).length);
+        }
+    } catch (error) {
+        console.error("Error updating UHI dynamic visualization:", error);
+    }
+}
+
+/**
+ * Calcola metriche avanzate di presenza per un poligono (sistema ibrido).
+ * @param {object} polygon - Feature poligono
+ * @param {array} points - Array di punti presence
+ * @returns {object} Oggetto con count, density, concentration, hybridScore
+ */
+function calculatePresenceMetrics(polygon, points) {
+    const metrics = {
+        count: 0,
+        density: 0,
+        concentration: 0,
+        hybridScore: 0
+    };
+    
+    try {
+        // 1. Conteggio assoluto
+        const pointsInPolygon = [];
+        points.forEach(point => {
+            if (turf.booleanPointInPolygon(point, polygon)) {
+                pointsInPolygon.push(point);
+                metrics.count++;
+            }
+        });
+        
+        if (metrics.count === 0) {
+            return metrics;
+        }
+        
+        // 2. Densità per area standard (900m² = 0.0009 km²)
+        const STANDARD_AREA_KM2 = 0.0009;
+        metrics.density = metrics.count / STANDARD_AREA_KM2; // punti per km²
+        
+        // 3. Concentrazione (quanto sono raggruppati i punti)
+        if (metrics.count > 1) {
+            // Calcola la distanza media tra tutti i punti
+            let totalDistance = 0;
+            let pairCount = 0;
+            
+            for (let i = 0; i < pointsInPolygon.length; i++) {
+                for (let j = i + 1; j < pointsInPolygon.length; j++) {
+                    const dist = turf.distance(pointsInPolygon[i], pointsInPolygon[j], { units: 'meters' });
+                    totalDistance += dist;
+                    pairCount++;
+                }
+            }
+            
+            const avgDistance = totalDistance / pairCount;
+            // Normalizza: distanza bassa = alta concentrazione
+            // Assumendo che 30m sia la distanza massima in un poligono di 900m²
+            const maxDistance = 30; // metri
+            metrics.concentration = Math.max(0, 1 - (avgDistance / maxDistance));
+        } else {
+            metrics.concentration = 1; // Un singolo punto è perfettamente concentrato
+        }
+        
+        // 4. Punteggio ibrido combinato
+        // Normalizza i componenti
+        const normalizedCount = Math.min(metrics.count / 20, 1); // max 20 punti
+        const normalizedDensity = Math.min(metrics.density / 22222, 1); // 20 punti / 0.0009 km²
+        const normalizedConcentration = metrics.concentration; // già 0-1
+        
+        // Combina con pesi: conteggio 40%, densità 40%, concentrazione 20%
+        metrics.hybridScore = (normalizedCount * 0.4) + 
+                             (normalizedDensity * 0.4) + 
+                             (normalizedConcentration * 0.2);
+        
+    } catch (error) {
+        console.warn("Error calculating presence metrics:", error);
+    }
+    
+    return metrics;
+}
+
+/**
+ * Calcola il numero di presence points all'interno di un poligono (legacy).
+ * @param {object} polygon - Feature poligono
+ * @param {array} points - Array di punti presence
+ * @returns {number} Numero di punti all'interno del poligono
+ */
+function calculatePresencePointsInPolygon(polygon, points) {
+    const metrics = calculatePresenceMetrics(polygon, points);
+    return metrics.count;
+}
+
+/**
+ * Calcola l'opacità dinamica basata su UHI Risk e metriche avanzate di presenza.
+ * Sistema ibrido che considera: conteggio, densità, concentrazione.
+ * @param {string} uhiRisk - Livello di rischio UHI
+ * @param {object} presenceMetrics - Oggetto con metriche di presenza
+ * @returns {number} Valore di opacità tra 0 e 1
+ */
+function getUhiDynamicOpacityHybrid(uhiRisk, presenceMetrics) {
+    // Mappa i livelli UHI Risk a valori numerici
+    const uhiRiskLevels = {
+        'Very Low': 1,
+        'Low': 2,
+        'Low-Medium': 3,
+        'Medium-Low': 4,
+        'Medium': 5,
+        'High': 6,
+        'Very High': 7
+    };
+    
+    const riskLevel = uhiRiskLevels[uhiRisk] || 1;
+    const riskIntensity = riskLevel / 7; // 0-1
+    
+    // Usa il punteggio ibrido delle metriche di presenza
+    const presenceIntensity = presenceMetrics.hybridScore; // già 0-1
+    
+    // Definisci soglie per "alto rischio" e "alta presenza"
+    const highRiskThreshold = 0.6; // 60% del rischio massimo (circa Medium+)
+    const highPresenceThreshold = 0.3; // 30% del punteggio ibrido massimo
+    
+    const isHighRisk = riskIntensity >= highRiskThreshold;
+    const isHighPresence = presenceIntensity >= highPresenceThreshold;
+    
+    // Sistema di visibilità migliorato
+    if (isHighRisk && isHighPresence) {
+        // ✅ Alto rischio + alta presenza = Molto visibile (0.75-0.95)
+        const combinedIntensity = (riskIntensity + presenceIntensity) / 2;
+        return 0.75 + (combinedIntensity * 0.2); // 0.75 - 0.95
+    } else if (isHighRisk && !isHighPresence) {
+        // 🟡 Alto rischio + bassa presenza = Moderatamente visibile (0.4-0.6)
+        const adjustedIntensity = riskIntensity * 0.5 + presenceIntensity * 0.5;
+        return 0.4 + (adjustedIntensity * 0.2); // 0.4 - 0.6
+    } else if (!isHighRisk && isHighPresence) {
+        // 🟡 Basso rischio + alta presenza = Moderatamente visibile (0.3-0.5)
+        const adjustedIntensity = riskIntensity * 0.3 + presenceIntensity * 0.7;
+        return 0.3 + (adjustedIntensity * 0.2); // 0.3 - 0.5
+    } else {
+        // ✅ Basso rischio + bassa presenza = Poco visibile (0.15-0.35)
+        const combinedIntensity = (riskIntensity + presenceIntensity) / 2;
+        return 0.15 + (combinedIntensity * 0.2); // 0.15 - 0.35
+    }
+}
+
+/**
+ * Calcola l'opacità dinamica (versione legacy per compatibilità).
+ * @param {string} uhiRisk - Livello di rischio UHI
+ * @param {number} presenceCount - Numero di presence points
+ * @returns {number} Valore di opacità tra 0 e 1
+ */
+function getUhiDynamicOpacity(uhiRisk, presenceCount) {
+    // Crea metriche semplificate per compatibilità
+    const presenceMetrics = {
+        count: presenceCount,
+        density: presenceCount / 0.0009, // densità per km²
+        concentration: presenceCount > 0 ? 0.5 : 0, // concentrazione media
+        hybridScore: Math.min(presenceCount / 20, 1) // normalizzato
+    };
+    
+    return getUhiDynamicOpacityHybrid(uhiRisk, presenceMetrics);
 }

@@ -5,6 +5,7 @@ export const KML_URL = 'https://gist.githubusercontent.com/grazianoEnzoMarchesan
 export const POI_CSV_URL = 'https://gist.githubusercontent.com/grazianoEnzoMarchesani/0ac7cac113479e704e2af0865e7f516d/raw/adb569636698d58b16a610dbc82f1b4936f9b2ad/cityrhythm_blimp.csv';
 export const CROWDED_CSV_URL = 'https://gist.githubusercontent.com/grazianoEnzoMarchesani/d4574acad4dabf1e4b83fe2d68a59e91/raw/90bd98a5ff27ba9d968028ae374211f90025d284/cityrhythm_crowded_data.csv';
 export const SPOTS_CSV_URL = 'https://gist.githubusercontent.com/grazianoEnzoMarchesani/c2813df8436ad6ebb91327d5e517f1ae/raw/296130747c07c88cb834d7860a1ceaee43502281/cityrhythm_spotMapper.csv';
+export const LCZ_VITALITY_CSV_URL = 'https://gist.githubusercontent.com/grazianoEnzoMarchesani/bc2ad1bea5689e0195296daa57f9b893/raw/0ecce2a26b35c561e110a135638f4f5b84c8acd8/lcz_vitality.csv';
 
 export const INITIAL_CENTER = [12.5674, 41.8719];
 export const INITIAL_ZOOM = 5;
@@ -23,6 +24,8 @@ export const SPOTS_SOURCE_ID = 'spots-points-source';
 export const SPOTS_LAYER_ID = 'spots-points-layer';
 export const SYNTHETIC_CROWDED_SOURCE_ID = 'synthetic-crowded-points-source'; // Aggiunto per coerenza
 export const SYNTHETIC_CROWDED_LAYER_ID = 'synthetic-crowded-points-layer'; // Aggiunto per coerenza
+export const LCZ_VITALITY_SOURCE_ID = 'lcz-vitality-source';
+export const LCZ_VITALITY_LAYER_ID = 'lcz-vitality-layer';
 
 
 export const PRESENCE_POINTS_DENSITY_FACTOR = 50;
@@ -352,6 +355,49 @@ export const MAP_STYLES = {
       15, 'rgb(0, 0, 0)'
     ],
     CIRCLE_STROKE_OPACITY: 1
+  },
+
+  // LCZ Vitality Layer Style
+  LCZ_VITALITY: {
+    FILL_OPACITY: 0.7,
+    STROKE_WIDTH: 1,
+    STROKE_COLOR: '#ffffff',
+    STROKE_OPACITY: 0.8,
+    // LCZ Color mapping - using case expression for better error handling
+    LCZ_COLORS: [
+      'case',
+      ['==', ['get', 'LCZ'], '1'], '#8B0000', // Compact high-rise - Rosso scuro
+      ['==', ['get', 'LCZ'], '2'], '#cf0201', // Compact midrise - Rosso
+      ['==', ['get', 'LCZ'], '3'], '#fe0100', // Compact low-rise - Rosso chiaro
+      ['==', ['get', 'LCZ'], '4'], '#bd4d01', // Open high-rise - Arancione
+      ['==', ['get', 'LCZ'], '5'], '#ff6600', // Open midrise - Arancione
+      ['==', ['get', 'LCZ'], '6'], '#ff9957', // Open low-rise - Arancione chiaro
+      ['==', ['get', 'LCZ'], '7'], '#f9ef00', // Lightweight low-rise - Giallo
+      ['==', ['get', 'LCZ'], '8'], '#bcbcbc', // Large low-rise - Grigio chiaro
+      ['==', ['get', 'LCZ'], '9'], '#fecca9', // Sparsely built - Pesca/Beige
+      ['==', ['get', 'LCZ'], '10'], '#555555', // Heavy industry - Grigio scuro
+      ['==', ['get', 'LCZ'], 'A'], '#016901', // Dense trees - Verde scuro
+      ['==', ['get', 'LCZ'], 'B'], '#06aa02', // Scattered trees - Verde
+      ['==', ['get', 'LCZ'], 'C'], '#638526', // Bush, scrub - Verde chiaro/Cachi
+      ['==', ['get', 'LCZ'], 'D'], '#badb7a', // Low plants - Verde lime
+      ['==', ['get', 'LCZ'], 'E'], '#000000', // Bare rock or paved - Nero
+      ['==', ['get', 'LCZ'], 'F'], '#fbf5ad', // Bare soil or sand - Giallo paglierino
+      ['==', ['get', 'LCZ'], 'G'], '#6a6afe', // Water - Blu
+      ['==', ['get', 'LCZ'], 'UNKNOWN'], '#888888', // Unknown/Invalid LCZ - Grigio
+      '#888888' // Default color for any other value
+    ],
+    // UHI Risk Color mapping - using case expression for better error handling
+    UHI_COLORS: [
+      'case',
+      ['==', ['get', 'UHI risk'], 'Very Low'], '#c1e4f5',
+      ['==', ['get', 'UHI risk'], 'Low'], '#c0f0c8',
+      ['==', ['get', 'UHI risk'], 'Low-Medium'], '#d9f2d0',
+      ['==', ['get', 'UHI risk'], 'Medium-Low'], '#fae2d6',
+      ['==', ['get', 'UHI risk'], 'Medium'], '#f6c6ac',
+      ['==', ['get', 'UHI risk'], 'High'], '#e97131',
+      ['==', ['get', 'UHI risk'], 'Very High'], '#ff5150',
+      '#cccccc' // Default color for any other value
+    ]
   }
 };
 
