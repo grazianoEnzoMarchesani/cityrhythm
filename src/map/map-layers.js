@@ -664,6 +664,15 @@ export function updateAllPresencePoints(timelineHourIndex, currentCrowdednessMap
         : null;
     addOrUpdatePresencePointsLayer(currentPresencePoints, initialVisibility);
     
+    // Aggiorna automaticamente la visualizzazione dinamica UHI se attivata
+    if (uhiDynamicVisibilityEnabled && currentLczVisualizationType === 'UHI') {
+        console.log('🔄 Auto-updating UHI dynamic visualization from updateAllPresencePoints');
+        // Usa un piccolo timeout per assicurarsi che i presence points siano stati aggiornati
+        setTimeout(() => {
+            updateUhiDynamicVisualization();
+        }, 50);
+    }
+    
     if (animationFrameId) cancelAnimationFrame(animationFrameId);
     if (DEBUG_MODE) addForceGridDebugLayer(map);
 }
@@ -1321,12 +1330,19 @@ export function setUhiDynamicVisibility(enabled) {
  * Aggiorna la visualizzazione dinamica UHI basata sulla densità di presence points.
  */
 export function updateUhiDynamicVisualization() {
+    console.log('🎯 updateUhiDynamicVisualization called');
+    
     const map = getMapInstance();
     if (!map || !map.isStyleLoaded() || !map.getLayer(LCZ_VITALITY_LAYER_ID)) {
+        console.log('❌ Map, style, or LCZ layer not ready');
         return;
     }
     
+    console.log('📊 uhiDynamicVisibilityEnabled:', uhiDynamicVisibilityEnabled);
+    console.log('📊 currentLczVisualizationType:', currentLczVisualizationType);
+    
     if (!uhiDynamicVisibilityEnabled || currentLczVisualizationType !== 'UHI') {
+        console.log('❌ Dynamic visibility disabled or not in UHI mode');
         return;
     }
 

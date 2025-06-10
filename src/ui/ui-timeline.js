@@ -4,9 +4,7 @@ import {
     updateCrowdedPointsLayerStyle,
     getCrowdednessColumnName,
     addSyntheticCrowdedPointsLayer,
-    removeSyntheticCrowdedPointsLayer,
-    getCurrentLczVisualizationType,
-    updateUhiDynamicVisualization
+    removeSyntheticCrowdedPointsLayer
 } from '../map/map-layers.js';
 import { refreshKmlChartsForTimeline } from './ui-sidebar.js';
 import { getCrowdedData } from '../data/data-loader.js';
@@ -92,16 +90,6 @@ function updateAppStateForHour(hourIndex) {
         }
         const presenceVisible = getLayerToggleState('presence');
         updateAllPresencePoints(hourIndex, currentCrowdednessMap, presenceVisible);
-        
-        // Aggiorna automaticamente la visualizzazione dinamica UHI se attiva
-        const uhiDynamicCheckbox = document.getElementById('uhi-dynamic-visibility');
-        if (uhiDynamicCheckbox && uhiDynamicCheckbox.checked && getCurrentLczVisualizationType() === 'UHI') {
-            console.log('🔄 Timeline update - updating UHI dynamic visualization');
-            // Usa un timeout per assicurarsi che i presence points siano stati aggiornati
-            setTimeout(() => {
-                updateUhiDynamicVisualization();
-            }, 150);
-        }
         const syntheticCrowdedVisible = getLayerToggleState('synthetic-crowded');
         if (syntheticCrowdedVisible) {
             addSyntheticCrowdedPointsLayer(hourIndex, true);
