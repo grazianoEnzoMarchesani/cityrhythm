@@ -10,9 +10,6 @@ CityRhythm is an advanced, interactive geospatial data visualisation dashboard d
 
 ---
 
-![CityRhythm Screenshot](https://www.cityrhythm.it/screenshot.png) 
-*(Note: You can replace this link with a direct link to a screenshot in your repository)*
-
 ## Core Features
 
 This application goes beyond simple data plotting, incorporating several sophisticated features to provide a rich analytical experience:
