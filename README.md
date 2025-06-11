@@ -1,6 +1,6 @@
 # CityRhythm
 
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15641271.svg)](https://doi.org/10.5281/zenodo.15641271)
 
 CityRhythm is an advanced, interactive geospatial data visualisation dashboard designed to explore and analyse complex urban dynamics. The application provides detailed insights into footfall, demographics, and visitor interests across different city areas, with powerful temporal filtering capabilities.
 
