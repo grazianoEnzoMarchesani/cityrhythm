@@ -15,6 +15,9 @@ import { fitMapToBounds } from './src/utils/utils.js';
 import { updateStatusMessage, initializeSidebar } from './src/ui/ui-sidebar.js';
 import { setupTimelineControls, getCurrentHour, setHour } from './src/ui/ui-timeline.js';
 import { setupLayerControls, initializeSpotTypeFilter } from './src/ui/ui-layer-controls.js';
+import { startCompass } from './src/compass/compass.js';
+import { initCompassUI } from './src/ui/ui-compass.js';
+import { initAudioEngine } from './src/audio/audio-engine.js';
 
 // Main DOM references
 const mapContainerId = 'map';
@@ -178,6 +181,9 @@ async function startApp() {
                 const lczVisible = false;
                 if (lczVitalityData?.length > 0) {
                     addLczVitalityLayer(lczVisible, 'LCZ');
+                    initCompassUI(map);
+                    initAudioEngine();
+                    startCompass().catch(err => console.error('Bussola non avviata:', err));
                 } else {
                 }
 

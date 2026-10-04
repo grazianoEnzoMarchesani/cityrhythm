@@ -11,3 +11,6 @@ sound-lab/data/bussola_prova.csv
 node_modules/
 dist/
 *.local
+
+# progetto QGIS delle LCZ (2,7 GB): fonte per sound-lab/estrai_lcz.py, mai su GitHub
+Lcz_neurali 2/

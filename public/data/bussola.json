@@ -1,0 +1,70 @@
+{
+  "nota": "Parametri della bussola emotiva. Li leggono sound-lab/compass.py e clima.py (riferimento) e src/compass/. 'energia' e 'aree_km2' li riscrive compass.py.",
+  "parametri": {
+    "w_comfort": 0.75,
+    "w_green": 0.25,
+    "rain": 0.3,
+    "rain_mm": 0.5,
+    "night_sun_deg": -6,
+    "cut": 0.3333333,
+    "svf_ripiego": 0.4,
+    "energia_svanisce_m": 300,
+    "tenuta_s": 2
+  },
+  "griglia": [
+    [
+      "afa",
+      "fatica",
+      "calca"
+    ],
+    [
+      "attesa",
+      "routine",
+      "corrente"
+    ],
+    [
+      "rifugio",
+      "passeggiata",
+      "festa"
+    ]
+  ],
+  "energia": {
+    "log_lo": 3.23806,
+    "log_hi": 3.99485
+  },
+  "aree_km2": {
+    "Ascoli - Porta Romana": 0.2731,
+    "Ascoli - Borgo Solesta": 0.3149,
+    "Ascoli - Campo Parignano": 0.2543,
+    "Ascoli - Porta Cartara": 0.1469,
+    "Ascoli - Borgo Chiaro": 0.2334,
+    "Ascoli - Pennile di Sotto": 0.19,
+    "Ascoli - Porta Maggiore": 0.8585,
+    "Ascoli - Tofare": 0.1745,
+    "Ascoli - San Filippo": 0.1385,
+    "Ascoli - Centro Storico": 1.0257,
+    "Ascoli - Stadio": 0.2677
+  },
+  "fisica": {
+    "ak": 0.7,
+    "ep": 0.97,
+    "eps_superfici": 0.95,
+    "popolazione": 46000,
+    "z0_stazione": 0.03,
+    "altezza_miscelamento_m": 60,
+    "utci_nessuno_stress": [
+      9,
+      26
+    ],
+    "utci_stress_forte_caldo": 32,
+    "utci_stress_forte_freddo": -13
+  },
+  "fonti": {
+    "UTCI": "Broede et al. 2012, Int J Biometeorol 56:481 (polinomio da pythermalcomfort); fasce di stress ufficiali",
+    "Tmrt": "Thorsson et al. 2007; VDI 3787 / RayMan (Matzarakis et al. 2010): ak 0.7, ep 0.97, Fi 0.06/0.22, fp di Jendritzky",
+    "isola di calore": "Oke 1981 (dT = 15.27 - 13.88 SVF), Oke 1973 (2.01 log P - 4.06, citta europee), Oke 1982 (dT ~ U^-1/2)",
+    "cielo": "Brutsaert 1975 (emissivita a cielo sereno), Crawford & Duchon 1999 (nuvole)",
+    "vento": "Wieringa 1986, WMO-No. 8 (altezza di miscelamento 60 m, z0 aperta campagna 0.03)",
+    "popolazione": "Ascoli Piceno, circa 46.000 abitanti (ISTAT 2024)"
+  }
+}

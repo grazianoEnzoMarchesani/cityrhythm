@@ -5,7 +5,13 @@ export const KML_URL = DATA_BASE + 'cityrhythm_blimp_areas.kml';
 export const POI_CSV_URL = DATA_BASE + 'cityrhythm_blimp.csv';
 export const CROWDED_CSV_URL = DATA_BASE + 'cityrhythm_crowded_data.csv';
 export const SPOTS_CSV_URL = DATA_BASE + 'cityrhythm_spotMapper.csv';
-export const LCZ_VITALITY_CSV_URL = DATA_BASE + 'lcz_vitality.csv';
+// Celle LCZ da 30 m, area dei quartieri (vedi sound-lab/estrai_lcz.py)
+export const LCZ_GEOJSON_URL = DATA_BASE + 'lcz_ascoli.geojson';
+// Bussola emotiva: parametri (scritti anche da sound-lab/compass.py) e meteo orario Open-Meteo
+export const BUSSOLA_URL = DATA_BASE + 'bussola.json';
+export const METEO_URL = DATA_BASE + 'meteo_ascoli.json';
+// Brani, suoni urbani e mix della mappa sonora (preparati in sound-lab/)
+export const AUDIO_BASE = import.meta.env.BASE_URL + 'audio/';
 
 // Mappa di base, terreno ed edifici: file locali, solo Comune di Ascoli Piceno (vedi sound-lab/estrai_edifici_gba.py)
 export const MAP_DATA_BASE = DATA_BASE + 'mappa/';
