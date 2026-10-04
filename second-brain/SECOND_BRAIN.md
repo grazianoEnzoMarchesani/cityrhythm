@@ -2,7 +2,7 @@
 
 > Memoria condivisa del progetto. **Ogni agente la legge prima di iniziare.** Si aggiorna a fine sessione col comando `/second-brain` (vedi `.claude/skills/second-brain/SKILL.md`). Sintetico: decisioni e stato, non cronaca.
 
-Ultimo aggiornamento: 2026-10-04 (quinta sessione)
+Ultimo aggiornamento: 2026-10-05 (ottava sessione)
 
 ## 1. Progetto in breve
 - **CityRhythm**: dashboard geospaziale (**MapLibre GL 6.12** + PMTiles, ECharts 5.5, Turf 7, D3 + d3-cloud, PapaParse, Litepicker) su affollamento, demografia, POI, LCZ/UHI. 3 dimensioni spaziali + 1 temporale (timeline).
@@ -65,6 +65,11 @@ Aggiungere una **dimensione sonora** attivabile ("mappa sonora"). Scopo **divulg
 | Framework | **Vite (vanilla)**, fatto. Svelte/React/Vue aggiungibili con un plugin in `vite.config.js` (`base: './'`). |
 | Intercambiabilità | Tutto deve poter essere sostituito (UI in Svelte/React/Vue, libreria dei grafici). **Fatto**: store centrale compatibile Svelte (React via `useSyncExternalStore(store.subscribe, store.get)`), ECharts isolato in `src/charts/charts.js`. Bussola e motore audio comunicano solo tramite lo store. Formato neutro per le opzioni dei grafici: solo se si cambia davvero libreria. |
 | Pubblicazione | **GitHub Pages** con `.github/workflows/deploy.yml` (build a ogni push su `main`). Serve Settings → Pages → Source: **GitHub Actions**. Nessun token da configurare. |
+| Puntini delle persone (Presence Density) | Ogni persona ha un'**identità stabile** ricordata da un'ora all'altra (`presenceStates` in `map-layers.js`); niente rimescolamento a caso (faceva ammassare tutti al centro durante gli spostamenti). A ogni cambio d'ora: 1) dentro il quartiere chi è in più a uno spot va allo spot vicino che cresce; 2) **fra quartieri**: chi avanza in un quartiere che si svuota va allo spot che cresce più vicino in un quartiere che si riempie; 3) solo il resto **entra da fuori città** (fade in) o **esce verso l'esterno** (fade out), 600 m oltre la posizione in direzione opposta al centro (`PRESENCE_EXIT_METERS`). Animazione 1 s (`PRESENCE_MOVE_MS`); Play a 1,3 s per ora (prima ~0,3 s). Rispetta "riduci movimento". |
+| Gente "in giro" (10% per quartiere) | Solo su celle LCZ **costruite (1–10) o pavimentate (E)** del quartiere (`getStreetCellsForFeature` in `map-layers.js`), cella fissa per persona: **mai fiume, boschi, prati** (A–D, F, G), a nessuna ora. Richiesto dall'utente ("improbabile che ci sia gente al fiume"). Gli spot reali in celle verdi (110 su 1.186) restano, con i puntini entro 10 m. |
+| Notte delle persone | **95%** a casa (`NIGHT_HOME_SHARE`), rampa 22→24 e 6→8 (`NIGHT_GO_HOME_HOURS`, `NIGHT_WAKE_UP_HOURS`); il 5% resta ai locali. Casa = edificio TUM del quartiere scelto **in proporzione al volume** (area × altezza), sempre lo stesso per persona. I dati TUM non distinguono abitazioni da capannoni. Approvato dall'utente ("di notte va bene"). |
+| Synthetic Crowded Points | Ogni spot (1.186) ha **5 "maestri" fissi** fra gli 87 luoghi reali (etichette simili, vicini); un maestro chiuso conta 0. Maestri calcolati una volta e messi in cache. Alle 3 di notte di sabato gli spot attivi scendono da 784 a ~460; fra mattina e sera cambia posto il 25–28% delle persone (prima 15%). Raggio massimo di 500 m scartato: 1/4 degli spot senza maestri e 3 quartieri (Porta Cartara, Borgo Chiaro, Tofare) senza luoghi reali. Resta una stima: 87 luoghi per 1.186 spot, 27 etichette generiche. |
+| Colorazione dei puntini | Sezione **"Color dots by"** nel riquadro Map Layers (pulsanti **Off · Gender · Age · Nationality · Visits** + legenda), in `src/map/presence-colors.js`. Colora **tutti i quartieri**, ognuno con le **sue percentuali reali** (stessi giorni dei grafici: < 7 giorni = intervallo, altrimenti stesso giorno della settimana). Conteggi esatti (resti maggiori) e **stabili al cambio d'ora**: ogni persona ha un posto fisso in una "fila" per quartiere (`hash01(chiave)`), in prova 189/195 tengono il colore. Il clic sui grafici di genere/età/nazionalità/visite accende il pulsante corrispondente. Province, nazioni e interessi **esclusi** dal selettore (elenchi diversi per quartiere; gli interessi sono indici, non percentuali): il loro clic colora solo il quartiere selezionato, come prima. |
 | Stem | Al momento non servono. Se servissero: StemDeck o UVR5 (locali), MVSEP (web). |
 
 ## 4. Decisioni superate
@@ -91,6 +96,11 @@ Aggiungere una **dimensione sonora** attivabile ("mappa sonora"). Scopo **divulg
 - ~~Temperatura locale = percepita + 4 °C sole × SVF − 2 °C verde + 1/2,5 °C × UHI risk; comfort 16–26 °C, −1 a 36 / −4 °C~~ → "numeri a caso" secondo l'utente: sostituiti dall'**UTCI** con fisica e fasce ufficiali.
 - ~~Inverno → Attesa/Routine/Corrente~~ → con l'UTCI le giornate invernali sono senza stress: serene.
 - ~~Fuori dalle aree coperte: brano neutro~~ → silenzio.
+- ~~Spot che copiano solo dai luoghi reali aperti in quell'ora (anche a ~1 km)~~ → maestri fissi, i chiusi contano 0: di notte restava "aperto" il 66% degli spot.
+- ~~Puntini rigenerati a caso a ogni ora, Play a 5 passi/s~~ → identità stabili e spostamenti animati; il Play interrompeva l'animazione e ammassava tutti al centro.
+- ~~Colori dei puntini solo dal clic sui grafici, solo per il quartiere selezionato, persi al cambio d'ora~~ → selettore "Color dots by" su tutti i quartieri, stabile (per genere, età, nazionalità, visite).
+- ~~Gente "in giro" in un punto a caso del quartiere~~ → finiva sul Tronto e nei prati; ora solo celle LCZ costruite o pavimentate.
+- ~~Chi arriva esce di casa, chi se ne va rientra in casa~~ (passaggio intermedio) → si entra/esce dalla città con dissolvenza.
 
 ## 5. Stato degli asset audio
 Grezzi in `music/` e `music/sfx/` (**non versionati**). Pronti in **`public/audio/loops/`** e **`public/audio/sfx/`** (collegati da `sound-lab/loops`, `sound-lab/sfx`).
@@ -149,14 +159,15 @@ Giudizio dell'utente: i brani 2025 suonano "parenti"; la bussola di prova piace;
 3. **Suoni urbani dai dati**: presenza degli effetti da persone (X), verde, UTCI e notte invece che dalle scene fisse.
 4. Clima più preciso (facoltativo): **SOLWEIG** (plugin UMEP di QGIS) con `dsm_10m`, terreno e chiome del progetto, su giorni tipo, per ombre vere e suolo caldo; oppure **tarare** l'isola di calore con stazioni in città (verificare la rete regionale delle Marche).
 5. **Grafica della mappa MapLibre** (più avanti): stile nuovo secondo le indicazioni dell'utente, al posto del "light" provvisorio.
-5. Più avanti: ECharts 5.5 ha un avviso di sicurezza moderato (`npm audit`); valutare ECharts 6.
+6. **Puntini delle persone**: l'utente verifica i flussi fra quartieri, l'entrata/uscita dalla città (600 m adatti?) e la velocità del Play. Possibili ritocchi: anche la gente "in giro" (10%) fra quartieri; chi cambia quartiere dorme nel quartiere dove si trova. Verificare in mappa che fiume e prati restino vuoti (Tronto, Tue 20:00 e ore 11); se disturbano anche i gruppetti agli spot in celle verdi: ridurli o toglierli di sera. Il vecchio `animatePresencePoints`/campo di forze in `map-layers.js` non è mai avviato (codice morto, da togliere).
+7. Più avanti: ECharts 5.5 ha un avviso di sicurezza moderato (`npm audit`); valutare ECharts 6.
 
 ## 8. Diario delle sessioni
-- **2026-10-04 (1)**: strategia S2, bussola a 9 stati, workflow finetuning.ai; 17 brani generati, 10 loop scelti; script di analisi/post-produzione, pagina di ascolto, second brain.
-- **2026-10-04 (2)**: 6 effetti urbani (11 varianti) analizzati, puliti e in pagina con alternanza casuale e mix calcolato; dissolvenza 3 s. Scoperto che i dati coprono 246 giorni (non una settimana) e che LCZ copre solo il centro; scaricato il meteo e scritto il prototipo `compass.py` (stagioni → righe della bussola).
-- **2026-10-04 (3)**: mix approvato "per ora". Migrazione a **Vite** con librerie e dati locali (nessun CDN), pubblicazione via GitHub Actions su Pages, token Mapbox di sviluppo solo in `.env.local`. Corretti PapaParse (worker) e Litepicker (import); verificato dall'utente che la piattaforma funziona. Scelta (a) per la settimana tipo.
-- **2026-10-04 (4)**: store centrale e modulo grafici fatti (corretti 2 difetti di timeline/calendario). Mapbox sostituito da **MapLibre + PMTiles locali** (base OSM/Protomaps, edifici 3D **TUM GlobalBuildingAtlas**, terreno Mapterhorn): niente più token. Nuova regola **solo Comune di Ascoli**: dati tagliati sul confine (affollamento 87, spot 1.186, LCZ 1.548). Migrazione provata dall’utente; corretta la colorazione dei pallini dai grafici a ciambella.
+- **2026-10-04 (1–4)**: strategia S2, bussola a 9 stati, loop ed effetti scelti, pagina di ascolto, meteo 246 giorni; Vite tutto locale e Pages; store centrale e modulo grafici; MapLibre + PMTiles (edifici TUM), niente token; regola **solo Comune di Ascoli**.
 - **2026-10-04 (5)**: LCZ dal progetto QGIS di Simone (12.496 celle da 30 m, popup con tutti i parametri). Bussola **per cella** in JS, verificata contro Python, con isteresi e mirino; **motore audio** con interruttore. Su richiesta dell'utente, i coefficienti inventati sostituiti dall'**UTCI** (Oke, RayMan, Bröde); verde tenuto come "bellezza".
+- **2026-10-04 (6)**: puntini delle persone: di notte il 95% va a casa (edifici TUM pesati per volume); identità stabili, spostamenti animati dentro e fra quartieri, entrata/uscita dalla città con dissolvenza; Play rallentato. Synthetic Crowded Points corretti (maestri fissi, chiusi = 0).
+- **2026-10-05 (7)**: selettore "Color dots by" (genere, età, nazionalità, visite): tutti i quartieri colorati con le proprie percentuali reali, stabile col Play; il clic sui grafici accende il pulsante.
+- **2026-10-05 (8)**: la "gente in giro" non finisce più su fiume e prati: solo celle LCZ costruite o pavimentate.
 
 ## 9. Prompt per la prossima sessione
 ```

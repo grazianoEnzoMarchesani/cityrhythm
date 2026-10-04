@@ -79,7 +79,7 @@ def clima(F, *, ta, rh, cloud_pct, wind_kmh, dni, dir_h, dif_h, sun, svf, albedo
 
 
 def comfort(utci, F):
-    """+1 senza stress termico (9-26 °C UTCI), -1 dove inizia lo stress forte (32 °C caldo, -13 °C freddo)."""
+    """+1 senza stress termico (9-26 °C UTCI), -1 a 30 °C (scelta espressiva, lo stress forte ufficiale parte da 32) e a -13 °C (inizio stress forte da freddo)."""
     c0, c1 = F["utci_nessuno_stress"]
     hot, cold = F["utci_stress_forte_caldo"], F["utci_stress_forte_freddo"]
     c = np.where(utci > c1, 1 - 2 * (utci - c1) / (hot - c1),

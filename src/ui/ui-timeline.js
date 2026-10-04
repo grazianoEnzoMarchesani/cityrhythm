@@ -4,13 +4,14 @@ import {
     updateCrowdedPointsLayerStyle,
     getCrowdednessColumnName,
     addSyntheticCrowdedPointsLayer,
-    removeSyntheticCrowdedPointsLayer
+    removeSyntheticCrowdedPointsLayer,
+    setPresenceMoveDuration
 } from '../map/map-layers.js';
 import { refreshKmlChartsForTimeline } from './ui-sidebar.js';
 import { getCrowdedData } from '../data/data-loader.js';
 import { getLayerToggleState } from './ui-layer-controls.js';
 import { getMapInstance } from '../map/map-setup.js';
-import { DEBUG_MODE } from '../data/config.js';
+import { DEBUG_MODE, PRESENCE_MOVE_MS } from '../data/config.js';
 import { time } from '../state/store.js';
 
 const timeSlider = document.getElementById('timeSlider');
@@ -26,7 +27,8 @@ let isPlaying = false;
 let isForward = true;
 let animationFrameId = null;
 let updateInProgress = false;
-const targetFrameRate = 5;
+// Pausa fra un'ora e l'altra col Play: lo spostamento dei puntini più un attimo fermi a guardare
+const PLAY_STEP_MS = PRESENCE_MOVE_MS + 300;
 
 // --- FUNZIONI ESPORTATE ---
 export function setupTimelineControls() {
@@ -138,7 +140,7 @@ async function stepAnimation() {
         if (isPlaying) {
             animationFrameId = setTimeout(() => {
                 requestAnimationFrame(stepAnimation);
-            }, 1000 / targetFrameRate);
+            }, PLAY_STEP_MS);
         }
     }
 }
@@ -146,6 +148,8 @@ async function stepAnimation() {
 function togglePlay() {
     isPlaying = !isPlaying;
     updatePlayButton();
+    // Col Play i puntini devono arrivare prima del passo successivo
+    setPresenceMoveDuration(isPlaying ? 0.9 * PLAY_STEP_MS : Infinity);
     if (isPlaying) {
         if (animationFrameId) {
             clearTimeout(animationFrameId);
