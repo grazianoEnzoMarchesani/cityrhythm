@@ -1,4 +1,4 @@
-import * as echarts from 'echarts';
+import { createChart } from '../charts/charts.js';
 import Papa from 'papaparse';
 import { hourToLabel, getDateTimeFromIndex, calculateAveragePresenceForFeature } from '../utils/utils.js';
 import { getPoiData } from '../data/data-loader.js';
@@ -697,7 +697,7 @@ function createAndRegisterChart(domId, options, errorMessage = "Data not availab
     }
 
     try {
-        const chart = echarts.init(chartDom);
+        const chart = createChart(chartDom);
         options.animation = true;
         options.animationEasing = 'cubicInOut';
         

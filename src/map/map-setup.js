@@ -1,5 +1,6 @@
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import { viewport } from '../state/store.js';
 import { INITIAL_CENTER, INITIAL_ZOOM, MAP_STYLE, KML_SOURCE_ID, MAPBOX_TOKEN } from '../data/config.js';
 
 let mapInstance = null;
@@ -25,6 +26,17 @@ export function initializeMap(containerId) {
 
         // MODIFICATO: Usato mapboxgl
         mapInstance.addControl(new mapboxgl.NavigationControl());
+
+        const publishViewport = () => {
+            const b = mapInstance.getBounds();
+            viewport.set({
+                bounds: [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()],
+                zoom: mapInstance.getZoom(),
+                center: mapInstance.getCenter().toArray()
+            });
+        };
+        mapInstance.on('load', publishViewport);
+        mapInstance.on('moveend', publishViewport);
 
         mapInstance.on('error', (e) => {
             console.error("Mapbox Error:", e);
