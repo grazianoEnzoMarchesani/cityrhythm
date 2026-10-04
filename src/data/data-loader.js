@@ -1,3 +1,5 @@
+import Papa from 'papaparse';
+import { kml } from '@tmcw/togeojson';
 // data-loader.js
 import { POI_CSV_URL, KML_URL, CROWDED_CSV_URL, SPOTS_CSV_URL, LCZ_VITALITY_CSV_URL, DEBUG_MODE } from './config.js';
 import { updateStatusMessage } from '../ui/ui-sidebar.js';
@@ -28,7 +30,6 @@ export function loadPoiData() {
             header: true,
             dynamicTyping: true, // Automatically converts numbers, booleans
             skipEmptyLines: true,
-            worker: true,
             complete: results => {
                  if (DEBUG_MODE) {
                      console.log("POI CSV parsing completed:", results);
@@ -143,7 +144,6 @@ export function loadCrowdedData() {
             header: true,
             dynamicTyping: true, // Let PapaParse handle basic types (numbers, booleans)
             skipEmptyLines: true,
-            worker: true,
             complete: results => {
                 // Manual trim of header fields and data keys (to replace transformHeader)
                 if (results.meta?.fields && results.data) {
@@ -246,29 +246,13 @@ export function getCrowdedData() {
 
 /**
  * Loads KML data, converts it to GeoJSON, enriches it with POI presence info,
- * and stores the full enriched GeoJSON. Dynamically loads toGeoJSON library if needed.
+ * and stores the full enriched GeoJSON.
  * @returns {Promise<object|null>} A promise that resolves with the enriched GeoJSON FeatureCollection
  *                                   or null if no features were found or an error occurred.
  */
 export function loadKMLLayer() {
     return new Promise(async (resolve, reject) => {
         updateStatusMessage("Loading KML...");
-        if (typeof toGeoJSON === 'undefined') {
-            if (DEBUG_MODE) {
-                console.log("Loading toGeoJSON library...");
-            }
-            try {
-                await loadScript('https://unpkg.com/@mapbox/togeojson@0.16.0/togeojson.js');
-                if (DEBUG_MODE) {
-                    console.log("toGeoJSON library loaded.");
-                }
-            } catch (error) {
-                console.error("Error loading toGeoJSON:", error);
-                updateStatusMessage("Error: cannot load KML library.", true);
-                reject(new Error("Error loading toGeoJSON")); return;
-            }
-        }
-
         try {
             if (DEBUG_MODE) {
                 console.log("Fetching KML from:", KML_URL);
@@ -289,7 +273,7 @@ export function loadKMLLayer() {
                     throw new Error(`KML XML parsing error: ${shortErrorMsg}`);
                 }
             }
-            const geoJson = toGeoJSON.kml(kmlDom);
+            const geoJson = kml(kmlDom);
             if (DEBUG_MODE) {
                 console.log("KML conversion completed.");
             }
@@ -324,22 +308,6 @@ export function loadKMLLayer() {
             }
             reject(error);
         }
-    });
-}
-
-/**
- * Helper function to load a script dynamically.
- * @param {string} src - The URL of the script to load.
- * @returns {Promise<void>} A promise that resolves when the script loads or rejects on error.
- */
-function loadScript(src) {
-    return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = src;
-        script.async = true;
-        script.onload = resolve;
-        script.onerror = reject;
-        document.head.appendChild(script);
     });
 }
 
@@ -419,7 +387,6 @@ export function loadSpotMapperData() {
             header: true,
             dynamicTyping: true, // Let PapaParse handle basic types (numbers, booleans)
             skipEmptyLines: true,
-            worker: true,
             complete: results => {
                 // Manual trim of header fields and data keys (to replace transformHeader)
                 if (results.meta?.fields && results.data) {
@@ -546,7 +513,6 @@ export function loadLczVitalityData() {
             header: true,
             delimiter: ';', // CSV uses semicolon as delimiter
             skipEmptyLines: true,
-            worker: true,
             complete: results => {
                 // Manual trim of header fields and data keys
                 if (results.meta?.fields && results.data) {

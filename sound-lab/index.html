@@ -22,6 +22,12 @@
   .btn { padding:10px 18px; border-radius:999px; border:1px solid #444; background:#222; color:var(--fg); font:inherit; cursor:pointer; }
   .btn.on { border-color:var(--on); color:var(--on); }
   #status { color:var(--muted); font-size:13px; min-height:1.4em; }
+  h2 { margin:8px 0 0; font-size:16px; font-weight:600; }
+  .sfx { display:grid; grid-template-columns:auto 1fr auto; gap:10px 12px; align-items:center; width:min(560px,100%); }
+  .sfx label { font-size:14px; }
+  .sfx small { color:var(--muted); font-size:11px; display:block; }
+  .sfx input { width:100%; }
+  .sfx output { color:var(--muted); font-size:12px; min-width:3.5em; text-align:right; }
 </style>
 </head>
 <body>
@@ -30,7 +36,7 @@
 <div class="row">
   <button class="btn" id="start">Attiva audio</button>
   <button class="btn" id="night" disabled>Notte</button>
-  <label>Dissolvenza <input type="range" id="fade" min="1" max="12" value="6"> <span id="fadeVal">6</span> s</label>
+  <label>Dissolvenza <input type="range" id="fade" min="1" max="12" value="3"> <span id="fadeVal">3</span> s</label>
 </div>
 <div class="wrap">
   <div class="ylab">opprimente → sereno</div>
@@ -38,6 +44,10 @@
   <div class="xlab">poca gente → folla</div>
 </div>
 <div id="status">Audio spento</div>
+<h2>Suoni urbani</h2>
+<p>Livello sovrapposto alla musica. Ogni suono alterna le sue varianti in dissolvenza, con piccole variazioni di velocità, per non sembrare un disco rotto. Con il mix calcolato, i cursori si muovono da soli quando cambi stato (regola in <code>mix.json</code>); puoi comunque ritoccarli a mano.</p>
+<div class="row"><label><input type="checkbox" id="auto" checked> Mix calcolato per stato</label></div>
+<div class="sfx" id="sfx"></div>
 <script>
 const GRID = [
   ["rifugio","Rifugio"],["passeggiata","Passeggiata"],["festa","Festa"],
@@ -86,10 +96,108 @@ document.getElementById('start').onclick = async (e) => {
       console.error(id, err);
     }
   }
+  await loadSfx(failed);
   status.textContent = failed.length
     ? `Errore su: ${failed.join(', ')}`
-    : `Tutti i brani caricati. In ascolto: ${current}`;
+    : `Brani e suoni caricati. In ascolto: ${current}`;
 };
+
+// --- Suoni urbani: ogni gruppo alterna a caso le sue varianti, in dissolvenza incrociata ---
+const SFX = [
+  ["folla-leggera","Folla leggera","persone"],["folla-densa","Folla densa","persone"],
+  ["traffico","Traffico","città"],["parco","Parco","verde"],
+  ["cicale","Cicale","calore"],["grilli","Grilli","notte"],
+];
+const sfxBox = document.getElementById('sfx');
+const sfx = {};
+for (const [id, label, hint] of SFX) {
+  sfxBox.insertAdjacentHTML('beforeend',
+    `<label for="v-${id}">${label}<small>${hint}</small></label>
+     <input type="range" id="v-${id}" min="0" max="100" value="0" disabled>
+     <output id="o-${id}">—</output>`);
+  const input = document.getElementById(`v-${id}`);
+  input.oninput = () => {
+    document.getElementById(`o-${id}`).textContent = `${input.value}%`;
+    if (!sfx[id]) return;
+    const g = sfx[id].gain.gain, t = ctx.currentTime;
+    g.cancelScheduledValues(t); g.setValueAtTime(g.value, t);
+    g.linearRampToValueAtTime((input.value / 100) ** 2, t + 0.3);
+  };
+}
+
+// Mix calcolato: volume = musica - sotto_musica_db + 20*log10(presenza), vedi mix.json.
+// Il cursore mostra la radice del guadagno, perché la sua scala è quadratica.
+let mix = null;
+function sceneGain(id, presence) {
+  if (!mix || !presence) return 0;
+  const db = mix.music_lufs - mix.sotto_musica_db[id] + 20 * Math.log10(presence) - mix.sfx_file_lufs;
+  return 10 ** (db / 20);
+}
+function applyScene(state, d) {
+  const scene = (mix && mix.scene[state]) || {};
+  const t = ctx.currentTime;
+  for (const [id] of SFX) {
+    const gain = sceneGain(id, scene[id]);
+    const input = document.getElementById(`v-${id}`);
+    input.value = Math.round(Math.sqrt(gain) * 100);
+    document.getElementById(`o-${id}`).textContent = `${input.value}%`;
+    if (!sfx[id]) continue;
+    const g = sfx[id].gain.gain;
+    g.cancelScheduledValues(t); g.setValueAtTime(g.value, t);
+    g.linearRampToValueAtTime(gain, t + d);
+  }
+}
+
+async function loadSfx(failed) {
+  try { mix = await (await fetch(`mix.json?v=${Date.now()}`, { cache: 'no-store' })).json(); }
+  catch (err) { failed.push(`mix.json (${err.message})`); }
+  let manifest;
+  try { manifest = await (await fetch(`sfx/manifest.json?v=${Date.now()}`, { cache: 'no-store' })).json(); }
+  catch (err) { failed.push(`manifest suoni (${err.message})`); return; }
+  for (const [id] of SFX) {
+    const buffers = [];
+    for (const v of manifest[id] || []) {
+      status.textContent = `Caricamento suono: ${v.file}…`;
+      try {
+        const res = await fetch(`sfx/${v.file}?v=${Date.now()}`, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        buffers.push(await ctx.decodeAudioData(await res.arrayBuffer()));
+      } catch (err) { failed.push(`${v.file} (${err.message})`); }
+    }
+    if (!buffers.length) continue;
+    const gain = ctx.createGain(); gain.gain.value = 0; gain.connect(ctx.destination);
+    sfx[id] = { gain, buffers, last: -1 };
+    const input = document.getElementById(`v-${id}`);
+    input.disabled = false;
+    document.getElementById(`o-${id}`).textContent = `${input.value}%`;
+    document.querySelector(`label[for="v-${id}"] small`).textContent += ` · ${buffers.length} variant${buffers.length > 1 ? 'i' : 'e'}`;
+    playNext(id, ctx.currentTime + 0.1);
+  }
+  if (document.getElementById('auto').checked && current) applyScene(current, +fade.value);
+}
+
+// Mette in coda la clip successiva: sceglie una variante diversa dalla precedente (se c'è),
+// cambia di poco la velocità e la sovrappone alla fine di quella in corso.
+function playNext(id, when) {
+  const s = sfx[id];
+  let i = Math.floor(Math.random() * s.buffers.length);
+  if (s.buffers.length > 1 && i === s.last) i = (i + 1) % s.buffers.length;
+  s.last = i;
+  const buf = s.buffers[i];
+  const rate = 0.96 + Math.random() * 0.08;
+  const dur = buf.duration / rate;
+  const x = Math.min(1.2, dur * 0.3);
+  const src = ctx.createBufferSource(); src.buffer = buf; src.playbackRate.value = rate;
+  const env = ctx.createGain(); src.connect(env); env.connect(s.gain);
+  const N = 64, up = new Float32Array(N), down = new Float32Array(N);
+  for (let k = 0; k < N; k++) { up[k] = Math.sin(k / (N - 1) * Math.PI / 2); down[k] = Math.cos(k / (N - 1) * Math.PI / 2); }
+  env.gain.value = 0;
+  env.gain.setValueCurveAtTime(up, when, x);
+  env.gain.setValueCurveAtTime(down, when + dur - x, x);
+  src.start(when); src.stop(when + dur);
+  const next = when + dur - x;
+  setTimeout(() => playNext(id, next), Math.max(0, (next - ctx.currentTime - 2) * 1000));
+}
 
 function go(id) {
   if (id === current || !voices[id]) return;
@@ -100,6 +208,7 @@ function go(id) {
     g.linearRampToValueAtTime(vid === id ? 1 : 0, t + d);
   }
   current = id;
+  if (document.getElementById('auto').checked) applyScene(id, d);
   document.querySelectorAll('button.cell').forEach(b => b.classList.toggle('on', b.dataset.id === id));
   document.getElementById('night').classList.toggle('on', id === 'notte');
   status.textContent = `In ascolto: ${id} (loop di ${voices[id].dur.toFixed(0)} s)`;

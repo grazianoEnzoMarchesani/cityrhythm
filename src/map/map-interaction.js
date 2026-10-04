@@ -1,3 +1,4 @@
+import * as turf from '@turf/turf';
 // map-interaction.js
 import { getMapInstance } from './map-setup.js';
 // MODIFICATO: Assicurati che KML_SOURCE_ID sia importato se usato nel fallback ID

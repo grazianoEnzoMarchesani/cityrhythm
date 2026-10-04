@@ -1,3 +1,6 @@
+import * as d3 from 'd3';
+import cloud from 'd3-cloud';
+import * as turf from '@turf/turf';
 // tag-cloud.js
 import { getCrowdedData, getFullKmlGeoJson, getSpotMapperData } from '../data/data-loader.js';
 import { getCrowdednessColumnName, generateSyntheticCrowdedPointsGeoJson } from '../map/map-layers.js';
@@ -44,7 +47,7 @@ function extractTagsFromAttractorMode(columnName, kmlFeatureId = null) {
     if (kmlFeatureId) {
         const kmlGeoJson = getFullKmlGeoJson();
         const selectedFeature = kmlGeoJson?.features?.find(f => f.id === kmlFeatureId);
-        if (selectedFeature && window.turf && window.turf.area(selectedFeature) > 0) {
+        if (selectedFeature && turf.area(selectedFeature) > 0) {
             records = records.filter(record => {
                 const lon = record.longitude ?? record.Longitudine;
                 const lat = record.latitude ?? record.Latitudine;
@@ -157,7 +160,7 @@ function createWordCloud(container, words, width, height) {
             .range(['rgb(180, 180, 180)', '#000']);
         
         // Create the word cloud layout
-        const layout = d3.layout.cloud()
+        const layout = cloud()
             .size([width, height])
             .words(topWords.map(d => ({ 
                 text: d.text, 

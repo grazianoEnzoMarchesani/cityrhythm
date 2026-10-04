@@ -1,11 +1,18 @@
-// MAPBOX_TOKEN richiesto per Mapbox GL JS
-export const MAPBOX_TOKEN = 'pk.eyJ1IjoiaW9ub25ob3Byb2JsZW1pIiwiYSI6ImNtYnFtb2dhazAxMmUyanM3bzEzdDc4bXQifQ.rmY4WI_G8YqBMpuuIsDV-A';
+// MAPBOX_TOKEN richiesto per Mapbox GL JS.
+// Quello pubblico e' limitato agli URL del sito (cityrhythm.it ecc.) e non funziona su localhost:
+// in sviluppo si usa VITE_MAPBOX_TOKEN da .env.local (non versionato, vedi .env.example).
+const PUBLIC_MAPBOX_TOKEN = 'pk.eyJ1IjoiaW9ub25ob3Byb2JsZW1pIiwiYSI6ImNtYnFtb2dhazAxMmUyanM3bzEzdDc4bXQifQ.rmY4WI_G8YqBMpuuIsDV-A';
+// Il token di sviluppo e' usato solo da `npm run dev`: la build non lo include mai.
+export const MAPBOX_TOKEN = (import.meta.env.DEV && import.meta.env.VITE_MAPBOX_TOKEN) || PUBLIC_MAPBOX_TOKEN;
 
-export const KML_URL = 'https://gist.githubusercontent.com/grazianoEnzoMarchesani/aad5e543d62ffd2478b0152348f39e0d/raw/305653b7b40f5858e0d8f83e11a99e921ac500a8/cityrhythm_blimp_areas.kml';
-export const POI_CSV_URL = 'https://gist.githubusercontent.com/grazianoEnzoMarchesani/0ac7cac113479e704e2af0865e7f516d/raw/adb569636698d58b16a610dbc82f1b4936f9b2ad/cityrhythm_blimp.csv';
-export const CROWDED_CSV_URL = 'https://gist.githubusercontent.com/grazianoEnzoMarchesani/d4574acad4dabf1e4b83fe2d68a59e91/raw/90bd98a5ff27ba9d968028ae374211f90025d284/cityrhythm_crowded_data.csv';
-export const SPOTS_CSV_URL = 'https://gist.githubusercontent.com/grazianoEnzoMarchesani/c2813df8436ad6ebb91327d5e517f1ae/raw/296130747c07c88cb834d7860a1ceaee43502281/cityrhythm_spotMapper.csv';
-export const LCZ_VITALITY_CSV_URL = 'https://gist.githubusercontent.com/grazianoEnzoMarchesani/bc2ad1bea5689e0195296daa57f9b893/raw/0ecce2a26b35c561e110a135638f4f5b84c8acd8/lcz_vitality.csv';
+// Dati serviti dal sito stesso (public/data/), non da servizi esterni
+const DATA_BASE = import.meta.env.BASE_URL + 'data/';
+
+export const KML_URL = DATA_BASE + 'cityrhythm_blimp_areas.kml';
+export const POI_CSV_URL = DATA_BASE + 'cityrhythm_blimp.csv';
+export const CROWDED_CSV_URL = DATA_BASE + 'cityrhythm_crowded_data.csv';
+export const SPOTS_CSV_URL = DATA_BASE + 'cityrhythm_spotMapper.csv';
+export const LCZ_VITALITY_CSV_URL = DATA_BASE + 'lcz_vitality.csv';
 
 export const INITIAL_CENTER = [12.5674, 41.8719];
 export const INITIAL_ZOOM = 5;

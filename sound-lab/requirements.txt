@@ -1,3 +1,5 @@
 librosa
 pyloudnorm
 soundfile
+pandas
+shapely

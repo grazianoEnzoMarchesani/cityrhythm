@@ -1,4 +1,6 @@
 // main.js
+import { Litepicker } from 'litepicker';
+import 'litepicker/dist/css/litepicker.css';
 import { initializeMap } from './src/map/map-setup.js';
 import {
     loadPoiData, loadKMLLayer, loadCrowdedData, loadSpotMapperData, loadLczVitalityData,
@@ -38,7 +40,7 @@ function setupCalendarDateRange() {
     const resetBtn = document.getElementById('calendar-reset-btn');
 
     // Inizializza Litepicker
-    const picker = new window.Litepicker({
+    const picker = new Litepicker({
         element: rangeInput,
         singleMode: false,
         format: 'YYYY-MM-DD',
@@ -138,16 +140,6 @@ async function startApp() {
     setupLayerControls();
 
     try {
-        // Aspetta che mapboxgl sia disponibile
-        if (typeof window.mapboxgl === 'undefined') {
-            await new Promise((resolve) => {
-                const check = () => {
-                    if (typeof window.mapboxgl !== 'undefined') resolve();
-                    else setTimeout(check, 50);
-                };
-                check();
-            });
-        }
         const map = initializeMap(mapContainerId);
 
         map.on('load', async () => {
