@@ -130,7 +130,7 @@ Giudizio dell'utente: i brani 2025 suonano "parenti"; la bussola di prova piace;
 
 ## 7. Prossimi passi
 0. **A mano (utente)**: cancellare `.env.local`, `prova-mappa.html`, `prova-mappa.js`; eliminare **entrambi** i token su Mapbox.
-1. **Rifare le LCZ per tutto il Comune**: oggi coprono solo il centro storico. Valutare la fonte (mappa LCZ europea WUDAPT a 100 m già pronta, oppure calcolo nostro di SVF/verde/calore da edifici TUM + verde OSM/Copernicus), controllarne licenza e qualità, ritagliarla sul Comune. Deve dare i campi usati da bussola e mappa (LCZ, UHI risk, PER_PC, SVF): sostituire `lcz_vitality.csv` (o affiancarlo), aggiornare il livello LCZ in mappa, rigenerare `aree_ascoli.json` con `compass.py` e ricontrollare la distribuzione degli stati.
+1. **Rifare le LCZ per tutto il Comune**: oggi coprono solo il centro storico. **Fonte: un progetto QGIS fornito dall'utente** (indicherà lui il percorso): esplorarne layer e campi, ritagliare sul Comune. Deve dare i campi usati da bussola e mappa (LCZ, UHI risk, PER_PC, SVF): sostituire `lcz_vitality.csv` (o affiancarlo), aggiornare il livello LCZ in mappa, rigenerare `aree_ascoli.json` con `compass.py` e ricontrollare la distribuzione degli stati.
 2. **Bussola in JS** (da `compass.py`): energia/piacevolezza sull'area inquadrata (`viewport` dello store, quartieri visibili pesati per la frazione visibile), SunCalc (già installato), meteo da `public/`, isteresi. Verificarla contro `compass.py` su ore campione.
 3. **Motore audio** con interruttore "Attiva mappa sonora" (`audioEnabled`): loop ed effetti copiati in `public/audio/`, dissolvenza 3 s, mix da `mix.json`, avviso per la settimana tipo. Poi ascolto sopra la mappa.
 4. **Grafica della mappa MapLibre** (più avanti): stile nuovo secondo le indicazioni dell'utente, al posto del "light" provvisorio.
@@ -149,12 +149,14 @@ Leggi second-brain/SECOND_BRAIN.md e riassumimi in 3 righe dove siamo.
 Ricorda la regola: solo il Comune di Ascoli Piceno.
 
 Obiettivo: punto 1 dei "Prossimi passi", le Local Climate Zone per tutto il Comune.
-1. Proponimi 2-3 fonti possibili (es. mappa LCZ europea WUDAPT, oppure calcolo
-   nostro da edifici TUM + verde), con licenza, risoluzione, peso e pro/contro,
-   e consigliamene una. Non scaricare niente prima del mio ok.
-2. Dopo il mio ok: ritaglio sul confine del Comune, stessi campi usati oggi
-   (LCZ, UHI risk, PER_PC, SVF), livello LCZ aggiornato in mappa, aree_ascoli.json
-   rigenerato con compass.py e confronto della distribuzione degli stati prima/dopo.
+Le informazioni le prendiamo da un progetto QGIS che ti fornisco io (ti dico dove sta).
+1. Esplora il progetto QGIS: elenca layer, campi, sistema di riferimento,
+   copertura sul Comune e peso, e dimmi quali dati servono a bussola e mappa
+   (LCZ, UHI risk, PER_PC, SVF) e cosa manca. Non modificare il progetto.
+2. Dopo il mio ok: estrai i dati ritagliati sul confine del Comune, sostituisci
+   lcz_vitality.csv mantenendo i campi usati, aggiorna il livello LCZ in mappa,
+   rigenera aree_ascoli.json con compass.py e confronta la distribuzione degli
+   stati prima/dopo.
 
 Poi, se c'è tempo, punto 2: la bussola in JS collegata allo store.
 
