@@ -153,7 +153,7 @@ Giudizio dell'utente: i brani 2025 suonano "parenti"; la bussola di prova piace;
 - **Piattaforma**: `npm install && npm run dev` dalla radice. Nessun token né `.env.local`.
 
 ## 7. Prossimi passi
-0. **A mano (utente)**: cancellare `.env.local`, `prova-mappa.html`, `prova-mappa.js`; eliminare **entrambi** i token su Mapbox.
+0. **A mano (utente)**: eliminare **entrambi** i token sul sito di Mapbox (file locali già cancellati; il token pubblico resta nella cronologia del repository, che è pubblico: va revocato).
 1. Fatto: commit `7ee7a36` su `Music` (LCZ, bussola UTCI, motore audio).
 2. **Ascolto sopra la mappa**: luglio alle 13 nel Centro (UTCI ~35, Fatica/Calca), alle 9/21 (Passeggiata/Festa), dicembre a mezzogiorno (sereno), mezzanotte (Notte + grilli), fuori dalle celle (silenzio). Giudicare volumi, rapidità dei cambi (isteresi 2 s), scelta dei brani.
 3. **Suoni urbani dai dati**: presenza degli effetti da persone (X), verde, UTCI e notte invece che dalle scene fisse.
