@@ -11,7 +11,7 @@ import {
     LCZ_VITALITY_SOURCE_ID, LCZ_VITALITY_LAYER_ID,
     ATTRACTION_MIN_CROWDEDNESS,
     MAP_DATA_BASE, NIGHT_HOME_SHARE, NIGHT_GO_HOME_HOURS, NIGHT_WAKE_UP_HOURS, PRESENCE_MOVE_MS, PRESENCE_EXIT_METERS,
-    MAP_STYLES,
+    MAP_STYLES, LCZ_DATA_VIEWS,
     DEBUG_MODE // <-- aggiunto
 } from '../data/config.js';
 import { calculateAveragePresenceForFeature, generatePointsForFeature, perlin2d, hash01 } from '../utils/utils.js';
@@ -1466,10 +1466,8 @@ export function addLczVitalityLayer(initialVisibility = true, visualizationType 
         });
 
         // Determina i colori in base al tipo di visualizzazione
-        const fillColor = visualizationType === 'LCZ' ? 
-            MAP_STYLES.LCZ_VITALITY.LCZ_COLORS : 
-            MAP_STYLES.LCZ_VITALITY.UHI_COLORS;
-            
+        const fillColor = getLczFillColor(visualizationType);
+
         if (DEBUG_MODE) {
             console.log("Fill color expression type:", visualizationType);
             console.log("Fill color expression length:", fillColor?.length);
@@ -1560,6 +1558,42 @@ const LCZ_PARAMS = [
     ['industry_heat', 'Calore industriale', 'W/m²']
 ];
 
+/**
+ * Colore delle celle per una vista: 'LCZ', 'UHI' o un campo di LCZ_DATA_VIEWS (scala continua).
+ * @param {string} type
+ */
+function getLczFillColor(type) {
+    if (type === 'LCZ') return MAP_STYLES.LCZ_VITALITY.LCZ_COLORS;
+    const view = LCZ_DATA_VIEWS[type];
+    if (!view) return MAP_STYLES.LCZ_VITALITY.UHI_COLORS;
+    const value = ['get', type];
+    const hasValue = ['==', ['typeof', value], 'number'];
+    return ['case',
+        view.missing !== undefined ? ['all', hasValue, ['!=', value, view.missing]] : hasValue,
+        ['interpolate', ['linear'], value, ...view.stops.flatMap(([v, c]) => [v, ['to-color', c]])],
+        'rgba(0,0,0,0)'
+    ];
+}
+
+/**
+ * Legenda della vista: categorie (LCZ, UHI) o scala continua con unità e spiegazione.
+ * @param {string} type
+ * @returns {{kind: 'categories', items: Array<{color: string, label: string}>} | {kind: 'ramp', stops: Array, unit: string, note: string}}
+ */
+export function getLczLegend(type) {
+    const view = LCZ_DATA_VIEWS[type];
+    if (view) return { kind: 'ramp', stops: view.stops, unit: view.unit, note: view.note };
+    // Le espressioni 'case' hanno coppie [condizione, colore]: la condizione è ['==', ['get', campo], valore]
+    const expr = type === 'LCZ' ? MAP_STYLES.LCZ_VITALITY.LCZ_COLORS : MAP_STYLES.LCZ_VITALITY.UHI_COLORS;
+    const items = [];
+    for (let i = 1; i + 1 < expr.length; i += 2) {
+        const key = expr[i][2];
+        if (key === 'UNKNOWN') continue;
+        items.push({ color: expr[i + 1], label: type === 'LCZ' ? `${key} ${LCZ_NAMES[key]}` : UHI_NAMES[key] ?? key });
+    }
+    return { kind: 'categories', items };
+}
+
 let lczPopupBound = false;
 
 /** Popup al clic su una cella LCZ: classe, rischio e parametri con cui è stata calcolata. */
@@ -1600,9 +1634,7 @@ export function updateLczVitalityVisualization(visualizationType) {
     }
 
     try {
-        const fillColor = visualizationType === 'LCZ' ? 
-            MAP_STYLES.LCZ_VITALITY.LCZ_COLORS : 
-            MAP_STYLES.LCZ_VITALITY.UHI_COLORS;
+        const fillColor = getLczFillColor(visualizationType);
 
         map.setPaintProperty(LCZ_VITALITY_LAYER_ID, 'fill-color', fillColor);
         currentLczVisualizationType = visualizationType;
@@ -1610,8 +1642,8 @@ export function updateLczVitalityVisualization(visualizationType) {
         // Se stiamo passando a UHI e la visualizzazione dinamica è attiva, aggiorna
         if (visualizationType === 'UHI' && uhiDynamicVisibilityEnabled) {
             updateUhiDynamicVisualization();
-        } else if (visualizationType === 'LCZ') {
-            // Se stiamo passando a LCZ, ripristina l'opacità normale
+        } else {
+            // Fuori da UHI dinamico: opacità normale
             setLczLayerOpacity(currentLczOpacity);
         }
 

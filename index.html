@@ -54,14 +54,35 @@
               </div>
               <!-- NEW: LCZ visualization options -->
               <div class="lcz-visualization-selector" id="lcz-visualization-selector" style="display: none; margin-left: 20px;">
-                <div class="radio-group">
-                  <input type="radio" id="lcz-type-lcz" name="lcz-visualization" value="LCZ" checked>
-                  <label for="lcz-type-lcz">LCZ Types</label>
-                </div>
-                <div class="radio-group">
-                  <input type="radio" id="lcz-type-uhi" name="lcz-visualization" value="UHI">
-                  <label for="lcz-type-uhi">UHI Risk</label>
-                </div>
+                <label for="lcz-visualization-select" class="lcz-view-title">Show</label>
+                <select id="lcz-visualization-select" class="lcz-view-select">
+                  <optgroup label="Classification">
+                    <option value="LCZ" selected>LCZ types</option>
+                    <option value="UHI">UHI risk</option>
+                    <option value="lcz_matches">Classification agreement</option>
+                  </optgroup>
+                  <optgroup label="Shape of the city">
+                    <option value="svf_mean">Sky view factor</option>
+                    <option value="aspect_ratio">Street canyon (H/W)</option>
+                    <option value="z_h">Height of buildings and trees</option>
+                  </optgroup>
+                  <optgroup label="Ground cover">
+                    <option value="building_frac">Built surface</option>
+                    <option value="impervious_frac">Sealed surface</option>
+                    <option value="pervious_frac">Permeable surface</option>
+                  </optgroup>
+                  <optgroup label="Heat">
+                    <option value="albedo">Albedo</option>
+                    <option value="admittance">Thermal admittance</option>
+                    <option value="anthro_heat">Human-made heat</option>
+                    <option value="industry_heat">Industrial heat</option>
+                  </optgroup>
+                  <optgroup label="Wind">
+                    <option value="terrain_rough">Roughness class</option>
+                    <option value="z0_value">Roughness length z0</option>
+                  </optgroup>
+                </select>
+                <div id="lcz-legend" class="lcz-legend"></div>
                 <!-- NEW: LCZ Opacity Control -->
                 <div class="opacity-control" style="margin-top: 10px;">
                   <label for="lcz-opacity-slider" style="font-size: 12px;">LCZ Opacity:</label>
@@ -69,7 +90,7 @@
                   <span id="lcz-opacity-value" style="font-size: 11px;">70%</span>
                 </div>
                 <!-- NEW: UHI Dynamic Visibility Control -->
-                <div class="uhi-dynamic-control" style="margin-top: 10px;">
+                <div class="uhi-dynamic-control" id="uhi-dynamic-control" style="margin-top: 10px; display: none;">
                   <div class="checkbox-group">
                     <input type="checkbox" id="uhi-dynamic-visibility" name="uhi-dynamic">
                     <label for="uhi-dynamic-visibility" style="font-size: 12px;">UHI Dynamic Visibility</label>
