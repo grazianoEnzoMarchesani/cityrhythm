@@ -1,0 +1,102 @@
+{
+  "rifugio": {
+    "source": "rifugio 2025.wav",
+    "loop_start_s": 0.91,
+    "loop_end_s": 83.17,
+    "duration_s": 82.27,
+    "seam_similarity": 1.986,
+    "lufs": -18.0,
+    "gain_db": -3.0,
+    "mp3_kb": 1608
+  },
+  "passeggiata": {
+    "source": "passeggiata 2025.wav",
+    "loop_start_s": 0.53,
+    "loop_end_s": 82.87,
+    "duration_s": 82.34,
+    "seam_similarity": 2.005,
+    "lufs": -18.0,
+    "gain_db": -4.1,
+    "mp3_kb": 1609
+  },
+  "festa": {
+    "source": "festa 2025.wav",
+    "loop_start_s": 17.25,
+    "loop_end_s": 84.03,
+    "duration_s": 66.78,
+    "seam_similarity": 2.035,
+    "lufs": -18.0,
+    "gain_db": -1.7,
+    "mp3_kb": 1305
+  },
+  "attesa": {
+    "source": "attesa 2026.wav",
+    "loop_start_s": 0.98,
+    "loop_end_s": 76.42,
+    "duration_s": 75.44,
+    "seam_similarity": 1.996,
+    "lufs": -18.0,
+    "gain_db": -2.8,
+    "mp3_kb": 1474
+  },
+  "routine": {
+    "source": "Routine 2025.wav",
+    "loop_start_s": 0.77,
+    "loop_end_s": 101.82,
+    "duration_s": 101.05,
+    "seam_similarity": 2.047,
+    "lufs": -18.0,
+    "gain_db": -2.5,
+    "mp3_kb": 1975
+  },
+  "corrente": {
+    "source": "corrente 2025 .wav",
+    "loop_start_s": 4.04,
+    "loop_end_s": 84.03,
+    "duration_s": 79.99,
+    "seam_similarity": 2.025,
+    "lufs": -18.0,
+    "gain_db": -1.2,
+    "mp3_kb": 1563
+  },
+  "afa": {
+    "source": "afa 2025.wav",
+    "loop_start_s": 5.9,
+    "loop_end_s": 87.82,
+    "duration_s": 81.92,
+    "seam_similarity": 2.037,
+    "lufs": -18.0,
+    "gain_db": -1.4,
+    "mp3_kb": 1601
+  },
+  "fatica": {
+    "source": "fatica 2026.wav",
+    "loop_start_s": 3.04,
+    "loop_end_s": 75.05,
+    "duration_s": 72.01,
+    "seam_similarity": 2.049,
+    "lufs": -18.0,
+    "gain_db": -2.0,
+    "mp3_kb": 1407
+  },
+  "calca": {
+    "source": "Calca 2025.wav",
+    "loop_start_s": 1.28,
+    "loop_end_s": 88.42,
+    "duration_s": 87.14,
+    "seam_similarity": 1.873,
+    "lufs": -18.0,
+    "gain_db": -4.3,
+    "mp3_kb": 1703
+  },
+  "notte": {
+    "source": "notte 2025.wav",
+    "loop_start_s": 0.53,
+    "loop_end_s": 88.47,
+    "duration_s": 87.93,
+    "seam_similarity": 2.014,
+    "lufs": -18.0,
+    "gain_db": -0.1,
+    "mp3_kb": 1718
+  }
+}

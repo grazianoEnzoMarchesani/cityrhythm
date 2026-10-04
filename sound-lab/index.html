@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bussola sonora</title>
+<style>
+  :root { --bg:#141414; --fg:#eee; --muted:#888; --cell:#222; --on:#e8b04a; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.4 system-ui, sans-serif; display:flex; flex-direction:column; align-items:center; padding:24px 16px; gap:18px; }
+  h1 { margin:0; font-size:20px; font-weight:600; }
+  p { margin:0; color:var(--muted); max-width:560px; text-align:center; }
+  .wrap { display:grid; grid-template-columns:auto 1fr; grid-template-rows:1fr auto; gap:8px; width:min(560px,100%); }
+  .ylab { writing-mode:vertical-rl; transform:rotate(180deg); color:var(--muted); font-size:12px; text-align:center; }
+  .xlab { grid-column:2; color:var(--muted); font-size:12px; text-align:center; }
+  .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  button.cell { aspect-ratio:1; border:1px solid #333; border-radius:12px; background:var(--cell); color:var(--fg); font:inherit; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; transition:background .3s, border-color .3s; }
+  button.cell small { color:var(--muted); font-size:11px; }
+  button.cell[disabled] { opacity:.35; cursor:not-allowed; }
+  button.cell.on { border-color:var(--on); background:#3a2e17; }
+  .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; justify-content:center; }
+  .btn { padding:10px 18px; border-radius:999px; border:1px solid #444; background:#222; color:var(--fg); font:inherit; cursor:pointer; }
+  .btn.on { border-color:var(--on); color:var(--on); }
+  #status { color:var(--muted); font-size:13px; min-height:1.4em; }
+</style>
+</head>
+<body>
+<h1>Bussola sonora</h1>
+<p>Clicca uno stato: la musica dissolve verso quello scelto. Ascolta se le transizioni sono morbide e se ogni loop riparte senza buchi.</p>
+<div class="row">
+  <button class="btn" id="start">Attiva audio</button>
+  <button class="btn" id="night" disabled>Notte</button>
+  <label>Dissolvenza <input type="range" id="fade" min="1" max="12" value="6"> <span id="fadeVal">6</span> s</label>
+</div>
+<div class="wrap">
+  <div class="ylab">opprimente → sereno</div>
+  <div class="grid" id="grid"></div>
+  <div class="xlab">poca gente → folla</div>
+</div>
+<div id="status">Audio spento</div>
+<script>
+const GRID = [
+  ["rifugio","Rifugio"],["passeggiata","Passeggiata"],["festa","Festa"],
+  ["attesa","Attesa"],["routine","Routine"],["corrente","Corrente"],
+  ["afa","Afa"],["fatica","Fatica"],["calca","Calca"],
+];
+const LOAD_ORDER = ["routine","rifugio","calca","attesa","passeggiata","festa","corrente","afa","fatica","notte"];
+const AVAILABLE = new Set(LOAD_ORDER);
+const grid = document.getElementById('grid');
+const status = document.getElementById('status');
+const fade = document.getElementById('fade');
+fade.oninput = () => document.getElementById('fadeVal').textContent = fade.value;
+
+let ctx, current = null;
+const voices = {};
+
+for (const [id, label] of GRID) {
+  const b = document.createElement('button');
+  b.className = 'cell'; b.dataset.id = id; b.disabled = true;
+  b.innerHTML = `${label}<small>${AVAILABLE.has(id) ? '' : 'da rigenerare'}</small>`;
+  b.onclick = () => go(id);
+  grid.appendChild(b);
+}
+
+document.getElementById('start').onclick = async (e) => {
+  e.target.disabled = true;
+  ctx = new AudioContext();
+  await ctx.resume();
+  document.getElementById('night').onclick = () => go('notte');
+  const failed = [];
+  for (const [i, id] of LOAD_ORDER.entries()) {
+    status.textContent = `Caricamento ${i + 1}/${LOAD_ORDER.length}: ${id}…`;
+    try {
+      const res = await fetch(`loops/${id}.mp3?v=${Date.now()}`, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const buf = await ctx.decodeAudioData(await res.arrayBuffer());
+      const gain = ctx.createGain(); gain.gain.value = 0; gain.connect(ctx.destination);
+      const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true; src.connect(gain); src.start();
+      voices[id] = { gain, dur: buf.duration };
+      const cell = document.querySelector(`button.cell[data-id="${id}"]`);
+      if (cell) cell.disabled = false;
+      if (id === 'notte') document.getElementById('night').disabled = false;
+      if (!current) go(id);
+    } catch (err) {
+      failed.push(`${id} (${err.message})`);
+      console.error(id, err);
+    }
+  }
+  status.textContent = failed.length
+    ? `Errore su: ${failed.join(', ')}`
+    : `Tutti i brani caricati. In ascolto: ${current}`;
+};
+
+function go(id) {
+  if (id === current || !voices[id]) return;
+  const t = ctx.currentTime, d = +fade.value;
+  for (const [vid, v] of Object.entries(voices)) {
+    const g = v.gain.gain;
+    g.cancelScheduledValues(t); g.setValueAtTime(g.value, t);
+    g.linearRampToValueAtTime(vid === id ? 1 : 0, t + d);
+  }
+  current = id;
+  document.querySelectorAll('button.cell').forEach(b => b.classList.toggle('on', b.dataset.id === id));
+  document.getElementById('night').classList.toggle('on', id === 'notte');
+  status.textContent = `In ascolto: ${id} (loop di ${voices[id].dur.toFixed(0)} s)`;
+}
+</script>
+</body>
+</html>

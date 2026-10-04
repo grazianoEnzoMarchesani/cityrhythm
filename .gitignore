@@ -4,3 +4,6 @@ cityrhythm_simulation_week.csv
 cityrhythm_simulation_week.geojson
 cityrhythm_simulation_week.gpkg
 export_qgis_simulation.py
+music/
+sound-lab/.venv/
+__pycache__/
