@@ -1,0 +1,312 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
+<Document id="11vGk4S5Sni28qfY1CCdK5i93TkHryt3F">
+	<name>Aree Ascoli Piceno</name>
+	<gx:CascadingStyle kml:id="__managed_style_186A8477D536FE26E319">
+		<Style>
+			<IconStyle>
+				<scale>1.2</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>6</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<gx:CascadingStyle kml:id="__managed_style_04F42F739236FE26E319">
+		<Style>
+			<IconStyle>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>4</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<StyleMap id="__managed_style_0342912CEE36FE26E318">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#__managed_style_04F42F739236FE26E319</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#__managed_style_186A8477D536FE26E319</styleUrl>
+		</Pair>
+	</StyleMap>
+	<Placemark id="04AB82C01034C157835F">
+		<name>Ascoli - Porta Romana</name>
+		<LookAt>
+			<longitude>13.55598605788827</longitude>
+			<latitude>42.85212994102883</latitude>
+			<altitude>1.414648398423424e-09</altitude>
+			<heading>0</heading>
+			<tilt>0</tilt>
+			<gx:fovy>34.99992084321102</gx:fovy>
+			<range>1206.296366546498</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0342912CEE36FE26E318</styleUrl>
+		<Polygon>
+			<outerBoundaryIs>
+				<LinearRing>
+					<coordinates>
+						13.55465567673138,42.85191666000274,0 13.55504986052904,42.85035107502168,0 13.55648698246831,42.85007908904112,0 13.55867163432155,42.85069703016937,0 13.56029643445021,42.85186415599018,0 13.56714009777325,42.85337068566095,0 13.56636256242047,42.85564598888497,0 13.56114464779905,42.85487031916548,0 13.55979169623397,42.85371245046932,0 13.55816409626845,42.85340019339391,0 13.55465567673138,42.85191666000274,0 
+					</coordinates>
+				</LinearRing>
+			</outerBoundaryIs>
+		</Polygon>
+	</Placemark>
+	<Placemark id="07FEA2E4B734C159DE74">
+		<name>Ascoli - Borgo Solesta</name>
+		<LookAt>
+			<longitude>13.56763371539611</longitude>
+			<latitude>42.85843211923218</latitude>
+			<altitude>-7.073241992117119e-10</altitude>
+			<heading>-6.010436414601803</heading>
+			<tilt>39.82035667830713</tilt>
+			<gx:fovy>34.99992084321102</gx:fovy>
+			<range>1856.335490135079</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0342912CEE36FE26E318</styleUrl>
+		<Polygon>
+			<outerBoundaryIs>
+				<LinearRing>
+					<coordinates>
+						13.56161677449963,42.85643324929541,0 13.5661975536302,42.85630232728175,0 13.57288124595329,42.85914083201151,0 13.57349153729931,42.86097846443669,0 13.57158646958389,42.86083142480475,0 13.56984685230712,42.8608988728296,0 13.56678284889395,42.86107457192131,0 13.56508460154155,42.86019670669729,0 13.56351468378116,42.8591635985081,0 13.56257601958101,42.85825093365018,0 13.56161677449963,42.85643324929541,0 
+					</coordinates>
+				</LinearRing>
+			</outerBoundaryIs>
+		</Polygon>
+	</Placemark>
+	<Placemark id="06DF18295C34C15B6B61">
+		<name>Ascoli - Campo Parignano</name>
+		<LookAt>
+			<longitude>13.57905194526242</longitude>
+			<latitude>42.86035554877679</latitude>
+			<altitude>1.414648398423424e-09</altitude>
+			<heading>-6.00267018519126</heading>
+			<tilt>39.82035667830026</tilt>
+			<gx:fovy>34.99992084321102</gx:fovy>
+			<range>1856.335489998796</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0342912CEE36FE26E318</styleUrl>
+		<Polygon>
+			<outerBoundaryIs>
+				<LinearRing>
+					<coordinates>
+						13.57569658564719,42.85786073702805,0 13.5761578278059,42.8575079608319,0 13.57961065451896,42.85757893075296,0 13.58364155573268,42.85723829676384,0 13.58461074991894,42.85892521673838,0 13.58423175522058,42.86120284154252,0 13.58185612605477,42.86089003583001,0 13.5801672575147,42.86070140863474,0 13.57605342239304,42.86079901082042,0 13.5761628252671,42.86009712846534,0 13.57587112459091,42.85832957498475,0 13.57569658564719,42.85786073702805,0 
+					</coordinates>
+				</LinearRing>
+			</outerBoundaryIs>
+		</Polygon>
+	</Placemark>
+	<Placemark id="02A9C9930C34C15C960A">
+		<name>Ascoli - Porta Cartara </name>
+		<LookAt>
+			<longitude>13.5681862671953</longitude>
+			<latitude>42.84963721861003</latitude>
+			<altitude>0</altitude>
+			<heading>-5.999415618591942</heading>
+			<tilt>39.81675036949464</tilt>
+			<gx:fovy>34.99992084321102</gx:fovy>
+			<range>1230.001170005806</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0342912CEE36FE26E318</styleUrl>
+		<Polygon>
+			<outerBoundaryIs>
+				<LinearRing>
+					<coordinates>
+						13.56716845078923,42.847215216473,0 13.56790697008946,42.84647976380631,0 13.56982204377502,42.84718933221853,0 13.57151182788769,42.84747930080756,0 13.57294533865094,42.84756869418781,0 13.57352332247305,42.84871880588814,0 13.57002647394707,42.85080211538777,0 13.56713258499517,42.84887351528086,0 13.56716845078923,42.847215216473,0 
+					</coordinates>
+				</LinearRing>
+			</outerBoundaryIs>
+		</Polygon>
+	</Placemark>
+	<Placemark id="073B23871F34C162774F">
+		<name>Ascoli - Borgo Chiaro</name>
+		<LookAt>
+			<longitude>13.58665956262159</longitude>
+			<latitude>42.86299288697803</latitude>
+			<altitude>-7.073241992117119e-10</altitude>
+			<heading>-5.979728250410466</heading>
+			<tilt>39.8179478908157</tilt>
+			<gx:fovy>34.99992084321102</gx:fovy>
+			<range>1437.983556800572</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0342912CEE36FE26E318</styleUrl>
+		<Polygon>
+			<outerBoundaryIs>
+				<LinearRing>
+					<coordinates>
+						13.59053758204306,42.86079348776173,0 13.59054909038434,42.86230678705344,0 13.5877697303978,42.86169875242852,0 13.58583013863756,42.86439725955915,0 13.58338358323383,42.86640280233501,0 13.5819130881406,42.86545864554569,0 13.58197147247533,42.86354506581781,0 13.584892198158,42.85996379074599,0 13.59053758204306,42.86079348776173,0 
+					</coordinates>
+				</LinearRing>
+			</outerBoundaryIs>
+		</Polygon>
+	</Placemark>
+	<Placemark id="0FA5A99C4E34C1649CDB">
+		<name>Ascoli - Pennile di Sotto</name>
+		<LookAt>
+			<longitude>13.59456931264292</longitude>
+			<latitude>42.85913274456253</latitude>
+			<altitude>113.3401347972584</altitude>
+			<heading>-5.973713455233716</heading>
+			<tilt>39.82225959827438</tilt>
+			<gx:fovy>34.99992084321102</gx:fovy>
+			<range>2186.86843013973</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0342912CEE36FE26E318</styleUrl>
+		<Polygon>
+			<outerBoundaryIs>
+				<LinearRing>
+					<coordinates>
+						13.59635586972803,42.85375966324388,0 13.59838764509913,42.85336150249107,0 13.59941043161809,42.85505570581163,0 13.59599755318643,42.85822126915358,0 13.59321508411116,42.85865190907388,0 13.59216271622675,42.85573387077256,0 13.59412441501114,42.85528109050826,0 13.59584615884862,42.85430144713377,0 13.59635586972803,42.85375966324388,0 
+					</coordinates>
+				</LinearRing>
+			</outerBoundaryIs>
+		</Polygon>
+	</Placemark>
+	<Placemark id="05E4BA076B34C168719F">
+		<name>Ascoli - Porta Maggiore</name>
+		<LookAt>
+			<longitude>13.59383141192407</longitude>
+			<latitude>42.85180961750509</latitude>
+			<altitude>1.414648398423424e-09</altitude>
+			<heading>-5.993847815426316</heading>
+			<tilt>39.82842714493206</tilt>
+			<gx:fovy>34.99992084321102</gx:fovy>
+			<range>3257.992946600076</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0342912CEE36FE26E318</styleUrl>
+		<Polygon>
+			<outerBoundaryIs>
+				<LinearRing>
+					<coordinates>
+						13.59346964207175,42.84642230085738,0 13.59832579931934,42.85331571775698,0 13.5963400690267,42.85370696834249,0 13.59577489024301,42.85428804320947,0 13.5941012080906,42.85523608095748,0 13.59204455076635,42.85541202574263,0 13.58595385866702,42.85490819942775,0 13.58664431921258,42.85243972637805,0 13.58251391817033,42.8506153681118,0 13.58301709915413,42.84826548355036,0 13.58499434710012,42.84732919268784,0 13.58687317377678,42.8469068533506,0 13.58953101867065,42.84680937302713,0 13.5911817130755,42.84694319566201,0 13.59346964207175,42.84642230085738,0 
+					</coordinates>
+				</LinearRing>
+			</outerBoundaryIs>
+		</Polygon>
+	</Placemark>
+	<Placemark id="00B25BDB0434C169DB3E">
+		<name>Ascoli - Tofare</name>
+		<LookAt>
+			<longitude>13.58769420879563</longitude>
+			<latitude>42.85060979098333</latitude>
+			<altitude>-7.073241992117119e-10</altitude>
+			<heading>-5.994954194905383</heading>
+			<tilt>39.82538129814865</tilt>
+			<gx:fovy>34.99992084321102</gx:fovy>
+			<range>2728.998228678611</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0342912CEE36FE26E318</styleUrl>
+		<Polygon>
+			<outerBoundaryIs>
+				<LinearRing>
+					<coordinates>
+						13.59469112406798,42.84697395778566,0 13.5982884248006,42.84580721526164,0 13.59936705761486,42.84585871767302,0 13.60124675245628,42.84906898194718,0 13.59873023766239,42.84988519696644,0 13.59644166807731,42.85043190200736,0 13.5948980302179,42.8477423565405,0 13.59469112406798,42.84697395778566,0 
+					</coordinates>
+				</LinearRing>
+			</outerBoundaryIs>
+		</Polygon>
+	</Placemark>
+	<Placemark id="0A9CE4A00034C16AF85A">
+		<name>Ascoli - San Filippo</name>
+		<LookAt>
+			<longitude>13.5994741534544</longitude>
+			<latitude>42.85284264621841</latitude>
+			<altitude>-7.073241992117119e-10</altitude>
+			<heading>-5.999552932650304</heading>
+			<tilt>39.8190723920908</tilt>
+			<gx:fovy>34.99992084321102</gx:fovy>
+			<range>1633.283871925156</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0342912CEE36FE26E318</styleUrl>
+		<Polygon>
+			<outerBoundaryIs>
+				<LinearRing>
+					<coordinates>
+						13.60224878080084,42.85043627671039,0 13.6020234622826,42.85321651522156,0 13.59943847118964,42.85446947445474,0 13.59751189622526,42.85079083151877,0 13.60142117322755,42.84929584505719,0 13.60224878080084,42.85043627671039,0 
+					</coordinates>
+				</LinearRing>
+			</outerBoundaryIs>
+		</Polygon>
+	</Placemark>
+	<Placemark id="056F0C9A1334C16C57D2">
+		<name>Ascoli - Centro Storico</name>
+		<LookAt>
+			<longitude>13.57489504691186</longitude>
+			<latitude>42.85468476609137</latitude>
+			<altitude>0</altitude>
+			<heading>-6.008844859656109</heading>
+			<tilt>39.82080620400107</tilt>
+			<gx:fovy>34.99992084321102</gx:fovy>
+			<range>1934.407808661628</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0342912CEE36FE26E318</styleUrl>
+		<Polygon>
+			<outerBoundaryIs>
+				<LinearRing>
+					<coordinates>
+						13.57722926813665,42.85120382785524,0 13.58232152236972,42.85115224698024,0 13.58621870429899,42.85255018881863,0 13.58348289496491,42.85680742661479,0 13.57714167623472,42.85691221472592,0 13.57529989278733,42.85742756572166,0 13.57551923519846,42.85854849511701,0 13.57521177265032,42.859800307701,0 13.56908456903442,42.85710676568885,0 13.56670074315581,42.85492315694589,0 13.57014691115315,42.85100958323883,0 13.57408697391619,42.84879133262997,0 13.57722926813665,42.85120382785524,0 
+					</coordinates>
+				</LinearRing>
+			</outerBoundaryIs>
+		</Polygon>
+	</Placemark>
+	<Placemark id="0BE090FF0A34C17EEE22">
+		<name>Ascoli - Stadio</name>
+		<LookAt>
+			<longitude>13.5844137975626</longitude>
+			<latitude>42.86423123942105</latitude>
+			<altitude>155.8658374652968</altitude>
+			<heading>-5.996877311248052</heading>
+			<tilt>39.8327060799819</tilt>
+			<gx:fovy>34.99992084321102</gx:fovy>
+			<range>3980.536118551972</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0342912CEE36FE26E318</styleUrl>
+		<Polygon>
+			<outerBoundaryIs>
+				<LinearRing>
+					<coordinates>
+						13.59741388058487,42.85841666343775,0 13.599486506989,42.86256725833268,0 13.59698376362532,42.86363715721971,0 13.591320690754,42.86268403080238,0 13.59142027631938,42.8611726179201,0 13.59335381818923,42.85895408931364,0 13.59741388058487,42.85841666343775,0 
+					</coordinates>
+				</LinearRing>
+			</outerBoundaryIs>
+		</Polygon>
+	</Placemark>
+</Document>
+</kml>

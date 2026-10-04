@@ -1,0 +1,124 @@
+{
+  "cicale": [
+    {
+      "file": "cicale-1.mp3",
+      "source": "Cicale.mp3",
+      "start_s": 0.0,
+      "end_s": 6.55,
+      "duration_s": 6.55,
+      "gain_db": 6.0,
+      "limited": false,
+      "lufs": -20.0
+    }
+  ],
+  "folla-densa": [
+    {
+      "file": "folla-densa-1.mp3",
+      "source": "Folla densa1.mp3",
+      "start_s": 0.0,
+      "end_s": 6.45,
+      "duration_s": 6.45,
+      "gain_db": -0.5,
+      "limited": false,
+      "lufs": -20.0
+    },
+    {
+      "file": "folla-densa-2.mp3",
+      "source": "Folla densa2.mp3",
+      "start_s": 0.0,
+      "end_s": 4.2,
+      "duration_s": 4.2,
+      "gain_db": -0.8,
+      "limited": false,
+      "lufs": -20.0
+    }
+  ],
+  "folla-leggera": [
+    {
+      "file": "folla-leggera-1.mp3",
+      "source": "Folla leggera1.mp3",
+      "start_s": 0.0,
+      "end_s": 2.55,
+      "duration_s": 2.55,
+      "gain_db": 5.8,
+      "limited": false,
+      "lufs": -20.0
+    },
+    {
+      "file": "folla-leggera-2.mp3",
+      "source": "Folla leggera2.mp3",
+      "start_s": 0.0,
+      "end_s": 4.15,
+      "duration_s": 4.15,
+      "gain_db": 14.1,
+      "limited": true,
+      "lufs": -21.5
+    },
+    {
+      "file": "folla-leggera-3.mp3",
+      "source": "Folla leggera3.mp3",
+      "start_s": 0.4,
+      "end_s": 6.15,
+      "duration_s": 5.75,
+      "gain_db": 13.1,
+      "limited": true,
+      "lufs": -20.3
+    },
+    {
+      "file": "folla-leggera-4.mp3",
+      "source": "Folla leggera4.mp3",
+      "start_s": 0.0,
+      "end_s": 6.05,
+      "duration_s": 6.05,
+      "gain_db": 6.0,
+      "limited": false,
+      "lufs": -20.0
+    }
+  ],
+  "grilli": [
+    {
+      "file": "grilli-1.mp3",
+      "source": "Grilli.mp3",
+      "start_s": 0.7,
+      "end_s": 6.45,
+      "duration_s": 5.75,
+      "gain_db": 2.5,
+      "limited": false,
+      "lufs": -20.0
+    }
+  ],
+  "parco": [
+    {
+      "file": "parco-1.mp3",
+      "source": "Parco.mp3",
+      "start_s": 0.0,
+      "end_s": 6.6,
+      "duration_s": 6.6,
+      "gain_db": 5.8,
+      "limited": false,
+      "lufs": -20.0
+    }
+  ],
+  "traffico": [
+    {
+      "file": "traffico-1.mp3",
+      "source": "Traffico1.mp3",
+      "start_s": 0.0,
+      "end_s": 4.35,
+      "duration_s": 4.35,
+      "gain_db": -7.6,
+      "limited": false,
+      "lufs": -20.0
+    },
+    {
+      "file": "traffico-2.mp3",
+      "source": "Traffico2.mp3",
+      "start_s": 0.0,
+      "end_s": 6.5,
+      "duration_s": 6.5,
+      "gain_db": -1.8,
+      "limited": false,
+      "lufs": -20.0
+    }
+  ]
+}

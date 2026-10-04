@@ -38,6 +38,8 @@ CityRhythm is built with a modern front-end stack, leveraging powerful open-sour
 *   **Word Cloud Generation:** [D3.js](https://d3js.org/) + `d3-cloud`
 *   **CSV Parsing:** [PapaParse](https://www.papaparse.com/)
 *   **Date/Time Picker:** [Litepicker](https://litepicker.com/)
+*   **KML parsing:** [@tmcw/togeojson](https://github.com/placemark/togeojson)
+*   **Build:** [Vite](https://vite.dev/) (vanilla; plugins for Svelte, React or Vue can be added in `vite.config.js`)
 *   **Core:** HTML5, CSS3, modern JavaScript (ES Modules)
 
 ## Getting Started
@@ -69,25 +71,24 @@ You need a local web server to run the application, as modern browsers restrict 
     export const MAPBOX_TOKEN = 'YOUR_OWN_MAPBOX_TOKEN';
     ```
 
-4.  **Serve the application:**
-    We recommend `npx`, which runs a package without installing it globally.
+4.  **Install and run:**
     ```bash
-    npx http-server
+    npm install
+    npm run dev
     ```
-    This will start a local server.
+    Open the URL printed by Vite (typically `http://localhost:5173`).
 
-5.  **Open in your browser:**
-    Open your web browser and navigate to the URL provided by `http-server`, which is typically `http://localhost:8080`.
+5.  **Production build:** `npm run build` writes a self-contained site to `dist/`. All libraries are bundled from `node_modules` and all data is served from `public/data/`: the site loads no code from external CDNs (only the Mapbox map tiles come from Mapbox). Pushing to `main` deploys `dist/` to GitHub Pages via `.github/workflows/deploy.yml`.
 
 ## Data Sources
 
-The application is powered by several datasets hosted externally. The URLs are configured in `config.js`.
+The datasets are served by the site itself from `public/data/`; the paths are configured in `src/data/config.js`.
 
-*   **KML Areas:** [cityrhythm_blimp_areas.kml](https://gist.githubusercontent.com/grazianoEnzoMarchesani/aad5e543d62ffd2478b0152348f39e0d/raw/305653b7b40f5858e0d8f83e11a99e921ac500a8/cityrhythm_blimp_areas.kml)
-*   **POI Historical Data:** [cityrhythm_blimp.csv](https://gist.githubusercontent.com/grazianoEnzoMarchesani/0ac7cac113479e704e2af0865e7f516d/raw/adb569636698d58b16a610dbc82f1b4936f9b2ad/cityrhythm_blimp.csv)
-*   **Crowdedness Data:** [cityrhythm_crowded_data.csv](https://gist.githubusercontent.com/grazianoEnzoMarchesani/d4574acad4dabf1e4b83fe2d68a59e91/raw/90bd98a5ff27ba9d968028ae374211f90025d284/cityrhythm_crowded_data.csv)
-*   **POI Spots (Spot Mapper):** [cityrhythm_spotMapper.csv](https://gist.githubusercontent.com/grazianoEnzoMarchesani/c2813df8436ad6ebb91327d5e517f1ae/raw/296130747c07c88cb834d7860a1ceaee43502281/cityrhythm_spotMapper.csv)
-*   **LCZ Vitality Data:** [lcz_vitality.csv](https://gist.githubusercontent.com/grazianoEnzoMarchesani/bc2ad1bea5689e0195296daa57f9b893/raw/0ecce2a26b35c561e110a135638f4f5b84c8acd8/lcz_vitality.csv)
+*   **KML Areas:** `cityrhythm_blimp_areas.kml`
+*   **POI Historical Data:** `cityrhythm_blimp.csv`
+*   **Crowdedness Data:** `cityrhythm_crowded_data.csv`
+*   **POI Spots (Spot Mapper):** `cityrhythm_spotMapper.csv`
+*   **LCZ Vitality Data:** `lcz_vitality.csv`
 
 ## Architecture Overview
 

@@ -1,3 +1,5 @@
+import * as turf from '@turf/turf';
+import mapboxgl from 'mapbox-gl';
 // utils.js - Contains general utility functions
 
 import { PRESENCE_POINTS_DENSITY_FACTOR, MAX_PRESENCE_POINTS, PRESENCE_STATIC_POINTS_RATIO } from '../data/config.js';

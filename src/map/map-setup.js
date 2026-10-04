@@ -1,3 +1,5 @@
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
 import { INITIAL_CENTER, INITIAL_ZOOM, MAP_STYLE, KML_SOURCE_ID, MAPBOX_TOKEN } from '../data/config.js';
 
 let mapInstance = null;

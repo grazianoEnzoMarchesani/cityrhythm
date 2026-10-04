@@ -21,7 +21,8 @@ Nome file: `<stato> <seed>.wav` nella cartella `music/`.
 
 Suggerimento: se un brano esce nella tonalità sbagliata, scrivere esplicitamente "In the key of D minor/major" e cambiare seed.
 
-## Effetti sonori (scheda Sound FX, ancora da generare e da adattare all'interfaccia)
+## Effetti sonori (scheda Sound FX, generati il 2026-10-04)
+Nome file: `<Nome><n>.mp3` in `music/sfx/` (es. `Traffico2.mp3`): `process_sfx.py` raggruppa da solo le varianti. Più varianti per suono = meno ripetizione.
 - Folla leggera: `Soft murmur of a small crowd in an open stone square, distant voices and footsteps, continuous, no music`
 - Folla densa: `Dense busy crowd in a narrow street, many overlapping voices and footsteps, continuous, no music`
 - Cicale: `Loud Mediterranean cicadas in midday summer heat, continuous, no music`

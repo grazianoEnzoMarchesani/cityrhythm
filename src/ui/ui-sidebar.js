@@ -1,3 +1,5 @@
+import * as echarts from 'echarts';
+import Papa from 'papaparse';
 import { hourToLabel, getDateTimeFromIndex, calculateAveragePresenceForFeature } from '../utils/utils.js';
 import { getPoiData } from '../data/data-loader.js';
 import { 
@@ -1518,8 +1520,8 @@ function exportSyntheticCrowdedCSV() {
             })
             .then(csvText => {
                 // Usa PapaParse se disponibile, altrimenti esporta direttamente
-                if (window.Papa) {
-                    const parsed = window.Papa.parse(csvText, { header: true });
+                if (Papa) {
+                    const parsed = Papa.parse(csvText, { header: true });
                     if (parsed.errors && parsed.errors.length > 0) {
                         setExportProgressStatus('Errore parsing CSV statico');
                         if (btn) btn.disabled = false;

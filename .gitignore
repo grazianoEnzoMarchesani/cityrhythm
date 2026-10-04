@@ -7,3 +7,7 @@ export_qgis_simulation.py
 music/
 sound-lab/.venv/
 __pycache__/
+sound-lab/data/bussola_prova.csv
+node_modules/
+dist/
+*.local

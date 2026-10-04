@@ -1,0 +1,25 @@
+{
+  "_regola": "Volume di un suono = musica (-18 LUFS) - sotto_musica_db + 20*log10(presenza). I file degli effetti sono a -20 LUFS, quindi il guadagno da applicare e' (volume - (-20)) dB. presenza va da 0 a 1: nella piattaforma la daranno i dati, qui la danno le scene.",
+  "music_lufs": -18,
+  "sfx_file_lufs": -20,
+  "sotto_musica_db": {
+    "folla-leggera": 12,
+    "folla-densa": 9,
+    "traffico": 15,
+    "parco": 13,
+    "cicale": 14,
+    "grilli": 11
+  },
+  "scene": {
+    "rifugio":     { "parco": 1.0, "folla-leggera": 0.25, "traffico": 0.2, "cicale": 0.2 },
+    "passeggiata": { "parco": 0.7, "folla-leggera": 0.7, "traffico": 0.3 },
+    "festa":       { "folla-densa": 0.8, "folla-leggera": 0.5, "traffico": 0.2 },
+    "attesa":      { "traffico": 0.5, "folla-leggera": 0.2 },
+    "routine":     { "folla-leggera": 0.8, "traffico": 0.6 },
+    "corrente":    { "folla-densa": 0.7, "folla-leggera": 0.3, "traffico": 0.8 },
+    "afa":         { "cicale": 1.0, "traffico": 0.3 },
+    "fatica":      { "cicale": 0.7, "folla-leggera": 0.6, "traffico": 0.5 },
+    "calca":       { "folla-densa": 1.0, "cicale": 0.5, "traffico": 0.6 },
+    "notte":       { "grilli": 1.0, "traffico": 0.15 }
+  }
+}
