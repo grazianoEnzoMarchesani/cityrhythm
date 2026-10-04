@@ -35,16 +35,14 @@ const GREEN_PATTERN = ['match', ['get', 'kind'],
     ['forest', 'wood', 'nature_reserve', 'national_park', 'protected_area'], 'toner:dots-t',
     'cemetery', 'toner:cross-t',
     'toner:dash-t'];
-const HIDDEN_LAYERS = new Set(['pois', 'roads_shields', 'roads_oneway', 'address_label']);
 
-// Stile: mappa di base Protomaps (OSM) in versione Toner + edifici TUM in 3D sotto le etichette + terreno per setTerrain.
+// Stile: mappa di base Protomaps (OSM) in versione Toner senza etichette né icone + edifici TUM in 3D + terreno per setTerrain.
 function buildMapStyle() {
-    const base = layers('protomaps', TONER_FLAVOR, { lang: 'it' }).filter(l => !HIDDEN_LAYERS.has(l.id));
+    const base = layers('protomaps', TONER_FLAVOR, { lang: 'it' }).filter(l => l.type !== 'symbol');
     const park = base.findIndex(l => l.id === 'landuse_park');
     base[park].paint = { 'fill-color': BLACK, 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 10, 0.3, 16, 1] };
     base.splice(park + 1, 0, { ...base[park], id: 'landuse_park_pattern', paint: { 'fill-pattern': GREEN_PATTERN } });
-    const firstLabel = base.findIndex(l => l.type === 'symbol');
-    base.splice(firstLabel, 0, {
+    base.push({
         // Contorno a terra: bianco su bianco, dall'alto gli edifici altrimenti sparirebbero.
         id: 'buildings-outline', type: 'line', source: 'buildings',
         paint: { 'line-color': BLACK, 'line-width': ['interpolate', ['linear'], ['zoom'], 13, 0.3, 17, 1.5] }
@@ -59,7 +57,7 @@ function buildMapStyle() {
     return {
         version: 8,
         glyphs: mapDataUrl('fonts/') + '{fontstack}/{range}.pbf', // URL() codificherebbe le graffe
-        sprite: [{ id: 'default', url: mapDataUrl('sprites/light') }, { id: 'toner', url: mapDataUrl('sprites/toner') }],
+        sprite: [{ id: 'toner', url: mapDataUrl('sprites/toner') }],
         sources: {
             protomaps: {
                 type: 'vector', url: 'pmtiles://' + mapDataUrl('ascoli_base.pmtiles'),
