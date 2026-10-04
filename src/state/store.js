@@ -17,9 +17,14 @@ export const time = writable({ index: 0, date: null });
 // Area inquadrata: bounds = [ovest, sud, est, nord].
 export const viewport = writable(null);
 export const audioEnabled = writable(false);
+// Bussola emotiva della cella al centro della mappa (src/compass/compass.js):
+// stato = confermato dopo l'isteresi (null fuori dalle celle), proposto = in attesa di conferma.
+export const mood = writable(null);
 
 if (import.meta.env.DEV) {
     time.subscribe(t => console.log('[store] ora', t.index, t.date ? t.date.toISOString().slice(0, 16) : 'settimana tipo'));
     viewport.subscribe(v => v && console.log('[store] area', v.bounds.map(n => n.toFixed(4)).join(', '), 'zoom', v.zoom.toFixed(1)));
     audioEnabled.subscribe(on => console.log('[store] audio', on));
+    let lastMood;
+    mood.subscribe(m => { if (m && m.stato !== lastMood) { lastMood = m.stato; console.log('[store] bussola', m.stato, 'cella', m.cella); } });
 }

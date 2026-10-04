@@ -1,0 +1,2202 @@
+[
+ {
+  "ora": "2024-10-04T22:00",
+  "cella": 329590,
+  "quartiere": "Ascoli - Borgo Chiaro",
+  "X": -1.0,
+  "Y": 1.0,
+  "T": 14.99,
+  "sole": -35.84,
+  "stato": "notte"
+ },
+ {
+  "ora": "2025-01-20T19:00",
+  "cella": 334897,
+  "quartiere": "Ascoli - Borgo Chiaro",
+  "X": -0.6945,
+  "Y": 1.0,
+  "T": 9.99,
+  "sole": -21.49,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-07-06T11:00",
+  "cella": 315421,
+  "quartiere": "Ascoli - Borgo Chiaro",
+  "X": -1.0,
+  "Y": -0.5,
+  "T": 33.74,
+  "sole": 56.25,
+  "stato": "afa"
+ },
+ {
+  "ora": "2025-01-20T08:00",
+  "cella": 336073,
+  "quartiere": "Ascoli - Borgo Chiaro",
+  "X": -0.8827,
+  "Y": 0.7506,
+  "T": 5.34,
+  "sole": 3.74,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2024-08-16T17:00",
+  "cella": 323686,
+  "quartiere": "Ascoli - Borgo Chiaro",
+  "X": -1.0,
+  "Y": -0.6085,
+  "T": 33.59,
+  "sole": 33.04,
+  "stato": "afa"
+ },
+ {
+  "ora": "2024-09-13T03:00",
+  "cella": 336674,
+  "quartiere": "Ascoli - Borgo Chiaro",
+  "X": -1.0,
+  "Y": 0.9365,
+  "T": 14.79,
+  "sole": -36.07,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-12-21T14:00",
+  "cella": 324281,
+  "quartiere": "Ascoli - Borgo Chiaro",
+  "X": -1.0,
+  "Y": 0.7156,
+  "T": 4.83,
+  "sole": 18.7,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2024-09-09T16:00",
+  "cella": 324263,
+  "quartiere": "Ascoli - Borgo Chiaro",
+  "X": -0.9763,
+  "Y": -0.5,
+  "T": 32.7,
+  "sole": 35.85,
+  "stato": "afa"
+ },
+ {
+  "ora": "2024-10-14T05:00",
+  "cella": 333118,
+  "quartiere": "Ascoli - Borgo Chiaro",
+  "X": -1.0,
+  "Y": 1.0,
+  "T": 10.79,
+  "sole": -25.87,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-06-07T18:00",
+  "cella": 318368,
+  "quartiere": "Ascoli - Borgo Chiaro",
+  "X": -1.0,
+  "Y": -0.1147,
+  "T": 30.36,
+  "sole": 26.72,
+  "stato": "attesa"
+ },
+ {
+  "ora": "2024-12-03T08:00",
+  "cella": 336670,
+  "quartiere": "Ascoli - Borgo Chiaro",
+  "X": -1.0,
+  "Y": 0.6022,
+  "T": 3.17,
+  "sole": 5.46,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2024-10-11T09:00",
+  "cella": 336089,
+  "quartiere": "Ascoli - Borgo Chiaro",
+  "X": -0.8751,
+  "Y": 0.9965,
+  "T": 18.81,
+  "sole": 17.49,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2024-08-21T03:00",
+  "cella": 336067,
+  "quartiere": "Ascoli - Borgo Chiaro",
+  "X": -1.0,
+  "Y": 1.0,
+  "T": 20.56,
+  "sole": -29.22,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-12-11T23:00",
+  "cella": 329004,
+  "quartiere": "Ascoli - Borgo Chiaro",
+  "X": -1.0,
+  "Y": 0.9207,
+  "T": 8.04,
+  "sole": -66.52,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-08-14T14:00",
+  "cella": 319558,
+  "quartiere": "Ascoli - Borgo Chiaro",
+  "X": -1.0,
+  "Y": -0.5,
+  "T": 37.61,
+  "sole": 59.69,
+  "stato": "afa"
+ },
+ {
+  "ora": "2024-09-20T13:00",
+  "cella": 319558,
+  "quartiere": "Ascoli - Borgo Chiaro",
+  "X": -0.995,
+  "Y": 1.0,
+  "T": 21.82,
+  "sole": 48.2,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2024-07-04T00:00",
+  "cella": 339034,
+  "quartiere": "Ascoli - Borgo Chiaro",
+  "X": -1.0,
+  "Y": 0.9395,
+  "T": 20.09,
+  "sole": -22.42,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-09-08T04:00",
+  "cella": 327234,
+  "quartiere": "Ascoli - Borgo Chiaro",
+  "X": -1.0,
+  "Y": 1.0,
+  "T": 20.03,
+  "sole": -26.97,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-07-21T01:00",
+  "cella": 337264,
+  "quartiere": "Ascoli - Borgo Chiaro",
+  "X": -1.0,
+  "Y": 0.9095,
+  "T": 23.12,
+  "sole": -26.55,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-08-04T13:00",
+  "cella": 330181,
+  "quartiere": "Ascoli - Borgo Chiaro",
+  "X": -1.0,
+  "Y": -0.5,
+  "T": 34.03,
+  "sole": 64.33,
+  "stato": "afa"
+ },
+ {
+  "ora": "2024-12-02T14:00",
+  "cella": 278849,
+  "quartiere": "Ascoli - Borgo Solesta",
+  "X": -1.0,
+  "Y": 0.937,
+  "T": 10.67,
+  "sole": 19.2,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2024-08-08T23:00",
+  "cella": 280624,
+  "quartiere": "Ascoli - Borgo Solesta",
+  "X": -1.0,
+  "Y": 1.0,
+  "T": 24.37,
+  "sole": -23.75,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-09-28T08:00",
+  "cella": 295379,
+  "quartiere": "Ascoli - Borgo Solesta",
+  "X": -0.2922,
+  "Y": 0.7195,
+  "T": 20.99,
+  "sole": 10.23,
+  "stato": "passeggiata"
+ },
+ {
+  "ora": "2025-01-28T06:00",
+  "cella": 282973,
+  "quartiere": "Ascoli - Borgo Solesta",
+  "X": -1.0,
+  "Y": 1.0,
+  "T": 13.51,
+  "sole": -15.72,
+  "stato": "notte"
+ },
+ {
+  "ora": "2025-01-23T13:00",
+  "cella": 303630,
+  "quartiere": "Ascoli - Borgo Solesta",
+  "X": -0.5533,
+  "Y": 1.0,
+  "T": 18.06,
+  "sole": 26.71,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2024-11-26T07:00",
+  "cella": 281806,
+  "quartiere": "Ascoli - Borgo Solesta",
+  "X": -1.0,
+  "Y": 1.0,
+  "T": 10.58,
+  "sole": -2.69,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2024-10-12T03:00",
+  "cella": 288885,
+  "quartiere": "Ascoli - Borgo Solesta",
+  "X": -1.0,
+  "Y": 1.0,
+  "T": 9.5,
+  "sole": -44.78,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-08-08T02:00",
+  "cella": 310134,
+  "quartiere": "Ascoli - Borgo Solesta",
+  "X": -1.0,
+  "Y": 0.977,
+  "T": 21.36,
+  "sole": -29.75,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-07-10T12:00",
+  "cella": 303026,
+  "quartiere": "Ascoli - Borgo Solesta",
+  "X": -1.0,
+  "Y": -0.5,
+  "T": 38.31,
+  "sole": 64.56,
+  "stato": "afa"
+ },
+ {
+  "ora": "2025-01-25T14:00",
+  "cella": 290048,
+  "quartiere": "Ascoli - Borgo Solesta",
+  "X": -1.0,
+  "Y": 0.994,
+  "T": 15.14,
+  "sole": 23.62,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2024-10-05T22:00",
+  "cella": 293011,
+  "quartiere": "Ascoli - Borgo Solesta",
+  "X": -1.0,
+  "Y": 1.0,
+  "T": 13.72,
+  "sole": -36.2,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-06-29T12:00",
+  "cella": 288884,
+  "quartiere": "Ascoli - Borgo Solesta",
+  "X": -1.0,
+  "Y": -0.5035,
+  "T": 38.43,
+  "sole": 65.61,
+  "stato": "afa"
+ },
+ {
+  "ora": "2024-11-01T09:00",
+  "cella": 293019,
+  "quartiere": "Ascoli - Borgo Solesta",
+  "X": -0.4532,
+  "Y": 1.0,
+  "T": 10.9,
+  "sole": 20.66,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2024-12-09T01:00",
+  "cella": 294185,
+  "quartiere": "Ascoli - Borgo Solesta",
+  "X": -1.0,
+  "Y": 0.3139,
+  "T": 2.87,
+  "sole": -66.09,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-10-29T19:00",
+  "cella": 291236,
+  "quartiere": "Ascoli - Borgo Solesta",
+  "X": -1.0,
+  "Y": 1.0,
+  "T": 16.52,
+  "sole": -22.21,
+  "stato": "notte"
+ },
+ {
+  "ora": "2025-01-12T15:00",
+  "cella": 304237,
+  "quartiere": "Ascoli - Borgo Solesta",
+  "X": 0.4974,
+  "Y": 0.4155,
+  "T": 5.25,
+  "sole": 14.92,
+  "stato": "festa"
+ },
+ {
+  "ora": "2024-06-10T17:00",
+  "cella": 293026,
+  "quartiere": "Ascoli - Borgo Solesta",
+  "X": 0.5267,
+  "Y": -0.3773,
+  "T": 31.46,
+  "sole": 37.94,
+  "stato": "calca"
+ },
+ {
+  "ora": "2024-10-09T00:00",
+  "cella": 302460,
+  "quartiere": "Ascoli - Borgo Solesta",
+  "X": -0.4837,
+  "Y": 0.969,
+  "T": 18.71,
+  "sole": -51.59,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-09-21T23:00",
+  "cella": 308342,
+  "quartiere": "Ascoli - Borgo Solesta",
+  "X": -1.0,
+  "Y": 0.965,
+  "T": 15.4,
+  "sole": -39.18,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-06-16T08:00",
+  "cella": 291248,
+  "quartiere": "Ascoli - Borgo Solesta",
+  "X": -0.9549,
+  "Y": 1.0,
+  "T": 22.69,
+  "sole": 25.14,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2024-11-05T18:00",
+  "cella": 320750,
+  "quartiere": "Ascoli - Campo Parignano",
+  "X": 0.4998,
+  "Y": 0.66,
+  "T": 14.26,
+  "sole": -12.67,
+  "stato": "festa"
+ },
+ {
+  "ora": "2024-12-27T17:00",
+  "cella": 326651,
+  "quartiere": "Ascoli - Campo Parignano",
+  "X": 0.5468,
+  "Y": 0.53,
+  "T": 9.66,
+  "sole": -4.2,
+  "stato": "festa"
+ },
+ {
+  "ora": "2024-10-24T20:00",
+  "cella": 317207,
+  "quartiere": "Ascoli - Campo Parignano",
+  "X": -0.2442,
+  "Y": 0.7035,
+  "T": 18.28,
+  "sole": -21.04,
+  "stato": "passeggiata"
+ },
+ {
+  "ora": "2024-08-03T23:00",
+  "cella": 327245,
+  "quartiere": "Ascoli - Campo Parignano",
+  "X": -0.2781,
+  "Y": 0.5175,
+  "T": 24.97,
+  "sole": -22.48,
+  "stato": "passeggiata"
+ },
+ {
+  "ora": "2024-12-24T14:00",
+  "cella": 318979,
+  "quartiere": "Ascoli - Campo Parignano",
+  "X": -0.0588,
+  "Y": -0.0538,
+  "T": -2.22,
+  "sole": 18.85,
+  "stato": "routine"
+ },
+ {
+  "ora": "2024-10-04T08:00",
+  "cella": 323104,
+  "quartiere": "Ascoli - Campo Parignano",
+  "X": -0.3782,
+  "Y": 1.0,
+  "T": 13.27,
+  "sole": 8.92,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2024-10-04T16:00",
+  "cella": 324302,
+  "quartiere": "Ascoli - Campo Parignano",
+  "X": 0.219,
+  "Y": 0.7,
+  "T": 16.51,
+  "sole": 26.67,
+  "stato": "passeggiata"
+ },
+ {
+  "ora": "2024-12-03T05:00",
+  "cella": 332560,
+  "quartiere": "Ascoli - Campo Parignano",
+  "X": -1.0,
+  "Y": 0.2933,
+  "T": 5.22,
+  "sole": -24.78,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-07-07T09:00",
+  "cella": 315425,
+  "quartiere": "Ascoli - Campo Parignano",
+  "X": -1.0,
+  "Y": 0.5814,
+  "T": 27.67,
+  "sole": 34.87,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2024-12-19T15:00",
+  "cella": 321941,
+  "quartiere": "Ascoli - Campo Parignano",
+  "X": 0.3611,
+  "Y": 1.0,
+  "T": 13.18,
+  "sole": 12.38,
+  "stato": "festa"
+ },
+ {
+  "ora": "2024-11-16T02:00",
+  "cella": 315434,
+  "quartiere": "Ascoli - Campo Parignano",
+  "X": -1.0,
+  "Y": 0.7368,
+  "T": 5.14,
+  "sole": -53.65,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-12-11T15:00",
+  "cella": 326070,
+  "quartiere": "Ascoli - Campo Parignano",
+  "X": 0.2955,
+  "Y": 0.5631,
+  "T": 8.53,
+  "sole": 12.25,
+  "stato": "passeggiata"
+ },
+ {
+  "ora": "2024-07-18T03:00",
+  "cella": 329009,
+  "quartiere": "Ascoli - Campo Parignano",
+  "X": -1.0,
+  "Y": 0.999,
+  "T": 21.83,
+  "sole": -21.42,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-12-15T09:00",
+  "cella": 322518,
+  "quartiere": "Ascoli - Campo Parignano",
+  "X": -0.2638,
+  "Y": 0.7192,
+  "T": 4.88,
+  "sole": 11.98,
+  "stato": "passeggiata"
+ },
+ {
+  "ora": "2024-07-18T01:00",
+  "cella": 318987,
+  "quartiere": "Ascoli - Campo Parignano",
+  "X": -1.0,
+  "Y": 0.6387,
+  "T": 26.54,
+  "sole": -26.03,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-06-21T01:00",
+  "cella": 321332,
+  "quartiere": "Ascoli - Campo Parignano",
+  "X": -1.0,
+  "Y": 1.0,
+  "T": 24.52,
+  "sole": -23.85,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-12-28T09:00",
+  "cella": 317211,
+  "quartiere": "Ascoli - Campo Parignano",
+  "X": 0.1374,
+  "Y": -0.2636,
+  "T": -3.94,
+  "sole": 11.24,
+  "stato": "routine"
+ },
+ {
+  "ora": "2024-12-29T21:00",
+  "cella": 324298,
+  "quartiere": "Ascoli - Campo Parignano",
+  "X": -0.256,
+  "Y": 0.4062,
+  "T": 7.13,
+  "sole": -46.58,
+  "stato": "passeggiata"
+ },
+ {
+  "ora": "2025-01-02T15:00",
+  "cella": 327840,
+  "quartiere": "Ascoli - Campo Parignano",
+  "X": 0.2543,
+  "Y": 0.7315,
+  "T": 12.26,
+  "sole": 13.45,
+  "stato": "passeggiata"
+ },
+ {
+  "ora": "2024-09-25T02:00",
+  "cella": 318393,
+  "quartiere": "Ascoli - Campo Parignano",
+  "X": -1.0,
+  "Y": 0.893,
+  "T": 16.04,
+  "sole": -45.61,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-11-09T09:00",
+  "cella": 317844,
+  "quartiere": "Ascoli - Centro Storico",
+  "X": -0.5888,
+  "Y": 1.0,
+  "T": 14.5,
+  "sole": 18.57,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2025-01-25T17:00",
+  "cella": 327271,
+  "quartiere": "Ascoli - Centro Storico",
+  "X": 0.0043,
+  "Y": 0.536,
+  "T": 13.66,
+  "sole": 0.36,
+  "stato": "passeggiata"
+ },
+ {
+  "ora": "2024-11-27T20:00",
+  "cella": 324312,
+  "quartiere": "Ascoli - Centro Storico",
+  "X": -0.349,
+  "Y": 0.677,
+  "T": 13.31,
+  "sole": -37.07,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-09-09T02:00",
+  "cella": 310153,
+  "quartiere": "Ascoli - Centro Storico",
+  "X": -1.0,
+  "Y": 0.3065,
+  "T": 22.89,
+  "sole": -39.91,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-08-27T13:00",
+  "cella": 313691,
+  "quartiere": "Ascoli - Centro Storico",
+  "X": 0.2506,
+  "Y": -1.0,
+  "T": 32.64,
+  "sole": 57.28,
+  "stato": "fatica"
+ },
+ {
+  "ora": "2025-01-11T08:00",
+  "cella": 331974,
+  "quartiere": "Ascoli - Centro Storico",
+  "X": -0.5595,
+  "Y": 0.6656,
+  "T": 6.22,
+  "sole": 3.07,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2024-09-11T22:00",
+  "cella": 314862,
+  "quartiere": "Ascoli - Centro Storico",
+  "X": -0.3297,
+  "Y": 0.899,
+  "T": 17.29,
+  "sole": -27.35,
+  "stato": "passeggiata"
+ },
+ {
+  "ora": "2024-06-30T06:00",
+  "cella": 319607,
+  "quartiere": "Ascoli - Centro Storico",
+  "X": -0.9473,
+  "Y": 1.0,
+  "T": 21.44,
+  "sole": 3.77,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2024-08-22T01:00",
+  "cella": 324322,
+  "quartiere": "Ascoli - Centro Storico",
+  "X": -1.0,
+  "Y": 1.0,
+  "T": 20.51,
+  "sole": -35.04,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-07-21T01:00",
+  "cella": 330211,
+  "quartiere": "Ascoli - Centro Storico",
+  "X": -0.8221,
+  "Y": 1.0,
+  "T": 23.56,
+  "sole": -26.55,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-08-04T00:00",
+  "cella": 326664,
+  "quartiere": "Ascoli - Centro Storico",
+  "X": -0.1688,
+  "Y": 1.0,
+  "T": 23.01,
+  "sole": -27.46,
+  "stato": "passeggiata"
+ },
+ {
+  "ora": "2024-10-03T14:00",
+  "cella": 303077,
+  "quartiere": "Ascoli - Centro Storico",
+  "X": 0.4996,
+  "Y": 0.7,
+  "T": 22.07,
+  "sole": 40.72,
+  "stato": "festa"
+ },
+ {
+  "ora": "2024-12-25T02:00",
+  "cella": 312500,
+  "quartiere": "Ascoli - Centro Storico",
+  "X": -0.9716,
+  "Y": -0.4528,
+  "T": -1.2,
+  "sole": -59.28,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-06-20T23:00",
+  "cella": 322559,
+  "quartiere": "Ascoli - Centro Storico",
+  "X": -0.484,
+  "Y": 0.6627,
+  "T": 27.35,
+  "sole": -17.68,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-08-01T00:00",
+  "cella": 317229,
+  "quartiere": "Ascoli - Centro Storico",
+  "X": -0.4229,
+  "Y": 0.504,
+  "T": 23.51,
+  "sole": -26.73,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-11-28T00:00",
+  "cella": 326091,
+  "quartiere": "Ascoli - Centro Storico",
+  "X": -0.653,
+  "Y": 0.7685,
+  "T": 12.17,
+  "sole": -68.31,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-12-24T16:00",
+  "cella": 314893,
+  "quartiere": "Ascoli - Centro Storico",
+  "X": 0.1675,
+  "Y": -0.0225,
+  "T": -1.6,
+  "sole": 4.73,
+  "stato": "routine"
+ },
+ {
+  "ora": "2024-08-16T02:00",
+  "cella": 314294,
+  "quartiere": "Ascoli - Centro Storico",
+  "X": -1.0,
+  "Y": 0.564,
+  "T": 24.36,
+  "sole": -32.01,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-07-17T09:00",
+  "cella": 329028,
+  "quartiere": "Ascoli - Centro Storico",
+  "X": 0.3954,
+  "Y": -0.2972,
+  "T": 31.19,
+  "sole": 33.81,
+  "stato": "corrente"
+ },
+ {
+  "ora": "2025-01-12T20:00",
+  "cella": 314854,
+  "quartiere": "Ascoli - Centro Storico",
+  "X": 0.1741,
+  "Y": 0.5907,
+  "T": 3.37,
+  "sole": -33.83,
+  "stato": "passeggiata"
+ },
+ {
+  "ora": "2024-11-10T10:00",
+  "cella": 340234,
+  "quartiere": "Ascoli - Pennile di Sotto",
+  "X": 0.2903,
+  "Y": 0.5385,
+  "T": 14.68,
+  "sole": 24.77,
+  "stato": "passeggiata"
+ },
+ {
+  "ora": "2024-07-31T09:00",
+  "cella": 344370,
+  "quartiere": "Ascoli - Pennile di Sotto",
+  "X": 0.4688,
+  "Y": -0.6264,
+  "T": 31.84,
+  "sole": 31.97,
+  "stato": "calca"
+ },
+ {
+  "ora": "2024-12-07T01:00",
+  "cella": 352036,
+  "quartiere": "Ascoli - Pennile di Sotto",
+  "X": -1.0,
+  "Y": 0.6207,
+  "T": 3.44,
+  "sole": -65.82,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-07-23T01:00",
+  "cella": 357341,
+  "quartiere": "Ascoli - Pennile di Sotto",
+  "X": -1.0,
+  "Y": 1.0,
+  "T": 22.33,
+  "sole": -26.93,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-12-22T11:00",
+  "cella": 356753,
+  "quartiere": "Ascoli - Pennile di Sotto",
+  "X": -0.9712,
+  "Y": 0.8918,
+  "T": 7.41,
+  "sole": 22.25,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2024-06-16T10:00",
+  "cella": 345545,
+  "quartiere": "Ascoli - Pennile di Sotto",
+  "X": 0.7726,
+  "Y": 0.2867,
+  "T": 27.89,
+  "sole": 47.01,
+  "stato": "corrente"
+ },
+ {
+  "ora": "2024-12-21T01:00",
+  "cella": 353810,
+  "quartiere": "Ascoli - Pennile di Sotto",
+  "X": -1.0,
+  "Y": 0.4902,
+  "T": 1.52,
+  "sole": -67.2,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-07-11T11:00",
+  "cella": 348490,
+  "quartiere": "Ascoli - Pennile di Sotto",
+  "X": 0.3821,
+  "Y": -0.5,
+  "T": 36.78,
+  "sole": 55.73,
+  "stato": "calca"
+ },
+ {
+  "ora": "2024-09-01T06:00",
+  "cella": 342003,
+  "quartiere": "Ascoli - Pennile di Sotto",
+  "X": -1.0,
+  "Y": 0.77,
+  "T": 15.27,
+  "sole": -6.04,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-08-17T22:00",
+  "cella": 353803,
+  "quartiere": "Ascoli - Pennile di Sotto",
+  "X": -0.7168,
+  "Y": 0.9899,
+  "T": 26.04,
+  "sole": -18.91,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-11-18T01:00",
+  "cella": 339050,
+  "quartiere": "Ascoli - Pennile di Sotto",
+  "X": -1.0,
+  "Y": 0.5033,
+  "T": 8.84,
+  "sole": -62.27,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-07-14T22:00",
+  "cella": 353218,
+  "quartiere": "Ascoli - Pennile di Sotto",
+  "X": -0.2346,
+  "Y": 0.9524,
+  "T": 26.19,
+  "sole": -11.98,
+  "stato": "passeggiata"
+ },
+ {
+  "ora": "2024-09-06T11:00",
+  "cella": 349683,
+  "quartiere": "Ascoli - Pennile di Sotto",
+  "X": 0.6988,
+  "Y": -0.3636,
+  "T": 31.45,
+  "sole": 44.56,
+  "stato": "calca"
+ },
+ {
+  "ora": "2024-06-02T10:00",
+  "cella": 349082,
+  "quartiere": "Ascoli - Pennile di Sotto",
+  "X": 0.2056,
+  "Y": 1.0,
+  "T": 22.68,
+  "sole": 46.8,
+  "stato": "passeggiata"
+ },
+ {
+  "ora": "2024-08-04T13:00",
+  "cella": 350867,
+  "quartiere": "Ascoli - Pennile di Sotto",
+  "X": -0.0153,
+  "Y": -0.9015,
+  "T": 35.51,
+  "sole": 64.33,
+  "stato": "fatica"
+ },
+ {
+  "ora": "2024-09-12T14:00",
+  "cella": 349680,
+  "quartiere": "Ascoli - Pennile di Sotto",
+  "X": 0.613,
+  "Y": 0.719,
+  "T": 25.61,
+  "sole": 49.23,
+  "stato": "festa"
+ },
+ {
+  "ora": "2024-06-27T01:00",
+  "cella": 350855,
+  "quartiere": "Ascoli - Pennile di Sotto",
+  "X": -1.0,
+  "Y": 1.0,
+  "T": 17.1,
+  "sole": -23.94,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-11-03T18:00",
+  "cella": 346721,
+  "quartiere": "Ascoli - Pennile di Sotto",
+  "X": 0.6698,
+  "Y": 0.885,
+  "T": 15.61,
+  "sole": -12.29,
+  "stato": "festa"
+ },
+ {
+  "ora": "2024-09-02T14:00",
+  "cella": 353808,
+  "quartiere": "Ascoli - Pennile di Sotto",
+  "X": 0.01,
+  "Y": 0.5402,
+  "T": 27.84,
+  "sole": 53.13,
+  "stato": "passeggiata"
+ },
+ {
+  "ora": "2024-11-26T10:00",
+  "cella": 338463,
+  "quartiere": "Ascoli - Pennile di Sotto",
+  "X": -0.4153,
+  "Y": 0.519,
+  "T": 14.43,
+  "sole": 21.06,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2024-11-08T20:00",
+  "cella": 303102,
+  "quartiere": "Ascoli - Porta Cartara",
+  "X": -1.0,
+  "Y": 1.0,
+  "T": 15.15,
+  "sole": -35.08,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-09-15T01:00",
+  "cella": 296009,
+  "quartiere": "Ascoli - Porta Cartara",
+  "X": -1.0,
+  "Y": 1.0,
+  "T": 12.66,
+  "sole": -43.92,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-12-31T08:00",
+  "cella": 312541,
+  "quartiere": "Ascoli - Porta Cartara",
+  "X": -1.0,
+  "Y": 0.442,
+  "T": 0.82,
+  "sole": 2.91,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2024-11-03T12:00",
+  "cella": 299547,
+  "quartiere": "Ascoli - Porta Cartara",
+  "X": -0.855,
+  "Y": 1.0,
+  "T": 21.78,
+  "sole": 31.82,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2024-12-17T07:00",
+  "cella": 293662,
+  "quartiere": "Ascoli - Porta Cartara",
+  "X": -1.0,
+  "Y": 0.7112,
+  "T": 4.76,
+  "sole": -5.68,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2024-08-24T01:00",
+  "cella": 298373,
+  "quartiere": "Ascoli - Porta Cartara",
+  "X": -1.0,
+  "Y": 1.0,
+  "T": 20.13,
+  "sole": -35.72,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-10-12T17:00",
+  "cella": 316090,
+  "quartiere": "Ascoli - Porta Cartara",
+  "X": -1.0,
+  "Y": 0.94,
+  "T": 19.82,
+  "sole": 14.45,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2024-07-19T06:00",
+  "cella": 311958,
+  "quartiere": "Ascoli - Porta Cartara",
+  "X": -1.0,
+  "Y": 1.0,
+  "T": 22.08,
+  "sole": 1.75,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2025-02-01T01:00",
+  "cella": 308993,
+  "quartiere": "Ascoli - Porta Cartara",
+  "X": -1.0,
+  "Y": 0.8939,
+  "T": 7.44,
+  "sole": -63.23,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-07-30T19:00",
+  "cella": 293655,
+  "quartiere": "Ascoli - Porta Cartara",
+  "X": -1.0,
+  "Y": 0.235,
+  "T": 29.06,
+  "sole": 14.64,
+  "stato": "attesa"
+ },
+ {
+  "ora": "2024-08-03T04:00",
+  "cella": 295430,
+  "quartiere": "Ascoli - Porta Cartara",
+  "X": -1.0,
+  "Y": 1.0,
+  "T": 20.59,
+  "sole": -18.23,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-06-19T00:00",
+  "cella": 298978,
+  "quartiere": "Ascoli - Porta Cartara",
+  "X": -1.0,
+  "Y": 1.0,
+  "T": 21.13,
+  "sole": -22.13,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-08-03T10:00",
+  "cella": 313131,
+  "quartiere": "Ascoli - Porta Cartara",
+  "X": -0.8558,
+  "Y": -0.5,
+  "T": 33.21,
+  "sole": 42.31,
+  "stato": "afa"
+ },
+ {
+  "ora": "2024-12-05T17:00",
+  "cella": 314309,
+  "quartiere": "Ascoli - Porta Cartara",
+  "X": -0.9044,
+  "Y": 0.8721,
+  "T": 7.12,
+  "sole": -5.24,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2024-11-19T16:00",
+  "cella": 296021,
+  "quartiere": "Ascoli - Porta Cartara",
+  "X": -0.9729,
+  "Y": 0.9515,
+  "T": 17.83,
+  "sole": 5.48,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2024-07-02T15:00",
+  "cella": 309007,
+  "quartiere": "Ascoli - Porta Cartara",
+  "X": -1.0,
+  "Y": 0.2943,
+  "T": 28.82,
+  "sole": 59.65,
+  "stato": "attesa"
+ },
+ {
+  "ora": "2024-09-01T13:00",
+  "cella": 294845,
+  "quartiere": "Ascoli - Porta Cartara",
+  "X": -1.0,
+  "Y": -0.5,
+  "T": 36.14,
+  "sole": 55.5,
+  "stato": "afa"
+ },
+ {
+  "ora": "2024-09-12T13:00",
+  "cella": 293076,
+  "quartiere": "Ascoli - Porta Cartara",
+  "X": -1.0,
+  "Y": 0.7535,
+  "T": 24.98,
+  "sole": 51.35,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2024-11-11T14:00",
+  "cella": 302515,
+  "quartiere": "Ascoli - Porta Cartara",
+  "X": -0.9632,
+  "Y": 1.0,
+  "T": 14.47,
+  "sole": 22.57,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2024-09-21T03:00",
+  "cella": 304856,
+  "quartiere": "Ascoli - Porta Cartara",
+  "X": -1.0,
+  "Y": 1.0,
+  "T": 13.59,
+  "sole": -38.52,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-10-23T06:00",
+  "cella": 329059,
+  "quartiere": "Ascoli - Porta Maggiore",
+  "X": -0.3419,
+  "Y": 0.9325,
+  "T": 18.62,
+  "sole": -16.92,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-12-24T13:00",
+  "cella": 334939,
+  "quartiere": "Ascoli - Porta Maggiore",
+  "X": 0.8024,
+  "Y": 0.0944,
+  "T": -1.11,
+  "sole": 22.74,
+  "stato": "corrente"
+ },
+ {
+  "ora": "2024-11-26T17:00",
+  "cella": 339685,
+  "quartiere": "Ascoli - Porta Maggiore",
+  "X": 0.2133,
+  "Y": 1.0,
+  "T": 15.4,
+  "sole": -4.86,
+  "stato": "passeggiata"
+ },
+ {
+  "ora": "2024-08-29T19:00",
+  "cella": 337296,
+  "quartiere": "Ascoli - Porta Maggiore",
+  "X": 0.8854,
+  "Y": -0.0287,
+  "T": 29.2,
+  "sole": 7.57,
+  "stato": "corrente"
+ },
+ {
+  "ora": "2024-09-19T07:00",
+  "cella": 331388,
+  "quartiere": "Ascoli - Porta Maggiore",
+  "X": 0.3867,
+  "Y": 0.525,
+  "T": 15.11,
+  "sole": 1.18,
+  "stato": "festa"
+ },
+ {
+  "ora": "2024-08-30T10:00",
+  "cella": 337297,
+  "quartiere": "Ascoli - Porta Maggiore",
+  "X": 0.833,
+  "Y": -0.6585,
+  "T": 33.21,
+  "sole": 37.25,
+  "stato": "calca"
+ },
+ {
+  "ora": "2024-06-27T23:00",
+  "cella": 326118,
+  "quartiere": "Ascoli - Porta Maggiore",
+  "X": -1.0,
+  "Y": 1.0,
+  "T": 20.19,
+  "sole": -17.66,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-07-20T23:00",
+  "cella": 321976,
+  "quartiere": "Ascoli - Porta Maggiore",
+  "X": -0.7417,
+  "Y": 1.0,
+  "T": 24.41,
+  "sole": -19.69,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-08-09T19:00",
+  "cella": 333778,
+  "quartiere": "Ascoli - Porta Maggiore",
+  "X": 0.8471,
+  "Y": 0.0732,
+  "T": 29.66,
+  "sole": 12.77,
+  "stato": "corrente"
+ },
+ {
+  "ora": "2024-08-17T06:00",
+  "cella": 327298,
+  "quartiere": "Ascoli - Porta Maggiore",
+  "X": -0.9979,
+  "Y": 1.0,
+  "T": 23.13,
+  "sole": -3.1,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2024-08-17T00:00",
+  "cella": 340259,
+  "quartiere": "Ascoli - Porta Maggiore",
+  "X": 0.3657,
+  "Y": 0.5125,
+  "T": 24.54,
+  "sole": -31.19,
+  "stato": "festa"
+ },
+ {
+  "ora": "2024-10-20T20:00",
+  "cella": 345552,
+  "quartiere": "Ascoli - Porta Maggiore",
+  "X": 0.5125,
+  "Y": 0.6565,
+  "T": 18.04,
+  "sole": -20.01,
+  "stato": "festa"
+ },
+ {
+  "ora": "2025-01-26T00:00",
+  "cella": 326104,
+  "quartiere": "Ascoli - Porta Maggiore",
+  "X": 0.2001,
+  "Y": 0.9609,
+  "T": 8.43,
+  "sole": -65.95,
+  "stato": "passeggiata"
+ },
+ {
+  "ora": "2024-12-08T13:00",
+  "cella": 344383,
+  "quartiere": "Ascoli - Porta Maggiore",
+  "X": 0.6555,
+  "Y": 0.51,
+  "T": 11.11,
+  "sole": 23.01,
+  "stato": "festa"
+ },
+ {
+  "ora": "2024-12-12T14:00",
+  "cella": 326701,
+  "quartiere": "Ascoli - Porta Maggiore",
+  "X": 0.0847,
+  "Y": 0.9995,
+  "T": 13.76,
+  "sole": 18.63,
+  "stato": "passeggiata"
+ },
+ {
+  "ora": "2024-12-04T18:00",
+  "cella": 339688,
+  "quartiere": "Ascoli - Porta Maggiore",
+  "X": -0.4435,
+  "Y": 0.6105,
+  "T": 7.69,
+  "sole": -15.48,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-10-25T20:00",
+  "cella": 340256,
+  "quartiere": "Ascoli - Porta Maggiore",
+  "X": 0.5883,
+  "Y": 0.534,
+  "T": 21.04,
+  "sole": -21.28,
+  "stato": "festa"
+ },
+ {
+  "ora": "2025-01-12T18:00",
+  "cella": 332583,
+  "quartiere": "Ascoli - Porta Maggiore",
+  "X": 0.6378,
+  "Y": -0.144,
+  "T": -3.71,
+  "sole": -12.21,
+  "stato": "corrente"
+ },
+ {
+  "ora": "2024-11-17T15:00",
+  "cella": 348515,
+  "quartiere": "Ascoli - Porta Maggiore",
+  "X": 0.9161,
+  "Y": 0.861,
+  "T": 18.04,
+  "sole": 14.35,
+  "stato": "festa"
+ },
+ {
+  "ora": "2024-10-02T02:00",
+  "cella": 333153,
+  "quartiere": "Ascoli - Porta Maggiore",
+  "X": -1.0,
+  "Y": 0.6385,
+  "T": 12.98,
+  "sole": -48.09,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-06-19T23:00",
+  "cella": 287732,
+  "quartiere": "Ascoli - Porta Romana",
+  "X": -0.7163,
+  "Y": 1.0,
+  "T": 24.97,
+  "sole": -17.71,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-09-29T03:00",
+  "cella": 279471,
+  "quartiere": "Ascoli - Porta Romana",
+  "X": -1.0,
+  "Y": 1.0,
+  "T": 10.46,
+  "sole": -40.95,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-07-23T08:00",
+  "cella": 287734,
+  "quartiere": "Ascoli - Porta Romana",
+  "X": -0.0775,
+  "Y": 0.97,
+  "T": 25.47,
+  "sole": 22.1,
+  "stato": "passeggiata"
+ },
+ {
+  "ora": "2024-07-03T15:00",
+  "cella": 282412,
+  "quartiere": "Ascoli - Porta Romana",
+  "X": -1.0,
+  "Y": -0.3949,
+  "T": 30.53,
+  "sole": 59.63,
+  "stato": "afa"
+ },
+ {
+  "ora": "2024-10-03T11:00",
+  "cella": 297181,
+  "quartiere": "Ascoli - Porta Romana",
+  "X": -0.1149,
+  "Y": 1.0,
+  "T": 21.3,
+  "sole": 36.42,
+  "stato": "passeggiata"
+ },
+ {
+  "ora": "2024-12-11T03:00",
+  "cella": 282428,
+  "quartiere": "Ascoli - Porta Romana",
+  "X": -1.0,
+  "Y": 0.598,
+  "T": 4.78,
+  "sole": -47.74,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-08-12T13:00",
+  "cella": 298954,
+  "quartiere": "Ascoli - Porta Romana",
+  "X": -0.7398,
+  "Y": -0.5,
+  "T": 38.78,
+  "sole": 62.13,
+  "stato": "afa"
+ },
+ {
+  "ora": "2024-12-07T02:00",
+  "cella": 296585,
+  "quartiere": "Ascoli - Porta Romana",
+  "X": -1.0,
+  "Y": 0.3614,
+  "T": 6.58,
+  "sole": -57.44,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-10-08T07:00",
+  "cella": 293041,
+  "quartiere": "Ascoli - Porta Romana",
+  "X": 0.4838,
+  "Y": 0.9575,
+  "T": 13.2,
+  "sole": -2.76,
+  "stato": "festa"
+ },
+ {
+  "ora": "2024-07-07T15:00",
+  "cella": 297172,
+  "quartiere": "Ascoli - Porta Romana",
+  "X": -0.3981,
+  "Y": -0.9315,
+  "T": 34.76,
+  "sole": 59.47,
+  "stato": "afa"
+ },
+ {
+  "ora": "2025-01-24T09:00",
+  "cella": 279469,
+  "quartiere": "Ascoli - Porta Romana",
+  "X": -1.0,
+  "Y": 0.8541,
+  "T": 6.86,
+  "sole": 12.96,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2024-09-07T19:00",
+  "cella": 285995,
+  "quartiere": "Ascoli - Porta Romana",
+  "X": -1.0,
+  "Y": 0.903,
+  "T": 26.39,
+  "sole": 4.75,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2024-08-12T15:00",
+  "cella": 291274,
+  "quartiere": "Ascoli - Porta Romana",
+  "X": -0.2436,
+  "Y": -0.7135,
+  "T": 39.98,
+  "sole": 53.7,
+  "stato": "fatica"
+ },
+ {
+  "ora": "2024-12-26T08:00",
+  "cella": 288934,
+  "quartiere": "Ascoli - Porta Romana",
+  "X": -1.0,
+  "Y": 0.6458,
+  "T": 3.81,
+  "sole": 3.06,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2024-07-01T14:00",
+  "cella": 293055,
+  "quartiere": "Ascoli - Porta Romana",
+  "X": -0.5075,
+  "Y": -0.5015,
+  "T": 34.81,
+  "sole": 67.5,
+  "stato": "afa"
+ },
+ {
+  "ora": "2024-11-28T11:00",
+  "cella": 299540,
+  "quartiere": "Ascoli - Porta Romana",
+  "X": -0.1736,
+  "Y": 1.0,
+  "T": 15.15,
+  "sole": 24.66,
+  "stato": "passeggiata"
+ },
+ {
+  "ora": "2024-07-17T04:00",
+  "cella": 290121,
+  "quartiere": "Ascoli - Porta Romana",
+  "X": -1.0,
+  "Y": 1.0,
+  "T": 20.76,
+  "sole": -15.16,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-09-05T13:00",
+  "cella": 297761,
+  "quartiere": "Ascoli - Porta Romana",
+  "X": -0.1153,
+  "Y": -0.996,
+  "T": 35.03,
+  "sole": 54.02,
+  "stato": "fatica"
+ },
+ {
+  "ora": "2024-07-28T01:00",
+  "cella": 298357,
+  "quartiere": "Ascoli - Porta Romana",
+  "X": -0.8872,
+  "Y": 0.9975,
+  "T": 22.54,
+  "sole": -27.96,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-12-24T22:00",
+  "cella": 279478,
+  "quartiere": "Ascoli - Porta Romana",
+  "X": -0.6541,
+  "Y": 0.11,
+  "T": 0.35,
+  "sole": -57.48,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-09-04T23:00",
+  "cella": 358532,
+  "quartiere": "Ascoli - San Filippo",
+  "X": -0.7438,
+  "Y": 1.0,
+  "T": 23.23,
+  "sole": -32.58,
+  "stato": "notte"
+ },
+ {
+  "ora": "2025-01-26T18:00",
+  "cella": 361498,
+  "quartiere": "Ascoli - San Filippo",
+  "X": -0.34,
+  "Y": 1.0,
+  "T": 11.68,
+  "sole": -9.61,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-11-01T19:00",
+  "cella": 350285,
+  "quartiere": "Ascoli - San Filippo",
+  "X": 0.7109,
+  "Y": 0.7985,
+  "T": 16.11,
+  "sole": -22.85,
+  "stato": "festa"
+ },
+ {
+  "ora": "2024-11-18T15:00",
+  "cella": 360311,
+  "quartiere": "Ascoli - San Filippo",
+  "X": -0.022,
+  "Y": 0.97,
+  "T": 15.41,
+  "sole": 14.19,
+  "stato": "passeggiata"
+ },
+ {
+  "ora": "2024-10-07T07:00",
+  "cella": 358540,
+  "quartiere": "Ascoli - San Filippo",
+  "X": 0.5867,
+  "Y": 0.9794,
+  "T": 8.7,
+  "sole": -2.54,
+  "stato": "festa"
+ },
+ {
+  "ora": "2024-08-16T00:00",
+  "cella": 357947,
+  "quartiere": "Ascoli - San Filippo",
+  "X": -0.7287,
+  "Y": 0.6402,
+  "T": 27.44,
+  "sole": -30.88,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-09-06T07:00",
+  "cella": 353230,
+  "quartiere": "Ascoli - San Filippo",
+  "X": 0.3767,
+  "Y": 0.68,
+  "T": 17.16,
+  "sole": 3.74,
+  "stato": "festa"
+ },
+ {
+  "ora": "2025-01-18T11:00",
+  "cella": 359143,
+  "quartiere": "Ascoli - San Filippo",
+  "X": 0.08,
+  "Y": 0.7227,
+  "T": 7.7,
+  "sole": 24.13,
+  "stato": "passeggiata"
+ },
+ {
+  "ora": "2024-07-20T11:00",
+  "cella": 361492,
+  "quartiere": "Ascoli - San Filippo",
+  "X": -0.4833,
+  "Y": -0.5,
+  "T": 35.94,
+  "sole": 54.59,
+  "stato": "afa"
+ },
+ {
+  "ora": "2025-01-30T02:00",
+  "cella": 350876,
+  "quartiere": "Ascoli - San Filippo",
+  "X": -1.0,
+  "Y": 0.5636,
+  "T": 2.6,
+  "sole": -57.21,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-12-04T13:00",
+  "cella": 359132,
+  "quartiere": "Ascoli - San Filippo",
+  "X": 0.4067,
+  "Y": 0.9675,
+  "T": 10.42,
+  "sole": 23.36,
+  "stato": "festa"
+ },
+ {
+  "ora": "2024-08-28T12:00",
+  "cella": 360314,
+  "quartiere": "Ascoli - San Filippo",
+  "X": -0.0677,
+  "Y": -0.586,
+  "T": 35.59,
+  "sole": 53.88,
+  "stato": "fatica"
+ },
+ {
+  "ora": "2024-11-05T19:00",
+  "cella": 360893,
+  "quartiere": "Ascoli - San Filippo",
+  "X": -0.6281,
+  "Y": 0.9285,
+  "T": 13.28,
+  "sole": -23.61,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-09-02T17:00",
+  "cella": 359119,
+  "quartiere": "Ascoli - San Filippo",
+  "X": -0.8728,
+  "Y": -0.294,
+  "T": 30.95,
+  "sole": 28.14,
+  "stato": "attesa"
+ },
+ {
+  "ora": "2024-09-02T20:00",
+  "cella": 355599,
+  "quartiere": "Ascoli - San Filippo",
+  "X": 1.0,
+  "Y": 0.614,
+  "T": 24.56,
+  "sole": -4.48,
+  "stato": "festa"
+ },
+ {
+  "ora": "2024-10-02T22:00",
+  "cella": 359710,
+  "quartiere": "Ascoli - San Filippo",
+  "X": -0.9004,
+  "Y": 1.0,
+  "T": 19.3,
+  "sole": -35.13,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-06-05T02:00",
+  "cella": 350872,
+  "quartiere": "Ascoli - San Filippo",
+  "X": -1.0,
+  "Y": 0.8215,
+  "T": 15.48,
+  "sole": -23.47,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-09-30T10:00",
+  "cella": 353823,
+  "quartiere": "Ascoli - San Filippo",
+  "X": 1.0,
+  "Y": 0.965,
+  "T": 22.87,
+  "sole": 29.61,
+  "stato": "festa"
+ },
+ {
+  "ora": "2025-01-26T00:00",
+  "cella": 358539,
+  "quartiere": "Ascoli - San Filippo",
+  "X": -0.0188,
+  "Y": 0.9501,
+  "T": 8.27,
+  "sole": -65.95,
+  "stato": "passeggiata"
+ },
+ {
+  "ora": "2024-08-10T05:00",
+  "cella": 360298,
+  "quartiere": "Ascoli - San Filippo",
+  "X": -1.0,
+  "Y": 0.98,
+  "T": 21.23,
+  "sole": -11.4,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-12-02T01:00",
+  "cella": 350848,
+  "quartiere": "Ascoli - Stadio",
+  "X": -1.0,
+  "Y": 0.8474,
+  "T": 6.76,
+  "sole": -65.05,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-09-17T22:00",
+  "cella": 359094,
+  "quartiere": "Ascoli - Stadio",
+  "X": -0.9941,
+  "Y": 0.656,
+  "T": 16.19,
+  "sole": -29.58,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-07-22T11:00",
+  "cella": 355543,
+  "quartiere": "Ascoli - Stadio",
+  "X": -1.0,
+  "Y": -0.037,
+  "T": 30.15,
+  "sole": 54.3,
+  "stato": "attesa"
+ },
+ {
+  "ora": "2025-01-09T15:00",
+  "cella": 349667,
+  "quartiere": "Ascoli - Stadio",
+  "X": 0.255,
+  "Y": 1.0,
+  "T": 16.95,
+  "sole": 14.42,
+  "stato": "passeggiata"
+ },
+ {
+  "ora": "2024-06-05T03:00",
+  "cella": 347897,
+  "quartiere": "Ascoli - Stadio",
+  "X": -1.0,
+  "Y": 1.0,
+  "T": 14.0,
+  "sole": -19.46,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-08-14T15:00",
+  "cella": 356750,
+  "quartiere": "Ascoli - Stadio",
+  "X": -1.0,
+  "Y": -0.513,
+  "T": 38.81,
+  "sole": 53.15,
+  "stato": "afa"
+ },
+ {
+  "ora": "2025-02-01T18:00",
+  "cella": 349637,
+  "quartiere": "Ascoli - Stadio",
+  "X": -1.0,
+  "Y": 1.0,
+  "T": 10.46,
+  "sole": -8.36,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-08-04T11:00",
+  "cella": 348458,
+  "quartiere": "Ascoli - Stadio",
+  "X": -1.0,
+  "Y": -0.5,
+  "T": 32.51,
+  "sole": 52.15,
+  "stato": "afa"
+ },
+ {
+  "ora": "2024-12-26T20:00",
+  "cella": 344913,
+  "quartiere": "Ascoli - Stadio",
+  "X": -1.0,
+  "Y": 0.5767,
+  "T": 2.79,
+  "sole": -36.01,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-10-27T23:00",
+  "cella": 344332,
+  "quartiere": "Ascoli - Stadio",
+  "X": -1.0,
+  "Y": 1.0,
+  "T": 18.36,
+  "sole": -58.46,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-12-16T06:00",
+  "cella": 344919,
+  "quartiere": "Ascoli - Stadio",
+  "X": -1.0,
+  "Y": 0.4342,
+  "T": 0.7,
+  "sole": -15.77,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-11-03T01:00",
+  "cella": 355546,
+  "quartiere": "Ascoli - Stadio",
+  "X": -0.991,
+  "Y": 1.0,
+  "T": 9.66,
+  "sole": -58.41,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-08-29T05:00",
+  "cella": 349065,
+  "quartiere": "Ascoli - Stadio",
+  "X": -1.0,
+  "Y": 1.0,
+  "T": 19.55,
+  "sole": -15.47,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-12-05T03:00",
+  "cella": 360845,
+  "quartiere": "Ascoli - Stadio",
+  "X": -1.0,
+  "Y": 0.883,
+  "T": 7.28,
+  "sole": -46.91,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-06-07T12:00",
+  "cella": 348465,
+  "quartiere": "Ascoli - Stadio",
+  "X": -0.3085,
+  "Y": -0.4301,
+  "T": 31.72,
+  "sole": 65.78,
+  "stato": "fatica"
+ },
+ {
+  "ora": "2024-09-18T21:00",
+  "cella": 341987,
+  "quartiere": "Ascoli - Stadio",
+  "X": -0.593,
+  "Y": 0.2,
+  "T": 15.65,
+  "sole": -20.34,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-08-31T11:00",
+  "cella": 349668,
+  "quartiere": "Ascoli - Stadio",
+  "X": 0.3305,
+  "Y": -0.5,
+  "T": 32.93,
+  "sole": 46.16,
+  "stato": "fatica"
+ },
+ {
+  "ora": "2024-09-26T08:00",
+  "cella": 361447,
+  "quartiere": "Ascoli - Stadio",
+  "X": -1.0,
+  "Y": 1.0,
+  "T": 14.22,
+  "sole": 10.66,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2024-07-02T09:00",
+  "cella": 357309,
+  "quartiere": "Ascoli - Stadio",
+  "X": -1.0,
+  "Y": 1.0,
+  "T": 24.47,
+  "sole": 35.29,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2024-07-25T17:00",
+  "cella": 347886,
+  "quartiere": "Ascoli - Stadio",
+  "X": 0.3156,
+  "Y": -0.2327,
+  "T": 30.93,
+  "sole": 37.24,
+  "stato": "routine"
+ },
+ {
+  "ora": "2024-10-17T06:00",
+  "cella": 347929,
+  "quartiere": "Ascoli - Tofare",
+  "X": -0.4798,
+  "Y": 0.807,
+  "T": 17.41,
+  "sole": -15.64,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-09-04T09:00",
+  "cella": 347360,
+  "quartiere": "Ascoli - Tofare",
+  "X": -0.3886,
+  "Y": 0.6287,
+  "T": 27.24,
+  "sole": 25.92,
+  "stato": "rifugio"
+ },
+ {
+  "ora": "2024-12-12T17:00",
+  "cella": 355607,
+  "quartiere": "Ascoli - Tofare",
+  "X": 0.7933,
+  "Y": 0.974,
+  "T": 9.94,
+  "sole": -5.2,
+  "stato": "festa"
+ },
+ {
+  "ora": "2024-10-27T20:00",
+  "cella": 353257,
+  "quartiere": "Ascoli - Tofare",
+  "X": 0.2771,
+  "Y": 1.0,
+  "T": 19.22,
+  "sole": -32.65,
+  "stato": "passeggiata"
+ },
+ {
+  "ora": "2024-12-29T20:00",
+  "cella": 349707,
+  "quartiere": "Ascoli - Tofare",
+  "X": 0.5589,
+  "Y": 0.5914,
+  "T": 4.26,
+  "sole": -35.67,
+  "stato": "festa"
+ },
+ {
+  "ora": "2024-11-28T03:00",
+  "cella": 347950,
+  "quartiere": "Ascoli - Tofare",
+  "X": -1.0,
+  "Y": 0.884,
+  "T": 10.16,
+  "sole": -45.8,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-10-27T01:00",
+  "cella": 346763,
+  "quartiere": "Ascoli - Tofare",
+  "X": -0.2199,
+  "Y": 0.934,
+  "T": 16.42,
+  "sole": -59.91,
+  "stato": "passeggiata"
+ },
+ {
+  "ora": "2024-08-10T18:00",
+  "cella": 349118,
+  "quartiere": "Ascoli - Tofare",
+  "X": 0.7268,
+  "Y": -0.4709,
+  "T": 31.73,
+  "sole": 23.51,
+  "stato": "calca"
+ },
+ {
+  "ora": "2024-12-10T13:00",
+  "cella": 350301,
+  "quartiere": "Ascoli - Tofare",
+  "X": 1.0,
+  "Y": 1.0,
+  "T": 14.14,
+  "sole": 22.87,
+  "stato": "festa"
+ },
+ {
+  "ora": "2024-08-01T19:00",
+  "cella": 357380,
+  "quartiere": "Ascoli - Tofare",
+  "X": -0.0465,
+  "Y": -0.701,
+  "T": 33.04,
+  "sole": 14.31,
+  "stato": "fatica"
+ },
+ {
+  "ora": "2024-06-19T12:00",
+  "cella": 353246,
+  "quartiere": "Ascoli - Tofare",
+  "X": 1.0,
+  "Y": -0.91,
+  "T": 38.52,
+  "sole": 66.03,
+  "stato": "calca"
+ },
+ {
+  "ora": "2025-01-23T20:00",
+  "cella": 359157,
+  "quartiere": "Ascoli - Tofare",
+  "X": -1.0,
+  "Y": 0.9917,
+  "T": 8.88,
+  "sole": -31.88,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-10-11T20:00",
+  "cella": 350310,
+  "quartiere": "Ascoli - Tofare",
+  "X": -0.1996,
+  "Y": 0.882,
+  "T": 20.17,
+  "sole": -17.44,
+  "stato": "passeggiata"
+ },
+ {
+  "ora": "2024-12-08T09:00",
+  "cella": 353245,
+  "quartiere": "Ascoli - Tofare",
+  "X": 0.3964,
+  "Y": 0.5799,
+  "T": 5.74,
+  "sole": 12.79,
+  "stato": "festa"
+ },
+ {
+  "ora": "2024-10-09T04:00",
+  "cella": 346753,
+  "quartiere": "Ascoli - Tofare",
+  "X": -1.0,
+  "Y": 0.886,
+  "T": 18.65,
+  "sole": -34.97,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-10-29T10:00",
+  "cella": 358557,
+  "quartiere": "Ascoli - Tofare",
+  "X": -0.1371,
+  "Y": 0.594,
+  "T": 20.81,
+  "sole": 28.18,
+  "stato": "passeggiata"
+ },
+ {
+  "ora": "2024-06-09T08:00",
+  "cella": 353255,
+  "quartiere": "Ascoli - Tofare",
+  "X": 0.032,
+  "Y": 1.0,
+  "T": 25.04,
+  "sole": 25.16,
+  "stato": "passeggiata"
+ },
+ {
+  "ora": "2024-07-16T22:00",
+  "cella": 359750,
+  "quartiere": "Ascoli - Tofare",
+  "X": -1.0,
+  "Y": 0.6666,
+  "T": 27.18,
+  "sole": -12.21,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-11-13T23:00",
+  "cella": 350304,
+  "quartiere": "Ascoli - Tofare",
+  "X": -0.8135,
+  "Y": 0.94,
+  "T": 9.08,
+  "sole": -63.15,
+  "stato": "notte"
+ },
+ {
+  "ora": "2024-10-19T08:00",
+  "cella": 352066,
+  "quartiere": "Ascoli - Tofare",
+  "X": 0.7461,
+  "Y": 0.6275,
+  "T": 17.74,
+  "sole": 5.52,
+  "stato": "festa"
+ }
+]

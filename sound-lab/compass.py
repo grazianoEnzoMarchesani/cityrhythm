@@ -1,85 +1,54 @@
-"""Prototipo della bussola emotiva per Ascoli, ora per ora, quartiere per quartiere.
+"""Bussola emotiva per Ascoli, ora per ora, CELLA per cella (LCZ da 30 m).
 
-Uso: python compass.py <cartella con i CSV/KML scaricati dalla piattaforma>
-Scrive data/aree_ascoli.json (caratteristiche fisse dei quartieri) e stampa la
-distribuzione degli stati, per verificare che la formula "racconti" bene l'anno.
+Uso: python compass.py [cartella dati]   (di default ../public/data)
+Legge i parametri da bussola.json, ci riscrive le ancore dell'energia e i km2
+dei quartieri, stampa la distribuzione degli stati e scrive
+data/bussola_campioni.json (casi di prova per verificare la versione JS).
 
-ENERGIA (asse X) = persone per km2 nell'ora, in scala logaritmica, ancorata al
-10o e al 90o percentile delle ore di luce: -1 = vuoto, +1 = affollato.
+ENERGIA (asse X) = persone per km2 del quartiere nell'ora, in scala logaritmica,
+ancorata al 10o e al 90o percentile delle ore di luce: -1 = vuoto, +1 = affollato.
+Le celle fuori dai quartieri non hanno dati di persone: l'energia del quartiere
+piu' vicino sfuma verso -1 entro 'energia_svanisce_m' metri.
 
-PIACEVOLEZZA (asse Y) = 0.75 * comfort termico + 0.25 * verde - pioggia.
-  Temperatura locale = temperatura percepita (Open-Meteo)
-                       + sole diretto (radiazione x cielo visibile SVF)
-                       - ombra/evaporazione del verde (solo di giorno)
-                       + isola di calore (UHI risk, piu' forte di notte).
-  Comfort: +1 fra 16 e 26 gradi, scende a -1 a 36 gradi (caldo) o a -4 (freddo).
-E' un INDICATORE di stress termico percepito, non una misura.
+PIACEVOLEZZA (asse Y) = w_comfort * comfort termico + w_green * verde - pioggia,
+con i valori della cella (nessuna media). Il comfort viene dall'UTCI della cella
+(vedi clima.py): +1 senza stress termico, -1 da stress forte. Il verde come
+"bellezza" (w_green) e' una scelta espressiva, non fisica.
 """
-import sys, os, re, json, math
+import sys, os, json, math
 import numpy as np, pandas as pd
-from shapely import wkt
-from shapely.geometry import Polygon
+from clima import clima, comfort
 
-SRC = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "public", "data")
 HERE = os.path.dirname(os.path.abspath(__file__))
-LAT0 = 42.854
+SRC = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "..", "public", "data")
+LAT0, LON0 = 42.854, 13.575
 
-UHI = {"Very Low": 0.0, "Low": 0.2, "Low-Medium": 0.35, "Medium-Low": 0.35, "Medium": 0.5, "High": 0.75, "Very High": 1.0}
-P = dict(  # coefficienti: modificabili a orecchio, documentati in un unico posto
-    sun_gain=4.0,      # gradi in piu' in pieno sole (900 W/m2) con cielo tutto visibile
-    green_cool=2.0,    # gradi in meno di giorno con verde al 100%
-    uhi_day=1.0, uhi_night=2.5,  # gradi in piu' con UHI "Very High"
-    comfort=(16, 26), hot_end=36, cold_end=-4,  # il freddo pesa meno: ci si copre
-    w_comfort=0.75, w_green=0.25, rain=0.3,
-    night_sun_deg=-6,  # notte = sole sotto -6 gradi (fine crepuscolo) E poca gente (X sotto la soglia)
-    cut=1 / 3,         # soglie fra le 3 colonne/righe della bussola
-)
-GRID = [["afa", "fatica", "calca"], ["attesa", "routine", "corrente"], ["rifugio", "passeggiata", "festa"]]
+CFG_PATH = os.path.join(SRC, "bussola.json")
+cfg = json.load(open(CFG_PATH))
+P, F, GRID = cfg["parametri"], cfg["fisica"], cfg["griglia"]
+COSTRUITE = [str(i) for i in range(1, 11)]
 
-def km(poly):  # proiezione locale equirettangolare, sufficiente su pochi km
-    k = math.cos(math.radians(LAT0))
-    return Polygon([(x * 111.32 * k, y * 110.57) for x, y in poly.exterior.coords])
+# --- celle LCZ ---
+cells = pd.DataFrame([f["properties"] for f in json.load(open(os.path.join(SRC, "lcz_ascoli.geojson")))["features"]])
+cells["svf"] = cells.svf_mean.where(cells.svf_mean > 0, P["svf_ripiego"])  # svf 0 = difetto del calcolo
+cells["costruita"] = cells.lcz_class.isin(COSTRUITE)
+cells["green"] = cells.pervious_frac / 100
+cells["fade"] = (cells.quartiere_dist_m / P["energia_svanisce_m"]).clip(0, 1)
 
-# --- quartieri (KML) ---
+# --- quartieri: area in km2 (proiezione locale equirettangolare) ---
+import re
+from shapely.geometry import Polygon
 kml = open(os.path.join(SRC, "cityrhythm_blimp_areas.kml")).read()
-areas = {}
+k = math.cos(math.radians(LAT0))
+km2 = {}
 for pm in re.findall(r"<Placemark[^>]*>(.*?)</Placemark>", kml, re.S):
-    name = re.search(r"<name>(.*?)</name>", pm).group(1)
+    name = re.search(r"<name>(.*?)</name>", pm).group(1).strip()
     coords = re.search(r"<coordinates>(.*?)</coordinates>", pm, re.S).group(1)
-    pts = [tuple(map(float, c.split(",")[:2])) for c in coords.split()]
-    areas[name.strip()] = Polygon(pts)
-
-# --- celle LCZ: media pesata per area dentro ogni quartiere ---
-lcz = pd.read_csv(os.path.join(SRC, "lcz_vitality.csv"), sep=";")
-feat = {a: {"w": 0.0, "uhi": 0.0, "green": 0.0, "svf": 0.0, "wg": 0.0} for a in areas}
-for _, r in lcz.iterrows():
-    g = wkt.loads(re.sub(r"(\d),(\d)", r"\1.\2", r.WKT))
-    c = g.centroid
-    for a, poly in areas.items():
-        if poly.contains(c):
-            w = km(g).area
-            f = feat[a]
-            svf = float(str(r.SVF).replace(",", "."))
-            f["w"] += w; f["uhi"] += w * UHI.get(r["UHI risk"], 0.5); f["svf"] += w * svf
-            per = float(str(r.PER_PC).replace(",", ".")) if pd.notna(r.PER_PC) else -1
-            if per >= 0:
-                f["wg"] += w; f["green"] += w * per / 100
-            break
-info = {}
-for a, f in feat.items():
-    info[a] = {
-        "km2": round(km(areas[a]).area, 3),
-        "uhi": round(f["uhi"] / f["w"], 3) if f["w"] else 0.5,
-        "svf": round(f["svf"] / f["w"], 3) if f["w"] else 0.7,
-        "green": round(f["green"] / f["wg"], 3) if f["wg"] else 0.3,
-        "lcz_km2": round(f["w"], 3), "copertura_lcz": round(f["w"] / km(areas[a]).area, 2),
-    }
-os.makedirs(os.path.join(HERE, "data"), exist_ok=True)
-json.dump({"parametri": P, "aree": info}, open(os.path.join(HERE, "data", "aree_ascoli.json"), "w"), indent=2, ensure_ascii=False)
-print(pd.DataFrame(info).T.to_string(), "\n")
+    km2[name] = round(Polygon([(float(c.split(",")[0]) * 111.32 * k, float(c.split(",")[1]) * 110.57)
+                               for c in coords.split()]).area, 4)
 
 # --- meteo e sole ---
-met = json.load(open(os.path.join(HERE, "data", "meteo_ascoli_2024-06-01_2025-02-01.json")))
+met = json.load(open(os.path.join(SRC, "meteo_ascoli.json")))
 met = pd.DataFrame(met["hourly"]); met["time"] = pd.to_datetime(met.time)
 
 def sun_elev(ts):  # elevazione solare (gradi), formula NOAA semplificata; ts in ora locale italiana
@@ -88,60 +57,79 @@ def sun_elev(ts):  # elevazione solare (gradi), formula NOAA semplificata; ts in
     g = 2 * math.pi / 365 * (d - 1 + (h - 12) / 24)
     decl = 0.006918 - 0.399912 * math.cos(g) + 0.070257 * math.sin(g) - 0.006758 * math.cos(2 * g) + 0.000907 * math.sin(2 * g)
     eqt = 229.18 * (0.000075 + 0.001868 * math.cos(g) - 0.032077 * math.sin(g) - 0.014615 * math.cos(2 * g) - 0.040849 * math.sin(2 * g))
-    ha = math.radians((h * 60 + eqt + 4 * 13.575) / 4 - 180)
+    ha = math.radians((h * 60 + eqt + 4 * LON0) / 4 - 180)
     lat = math.radians(LAT0)
     return math.degrees(math.asin(math.sin(lat) * math.sin(decl) + math.cos(lat) * math.cos(decl) * math.cos(ha)))
 
 met["sun"] = [sun_elev(t) for t in met.time]
 
-# --- presenze orarie ---
+# --- presenze orarie per quartiere ---
 poi = pd.read_csv(os.path.join(SRC, "cityrhythm_blimp.csv"))
 rows = []
 for _, r in poi.iterrows():
-    a = r.poi_name.strip()
     for h in range(24):
-        rows.append((a, pd.Timestamp(r.date) + pd.Timedelta(hours=h), r[f"presenze_{h}"]))
-df = pd.DataFrame(rows, columns=["area", "time", "people"]).dropna().merge(met, on="time")  # 1 ora senza dato su 64.944
-df["km2"] = df.area.map(lambda a: info[a]["km2"])
-for k in ("uhi", "svf", "green"):
-    df[k] = df.area.map(lambda a: info[a][k])
+        rows.append((r.poi_name.strip(), pd.Timestamp(r.date) + pd.Timedelta(hours=h), r[f"presenze_{h}"]))
+df = pd.DataFrame(rows, columns=["area", "time", "people"]).dropna().merge(met, on="time")  # 1 ora senza dato
 
-# energia
-logd = np.log10(df.people / df.km2 + 1)
+logd = np.log10(df.people / df.area.map(km2) + 1)
 lo, hi = np.percentile(logd[df.sun > P["night_sun_deg"]], [10, 90])  # solo ore di luce
 df["X"] = np.clip(2 * (logd - lo) / (hi - lo) - 1, -1, 1)
 
-# piacevolezza
-day = df.sun > 0
-rad = (df.shortwave_radiation / 900).clip(0, 1.2)
-df["T_loc"] = (df.apparent_temperature + P["sun_gain"] * rad * df.svf - P["green_cool"] * df.green * rad
-               + np.where(day, P["uhi_day"], P["uhi_night"]) * df.uhi)
-c0, c1 = P["comfort"]
-comfort = np.where(df.T_loc > c1, 1 - 2 * (df.T_loc - c1) / (P["hot_end"] - c1),
-          np.where(df.T_loc < c0, 1 - 2 * (c0 - df.T_loc) / (c0 - P["cold_end"]), 1.0))
-df["Y"] = np.clip(P["w_comfort"] * np.clip(comfort, -1, 1) + P["w_green"] * (2 * df.green - 1)
-                  - P["rain"] * (df.precipitation > 0.5), -1, 1)
-
-def state(r):
-    if r.sun < P["night_sun_deg"] and r.X < -P["cut"]:
-        return "notte"
-    col = 0 if r.X < -P["cut"] else 2 if r.X > P["cut"] else 1
-    row = 0 if r.Y < -P["cut"] else 2 if r.Y > P["cut"] else 1
-    return GRID[row][col]
-df["stato"] = df.apply(state, axis=1)
-
-pd.set_option("display.width", 200)
+cfg["energia"] = {"log_lo": round(float(lo), 5), "log_hi": round(float(hi), 5)}
+cfg["aree_km2"] = km2
+json.dump(cfg, open(CFG_PATH, "w"), indent=2, ensure_ascii=False)
 print(f"Energia: ancore {10**lo:.0f} e {10**hi:.0f} persone/km2 (10o e 90o percentile delle ore di luce)\n")
-print("Quota degli stati (%), tutte le ore e aree:")
-print((df.stato.value_counts(normalize=True) * 100).round(1).to_string(), "\n")
-print("Stati per mese (%):")
-print((pd.crosstab(df.time.dt.to_period("M"), df.stato, normalize="index") * 100).round(0).to_string(), "\n")
-print("Stato piu' frequente di giorno (sole > -6) per quartiere e mese:")
-d = df[df.stato != "notte"]
-print(pd.crosstab(d.area, d.time.dt.to_period("M"), values=d.stato, aggfunc=lambda s: s.mode().iat[0]).to_string(), "\n")
-for when, a in [("2024-07-13 18:00", "Ascoli - Centro Storico"), ("2024-07-16 14:00", "Ascoli - Porta Maggiore"),
-                ("2024-10-06 11:00", "Ascoli - Centro Storico"), ("2024-12-21 17:00", "Ascoli - Centro Storico"),
-                ("2025-01-15 08:00", "Ascoli - Stadio")]:
-    r = df[(df.time == when) & (df.area == a)].iloc[0]
-    print(f"{when} {a[8:]:16} persone {r.people:6.0f} X {r.X:+.2f} | T perc {r.apparent_temperature:4.1f} -> locale {r.T_loc:4.1f} Y {r.Y:+.2f} | sole {r.sun:+.0f} -> {r.stato}")
-df[["area", "time", "people", "X", "T_loc", "Y", "stato"]].to_csv(os.path.join(HERE, "data", "bussola_prova.csv"), index=False)
+
+
+def bussola(X, sun, met, cel):
+    """Stato per cella e ora; met = colonne meteo (1 x ore), cel = colonne cella (celle x 1)."""
+    T, _, _ = clima(F, ta=met("temperature_2m"), rh=met("relative_humidity_2m"), cloud_pct=met("cloud_cover"),
+                    wind_kmh=met("wind_speed_10m"), dni=met("direct_normal_irradiance"), dir_h=met("direct_radiation"),
+                    dif_h=met("diffuse_radiation"), sun=sun, svf=cel("svf"), albedo=cel("albedo"), z0=cel("z0_value"),
+                    costruita=cel("costruita"))
+    green = cel("green")
+    Y = np.clip(P["w_comfort"] * comfort(T, F) + P["w_green"] * (2 * green - 1) - P["rain"] * (met("precipitation") > P["rain_mm"]), -1, 1)
+    cut = P["cut"]
+    col = np.where(X < -cut, 0, np.where(X > cut, 2, 1))
+    row = np.where(Y < -cut, 0, np.where(Y > cut, 2, 1))
+    names = np.array(GRID)[row, col]
+    return np.where((sun < P["night_sun_deg"]) & (X < -cut), "notte", names), Y, T
+
+
+# --- stati per ogni cella e ora (matrice celle x ore, quartiere per quartiere) ---
+conteggi, mesi, campioni = {}, [], []
+rng = np.random.default_rng(1)
+for area, ore in df.groupby("area"):
+    cc = cells[cells.quartiere == area]
+    if cc.empty:
+        continue
+    col = lambda s: ore[s].to_numpy()[None, :]
+    cel = lambda s: cc[s].to_numpy()[:, None]
+    Xq = col("X")
+    X = Xq - (Xq + 1) * cel("fade")
+    stati, Y, T = bussola(X, col("sun"), col, cel)
+    dentro = cc.quartiere_dist_m.to_numpy() == 0
+    for chi, sel in (("tutte", slice(None)), ("dentro", dentro)):
+        s, n = np.unique(stati[sel], return_counts=True)
+        for a, b in zip(s, n):
+            conteggi[(chi, a)] = conteggi.get((chi, a), 0) + b
+    mese = ore.time.dt.to_period("M").to_numpy()
+    for m in np.unique(mese):
+        s, n = np.unique(stati[:, mese == m], return_counts=True)
+        mesi += [(m, a, b) for a, b in zip(s, n)]
+    for _ in range(20):  # casi di prova per la versione JS
+        i, j = rng.integers(len(cc)), rng.integers(len(ore))
+        r = ore.iloc[j]
+        campioni.append({"ora": r.time.strftime("%Y-%m-%dT%H:%M"), "cella": int(cc.id.iloc[i]), "quartiere": area,
+                         "X": round(float(X[i, j]), 4), "Y": round(float(Y[i, j]), 4), "T": round(float(T[i, j]), 2),
+                         "sole": round(float(r.sun), 2), "stato": str(stati[i, j])})
+
+c = pd.Series(conteggi)
+print("Quota degli stati (%), celle x ore:")
+print(pd.DataFrame({k: (c[k] / c[k].sum() * 100).round(1) for k in ("dentro", "tutte")}).rename(
+    columns={"dentro": "celle nei quartieri", "tutte": "tutte le celle"}).sort_values("tutte le celle", ascending=False).to_string(), "\n")
+m = pd.DataFrame(mesi, columns=["mese", "stato", "n"]).pivot_table(index="mese", columns="stato", values="n", aggfunc="sum").fillna(0)
+print("Stati per mese (%), tutte le celle:")
+print((m.div(m.sum(axis=1), axis=0) * 100).round(0).to_string(), "\n")
+json.dump(campioni, open(os.path.join(HERE, "data", "bussola_campioni.json"), "w"), indent=1, ensure_ascii=False)
+print(f"{len(campioni)} casi di prova in data/bussola_campioni.json")

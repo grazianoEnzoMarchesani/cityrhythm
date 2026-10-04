@@ -1,4 +1,5 @@
 import * as turf from '@turf/turf';
+import { Popup } from 'maplibre-gl';
 // src/map/map-layers.js
 import { getMapInstance } from './map-setup.js';
 import {
@@ -1213,6 +1214,8 @@ export function addLczVitalityLayer(initialVisibility = true, visualizationType 
             }
         }, beforeLayerId);
 
+        bindLczPopup(map);
+
         // Salva il tipo di visualizzazione corrente
         currentLczVisualizationType = visualizationType;
 
@@ -1241,6 +1244,63 @@ export function addLczVitalityLayer(initialVisibility = true, visualizationType 
         console.error("Error adding LCZ vitality source or layer:", error);
         removeLczVitalityLayer();
     }
+}
+
+// Nomi delle classi LCZ (Stewart & Oke) e del rischio isola di calore
+const LCZ_NAMES = {
+    '1': 'Compatto alto', '2': 'Compatto medio', '3': 'Compatto basso', '4': 'Aperto alto',
+    '5': 'Aperto medio', '6': 'Aperto basso', '7': 'Leggero basso', '8': 'Grandi edifici bassi',
+    '9': 'Edificato sparso', '10': 'Industria pesante', 'A': 'Alberi fitti', 'B': 'Alberi sparsi',
+    'C': 'Arbusti e macchia', 'D': 'Piante basse', 'E': 'Roccia o pavimentato', 'F': 'Suolo nudo',
+    'G': 'Acqua'
+};
+const UHI_NAMES = {
+    'Very Low': 'Molto basso', 'Low': 'Basso', 'Low-Medium': 'Basso-medio', 'Medium-Low': 'Medio-basso',
+    'Medium': 'Medio', 'High': 'Alto', 'Very High': 'Molto alto'
+};
+// Parametri che costruiscono la classe: [campo, etichetta, unità]
+const LCZ_PARAMS = [
+    ['svf_mean', 'Cielo visibile (Sky View Factor)', '0–1'],
+    ['aspect_ratio', 'Rapporto altezza/larghezza (H/W)', ''],
+    ['building_frac', 'Superficie coperta da edifici', '%'],
+    ['impervious_frac', 'Superficie impermeabile', '%'],
+    ['pervious_frac', 'Superficie permeabile', '%'],
+    ['z_h', 'Altezza media di edifici e alberi', 'm'],
+    ['terrain_rough', 'Classe di rugosità (Davenport)', '1–8'],
+    ['z0_value', 'Lunghezza di rugosità z0', 'm'],
+    ['admittance', 'Ammettenza termica', 'J m⁻² s⁻½ K⁻¹'],
+    ['albedo', 'Albedo', '0–1'],
+    ['anthro_heat', 'Calore antropico', 'W/m²'],
+    ['industry_heat', 'Calore industriale', 'W/m²']
+];
+
+let lczPopupBound = false;
+
+/** Popup al clic su una cella LCZ: classe, rischio e parametri con cui è stata calcolata. */
+function bindLczPopup(map) {
+    if (lczPopupBound) return;
+    lczPopupBound = true;
+    map.on('mouseenter', LCZ_VITALITY_LAYER_ID, () => { map.getCanvas().style.cursor = 'pointer'; });
+    map.on('mouseleave', LCZ_VITALITY_LAYER_ID, () => { map.getCanvas().style.cursor = ''; });
+    map.on('click', LCZ_VITALITY_LAYER_ID, e => {
+        const p = e.features?.[0]?.properties;
+        if (!p) return;
+        const fmt = v => (typeof v === 'number' ? (Number.isInteger(v) ? v : +v.toFixed(3)) : v);
+        const rows = LCZ_PARAMS
+            .filter(([key]) => p[key] !== undefined && p[key] !== null)
+            .map(([key, label, unit]) => `<tr><td>${label}</td><td style="text-align:right;padding-left:8px"><b>${fmt(p[key])}</b> ${unit}</td></tr>`)
+            .join('');
+        const fix = p.lcz_esa_fix && p.lcz_esa_fix !== '-' ? `<br>Corretta con ESA WorldCover: ${p.lcz_esa_fix}` : '';
+        new Popup({ maxWidth: '340px' })
+            .setLngLat(e.lngLat)
+            .setHTML(`<div style="font-size:12px;line-height:1.4">
+                <div style="font-size:14px"><b>LCZ ${p.lcz_class} – ${LCZ_NAMES[p.lcz_class] ?? 'sconosciuta'}</b></div>
+                Rischio isola di calore: <b>${UHI_NAMES[p.lcz_vulnerability] ?? p.lcz_vulnerability}</b><br>
+                Parametri in accordo con la classe: <b>${p.lcz_matches} su 10</b> · scarto ${fmt(p.lcz_rmsep)}${fix}
+                <table style="margin-top:6px;border-collapse:collapse">${rows}</table>
+                <div style="color:#888;margin-top:4px">Cella ${p.id} · 30 × 30 m</div></div>`)
+            .addTo(map);
+    });
 }
 
 /**
@@ -1355,8 +1415,20 @@ export function updateUhiDynamicVisualization() {
         }
 
         // Calcola le metriche avanzate di presenza per ogni poligono UHI
+        // Punti ordinati per longitudine: per ogni cella si passano a Turf solo quelli nel suo riquadro
+        const points = [...currentPresencePoints.features].sort((a, b) => a.geometry.coordinates[0] - b.geometry.coordinates[0]);
+        const lons = points.map(p => p.geometry.coordinates[0]);
+
         const updatedFeatures = lczData.map((feature, index) => {
-            const presenceMetrics = calculatePresenceMetrics(feature, currentPresencePoints.features);
+            const [minX, minY, maxX, maxY] = getCellBbox(feature);
+            let lo = 0, hi = lons.length;
+            while (lo < hi) { const mid = (lo + hi) >> 1; if (lons[mid] < minX) lo = mid + 1; else hi = mid; }
+            const candidates = [];
+            for (let i = lo; i < lons.length && lons[i] <= maxX; i++) {
+                const y = points[i].geometry.coordinates[1];
+                if (y >= minY && y <= maxY) candidates.push(points[i]);
+            }
+            const presenceMetrics = calculatePresenceMetrics(feature, candidates);
             const uhiRisk = feature.properties['UHI risk'];
             
             // Calcola l'opacità usando il sistema ibrido
@@ -1399,6 +1471,18 @@ export function updateUhiDynamicVisualization() {
     } catch (error) {
         console.error("Error updating UHI dynamic visualization:", error);
     }
+}
+
+const cellBboxCache = new WeakMap();
+
+/** Riquadro [minX, minY, maxX, maxY] di una cella LCZ, calcolato una volta sola. */
+function getCellBbox(feature) {
+    let bbox = cellBboxCache.get(feature.geometry);
+    if (!bbox) {
+        bbox = turf.bbox(feature);
+        cellBboxCache.set(feature.geometry, bbox);
+    }
+    return bbox;
 }
 
 /**
