@@ -424,3 +424,9 @@ export function perlin2d(x, y, seed = 0) {
     const x2 = lerp(grad(bl, xf, yf - 1), grad(br, xf - 1, yf - 1), u);
     return lerp(x1, x2, v) * 0.5 + 0.5; // Normalizzato tra 0 e 1
 }
+// Numero fisso in [0, 1) da una stringa (FNV-1a): stesse scelte a ogni ora e a ogni ricarica.
+export function hash01(str) {
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619);
+    return (h >>> 0) / 4294967296;
+}

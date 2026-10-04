@@ -94,10 +94,10 @@
   "cella": 318368,
   "quartiere": "Ascoli - Borgo Chiaro",
   "X": -1.0,
-  "Y": -0.1147,
+  "Y": -0.5235,
   "T": 30.36,
   "sole": 26.72,
-  "stato": "attesa"
+  "stato": "afa"
  },
  {
   "ora": "2024-12-03T08:00",
@@ -364,7 +364,7 @@
   "cella": 293026,
   "quartiere": "Ascoli - Borgo Solesta",
   "X": 0.5267,
-  "Y": -0.3773,
+  "Y": -0.5115,
   "T": 31.46,
   "sole": 37.94,
   "stato": "calca"
@@ -484,7 +484,7 @@
   "cella": 315425,
   "quartiere": "Ascoli - Campo Parignano",
   "X": -1.0,
-  "Y": 0.5814,
+  "Y": 0.3721,
   "T": 27.67,
   "sole": 34.87,
   "stato": "rifugio"
@@ -544,7 +544,7 @@
   "cella": 318987,
   "quartiere": "Ascoli - Campo Parignano",
   "X": -1.0,
-  "Y": 0.6387,
+  "Y": 0.5719,
   "T": 26.54,
   "sole": -26.03,
   "stato": "notte"
@@ -734,7 +734,7 @@
   "cella": 322559,
   "quartiere": "Ascoli - Centro Storico",
   "X": -0.484,
-  "Y": 0.6627,
+  "Y": 0.4941,
   "T": 27.35,
   "sole": -17.68,
   "stato": "notte"
@@ -784,10 +784,10 @@
   "cella": 329028,
   "quartiere": "Ascoli - Centro Storico",
   "X": 0.3954,
-  "Y": -0.2972,
+  "Y": -0.5,
   "T": 31.19,
   "sole": 33.81,
-  "stato": "corrente"
+  "stato": "calca"
  },
  {
   "ora": "2025-01-12T20:00",
@@ -814,7 +814,7 @@
   "cella": 344370,
   "quartiere": "Ascoli - Pennile di Sotto",
   "X": 0.4688,
-  "Y": -0.6264,
+  "Y": -0.666,
   "T": 31.84,
   "sole": 31.97,
   "stato": "calca"
@@ -854,7 +854,7 @@
   "cella": 345545,
   "quartiere": "Ascoli - Pennile di Sotto",
   "X": 0.7726,
-  "Y": 0.2867,
+  "Y": 0.0509,
   "T": 27.89,
   "sole": 47.01,
   "stato": "corrente"
@@ -894,7 +894,7 @@
   "cella": 353803,
   "quartiere": "Ascoli - Pennile di Sotto",
   "X": -0.7168,
-  "Y": 0.9899,
+  "Y": 0.9849,
   "T": 26.04,
   "sole": -18.91,
   "stato": "notte"
@@ -914,7 +914,7 @@
   "cella": 353218,
   "quartiere": "Ascoli - Pennile di Sotto",
   "X": -0.2346,
-  "Y": 0.9524,
+  "Y": 0.9286,
   "T": 26.19,
   "sole": -11.98,
   "stato": "passeggiata"
@@ -924,7 +924,7 @@
   "cella": 349683,
   "quartiere": "Ascoli - Pennile di Sotto",
   "X": 0.6988,
-  "Y": -0.3636,
+  "Y": -0.5,
   "T": 31.45,
   "sole": 44.56,
   "stato": "calca"
@@ -984,10 +984,10 @@
   "cella": 353808,
   "quartiere": "Ascoli - Pennile di Sotto",
   "X": 0.01,
-  "Y": 0.5402,
+  "Y": 0.3104,
   "T": 27.84,
   "sole": 53.13,
-  "stato": "passeggiata"
+  "stato": "routine"
  },
  {
   "ora": "2024-11-26T10:00",
@@ -1094,7 +1094,7 @@
   "cella": 293655,
   "quartiere": "Ascoli - Porta Cartara",
   "X": -1.0,
-  "Y": 0.235,
+  "Y": -0.1474,
   "T": 29.06,
   "sole": 14.64,
   "stato": "attesa"
@@ -1154,7 +1154,7 @@
   "cella": 309007,
   "quartiere": "Ascoli - Porta Cartara",
   "X": -1.0,
-  "Y": 0.2943,
+  "Y": -0.0585,
   "T": 28.82,
   "sole": 59.65,
   "stato": "attesa"
@@ -1234,10 +1234,10 @@
   "cella": 337296,
   "quartiere": "Ascoli - Porta Maggiore",
   "X": 0.8854,
-  "Y": -0.0287,
+  "Y": -0.4288,
   "T": 29.2,
   "sole": 7.57,
-  "stato": "corrente"
+  "stato": "calca"
  },
  {
   "ora": "2024-09-19T07:00",
@@ -1284,10 +1284,10 @@
   "cella": 333778,
   "quartiere": "Ascoli - Porta Maggiore",
   "X": 0.8471,
-  "Y": 0.0732,
+  "Y": -0.3847,
   "T": 29.66,
   "sole": 12.77,
-  "stato": "corrente"
+  "stato": "calca"
  },
  {
   "ora": "2024-08-17T06:00",
@@ -1434,7 +1434,7 @@
   "cella": 282412,
   "quartiere": "Ascoli - Porta Romana",
   "X": -1.0,
-  "Y": -0.3949,
+  "Y": -0.7625,
   "T": 30.53,
   "sole": 59.63,
   "stato": "afa"
@@ -1514,7 +1514,7 @@
   "cella": 285995,
   "quartiere": "Ascoli - Porta Romana",
   "X": -1.0,
-  "Y": 0.903,
+  "Y": 0.8545,
   "T": 26.39,
   "sole": 4.75,
   "stato": "rifugio"
@@ -1654,7 +1654,7 @@
   "cella": 357947,
   "quartiere": "Ascoli - San Filippo",
   "X": -0.7287,
-  "Y": 0.6402,
+  "Y": 0.4604,
   "T": 27.44,
   "sole": -30.88,
   "stato": "notte"
@@ -1734,10 +1734,10 @@
   "cella": 359119,
   "quartiere": "Ascoli - San Filippo",
   "X": -0.8728,
-  "Y": -0.294,
+  "Y": -0.5565,
   "T": 30.95,
   "sole": 28.14,
-  "stato": "attesa"
+  "stato": "afa"
  },
  {
   "ora": "2024-09-02T20:00",
@@ -1824,10 +1824,10 @@
   "cella": 355543,
   "quartiere": "Ascoli - Stadio",
   "X": -1.0,
-  "Y": -0.037,
+  "Y": -0.5,
   "T": 30.15,
   "sole": 54.3,
-  "stato": "attesa"
+  "stato": "afa"
  },
  {
   "ora": "2025-01-09T15:00",
@@ -1944,7 +1944,7 @@
   "cella": 348465,
   "quartiere": "Ascoli - Stadio",
   "X": -0.3085,
-  "Y": -0.4301,
+  "Y": -0.5,
   "T": 31.72,
   "sole": 65.78,
   "stato": "fatica"
@@ -1994,10 +1994,10 @@
   "cella": 347886,
   "quartiere": "Ascoli - Stadio",
   "X": 0.3156,
-  "Y": -0.2327,
+  "Y": -0.5,
   "T": 30.93,
   "sole": 37.24,
-  "stato": "routine"
+  "stato": "fatica"
  },
  {
   "ora": "2024-10-17T06:00",
@@ -2014,7 +2014,7 @@
   "cella": 347360,
   "quartiere": "Ascoli - Tofare",
   "X": -0.3886,
-  "Y": 0.6287,
+  "Y": 0.4737,
   "T": 27.24,
   "sole": 25.92,
   "stato": "rifugio"
@@ -2074,7 +2074,7 @@
   "cella": 349118,
   "quartiere": "Ascoli - Tofare",
   "X": 0.7268,
-  "Y": -0.4709,
+  "Y": -0.539,
   "T": 31.73,
   "sole": 23.51,
   "stato": "calca"
@@ -2174,7 +2174,7 @@
   "cella": 359750,
   "quartiere": "Ascoli - Tofare",
   "X": -1.0,
-  "Y": 0.6666,
+  "Y": 0.5189,
   "T": 27.18,
   "sole": -12.21,
   "stato": "notte"

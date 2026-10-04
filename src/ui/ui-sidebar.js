@@ -12,6 +12,7 @@ import { updateTagCloud } from './tag-cloud.js';
 import { getSpotMapperData, getCrowdedData } from '../data/data-loader.js';
 import { getCrowdednessColumnName, generateSyntheticCrowdedPointsGeoJson } from '../map/map-layers.js';
 import { exportArrayToCSV } from '../utils/utils.js';
+import { setPresenceColorSelection } from './ui-layer-controls.js';
 import { DEBUG_MODE } from '../data/config.js';
 
 let sidebarContainerElement = null;
@@ -1158,6 +1159,15 @@ function handleChartClick(chartId) {
         return;
     }
 
+    // Genere, età, nazionalità e visite: colorazione di tutti i quartieri, che resta al cambio d'ora
+    const colorVariable = ['gender', 'age', 'nationality', 'visits'].find(v => chartId.includes(v));
+    if (colorVariable) {
+        setPresenceColorSelection(colorVariable);
+        return;
+    }
+    // Gli altri grafici (province, nazioni, interessi) colorano solo il quartiere selezionato, una tantum
+    setPresenceColorSelection('none', false);
+
     const chartData = chart.getOption().series[0].data;
     let colors = [];
 
@@ -1286,6 +1296,10 @@ function updatePresencePointsColors(kmlFeatureId, chartData, colors) {
         // anche se l'assegnazione successiva sovrascriverà)
         pointsToColor.forEach(point => {
             point.properties.color = '#808080'; // Colore grigio di default o fallback
+        });
+        // Gli altri quartieri tornano senza colore (potevano averne uno dal selettore)
+        allPoints.forEach(point => {
+            if (point.properties.kmlFeatureId !== kmlFeatureId) delete point.properties.color;
         });
 
         // Mescola l'array dei punti da colorare per una distribuzione casuale

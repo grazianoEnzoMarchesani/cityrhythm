@@ -3,12 +3,12 @@
   "music_lufs": -18,
   "sfx_file_lufs": -20,
   "sotto_musica_db": {
-    "folla-leggera": 12,
-    "folla-densa": 9,
-    "traffico": 15,
-    "parco": 13,
-    "cicale": 14,
-    "grilli": 11
+    "folla-leggera": 10,
+    "folla-densa": 7,
+    "traffico": 13,
+    "parco": 11,
+    "cicale": 12,
+    "grilli": 9
   },
   "scene": {
     "rifugio":     { "parco": 1.0, "folla-leggera": 0.25, "traffico": 0.2, "cicale": 0.2 },

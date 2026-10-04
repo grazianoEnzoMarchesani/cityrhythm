@@ -10,10 +10,12 @@ import {
     SYNTHETIC_CROWDED_SOURCE_ID, SYNTHETIC_CROWDED_LAYER_ID, // Assicurati sia definito in config.js
     LCZ_VITALITY_SOURCE_ID, LCZ_VITALITY_LAYER_ID,
     ATTRACTION_MIN_CROWDEDNESS,
+    MAP_DATA_BASE, NIGHT_HOME_SHARE, NIGHT_GO_HOME_HOURS, NIGHT_WAKE_UP_HOURS, PRESENCE_MOVE_MS, PRESENCE_EXIT_METERS,
     MAP_STYLES,
     DEBUG_MODE // <-- aggiunto
 } from '../data/config.js';
-import { calculateAveragePresenceForFeature, generatePointsForFeature, perlin2d } from '../utils/utils.js';
+import { calculateAveragePresenceForFeature, generatePointsForFeature, perlin2d, hash01 } from '../utils/utils.js';
+import { applyPresenceColors, getPreviousPersonColor } from './presence-colors.js';
 import { getFullKmlGeoJson, getPoiData, getCrowdedData, getSpotMapperData, getLczVitalityData } from '../data/data-loader.js';
 import { addMapInteraction } from './map-interaction.js';
 
@@ -392,10 +394,10 @@ export function addOrUpdatePresencePointsLayer(pointsGeoJson, initialVisibility 
                 paint: {
                     'circle-radius': MAP_STYLES.PRESENCE_POINTS_COLOR.CIRCLE_RADIUS,
                     'circle-color': MAP_STYLES.PRESENCE_POINTS_COLOR.CIRCLE_COLOR,
-                    'circle-opacity': MAP_STYLES.PRESENCE_POINTS_COLOR.CIRCLE_OPACITY,
+                    'circle-opacity': ['*', MAP_STYLES.PRESENCE_POINTS_COLOR.CIRCLE_OPACITY, ['coalesce', ['get', 'fade'], 1]],
                     'circle-stroke-width': MAP_STYLES.PRESENCE_POINTS_COLOR.CIRCLE_STROKE_WIDTH,
                     'circle-stroke-color': MAP_STYLES.PRESENCE_POINTS_COLOR.CIRCLE_STROKE_COLOR,
-                    'circle-stroke-opacity': MAP_STYLES.PRESENCE_POINTS_COLOR.CIRCLE_STROKE_OPACITY,
+                    'circle-stroke-opacity': ['*', MAP_STYLES.PRESENCE_POINTS_COLOR.CIRCLE_STROKE_OPACITY, ['coalesce', ['get', 'fade'], 1]],
                     'circle-pitch-alignment': 'viewport',
                     'circle-pitch-scale': 'map'
                 }
@@ -410,10 +412,10 @@ export function addOrUpdatePresencePointsLayer(pointsGeoJson, initialVisibility 
                 paint: {
                     'circle-radius': MAP_STYLES.PRESENCE_POINTS_ZOOM.CIRCLE_RADIUS,
                     'circle-color': MAP_STYLES.PRESENCE_POINTS_ZOOM.CIRCLE_COLOR,
-                    'circle-opacity': MAP_STYLES.PRESENCE_POINTS_ZOOM.CIRCLE_OPACITY,
+                    'circle-opacity': ['*', MAP_STYLES.PRESENCE_POINTS_ZOOM.CIRCLE_OPACITY, ['coalesce', ['get', 'fade'], 1]],
                     'circle-stroke-width': MAP_STYLES.PRESENCE_POINTS_ZOOM.CIRCLE_STROKE_WIDTH,
                     'circle-stroke-color': MAP_STYLES.PRESENCE_POINTS_ZOOM.CIRCLE_STROKE_COLOR,
-                    'circle-stroke-opacity': MAP_STYLES.PRESENCE_POINTS_ZOOM.CIRCLE_STROKE_OPACITY,
+                    'circle-stroke-opacity': ['*', MAP_STYLES.PRESENCE_POINTS_ZOOM.CIRCLE_STROKE_OPACITY, ['coalesce', ['get', 'fade'], 1]],
                     'circle-pitch-alignment': 'viewport',
                     'circle-pitch-scale': 'map'
                 }
@@ -571,8 +573,271 @@ export function updateCrowdedPointsLayerStyle(timelineHourIndex, currentCrowdedn
     }
 }
 
+// --- NOTTE: LE PERSONE TORNANO A CASA ---
+let homeBuildings = null;      // [{ c: [lon, lat], v: volume m³ }] degli edifici TUM, caricati alla prima notte
+let homesLoading = null;
+const homesByFeature = new Map(); // id quartiere → { coords, cum } (volumi cumulati per la scelta pesata)
+let lastPresenceArgs = null;
+
+// Quota di persone a casa a un'ora del giorno (0–23): rampa la sera, piena di notte, rampa al mattino.
+function getHomeShare(hour) {
+    const [goStart, goEnd] = NIGHT_GO_HOME_HOURS;
+    const [wakeStart, wakeEnd] = NIGHT_WAKE_UP_HOURS;
+    const h = hour < wakeEnd ? hour + 24 : hour; // la notte come un unico tratto continuo
+    if (h <= goStart || h >= wakeEnd + 24) return 0;
+    if (h < goEnd) return NIGHT_HOME_SHARE * (h - goStart) / (goEnd - goStart);
+    if (h <= wakeStart + 24) return NIGHT_HOME_SHARE;
+    return NIGHT_HOME_SHARE * (wakeEnd + 24 - h) / (wakeEnd - wakeStart);
+}
+
+function ensureHomesLoaded() {
+    if (homesLoading) return;
+    homesLoading = fetch(MAP_DATA_BASE + 'gba_ascoli.geojson')
+        .then(r => r.json())
+        .then(gj => {
+            homeBuildings = gj.features.map(f => ({
+                c: turf.centroid(f).geometry.coordinates,
+                v: turf.area(f) * (f.properties.height > 0 ? f.properties.height : 3)
+            }));
+            // I punti dell'ora corrente sono stati disegnati senza case: ridisegnali
+            if (lastPresenceArgs) updateAllPresencePoints(...lastPresenceArgs);
+        })
+        .catch(e => console.error('Edifici per la notte non caricati:', e));
+}
+
+function getHomesForFeature(kmlFeature) {
+    if (!homeBuildings) return null;
+    if (homesByFeature.has(kmlFeature.id)) return homesByFeature.get(kmlFeature.id);
+    const [minLon, minLat, maxLon, maxLat] = turf.bbox(kmlFeature.geometry);
+    const coords = [];
+    const cum = [];
+    let total = 0;
+    homeBuildings.forEach(b => {
+        const [lon, lat] = b.c;
+        if (lon < minLon || lon > maxLon || lat < minLat || lat > maxLat) return;
+        if (!turf.booleanPointInPolygon(b.c, kmlFeature.geometry)) return;
+        total += b.v;
+        coords.push(b.c);
+        cum.push(total);
+    });
+    const homes = coords.length ? { coords, cum, total } : null;
+    homesByFeature.set(kmlFeature.id, homes);
+    return homes;
+}
+
+// Celle LCZ del quartiere dove si cammina: costruite (1–10) o pavimentate (E). Riquadri [w, s, e, n].
+const STREET_LCZ = new Set(['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'E']);
+const streetCellsByFeature = new Map();
+function getStreetCellsForFeature(kmlFeature) {
+    if (streetCellsByFeature.has(kmlFeature.id)) return streetCellsByFeature.get(kmlFeature.id);
+    const lcz = getLczVitalityData();
+    if (!lcz?.length) return null; // non ancora caricate: non mettere in cache
+    const [minLon, minLat, maxLon, maxLat] = turf.bbox(kmlFeature.geometry);
+    const cells = [];
+    lcz.forEach(cell => {
+        if (!STREET_LCZ.has(cell.properties.LCZ)) return;
+        const b = turf.bbox(cell);
+        const c = [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2];
+        if (c[0] < minLon || c[0] > maxLon || c[1] < minLat || c[1] > maxLat) return;
+        if (turf.booleanPointInPolygon(c, kmlFeature.geometry)) cells.push(b);
+    });
+    const result = cells.length ? cells : null;
+    streetCellsByFeature.set(kmlFeature.id, result);
+    return result;
+}
+
+// Casa della persona: edificio scelto in proporzione al volume, più qualche metro a caso per non sovrapporre i puntini.
+function homePosition(homes, key) {
+    const r = hash01(key + ':casa') * homes.total;
+    let lo = 0, hi = homes.cum.length - 1;
+    while (lo < hi) {
+        const mid = (lo + hi) >> 1;
+        if (homes.cum[mid] < r) lo = mid + 1; else hi = mid;
+    }
+    const [lon, lat] = homes.coords[lo];
+    const angle = hash01(key + ':a') * 2 * Math.PI;
+    const radius = 4 * Math.sqrt(hash01(key + ':r'));
+    return [
+        lon + Math.cos(angle) * radius / (111320 * Math.cos(lat * Math.PI / 180)),
+        lat + Math.sin(angle) * radius / 111320
+    ];
+}
+
+// --- PERSONE DI OGNI QUARTIERE, RICORDATE DA UN'ORA ALL'ALTRA ---
+const presenceStates = new Map(); // id quartiere → { at: chiave → attrattore, attrCoords, nRandom, next }
+
+function getPresenceState(kmlId) {
+    if (!presenceStates.has(kmlId)) {
+        presenceStates.set(kmlId, { at: new Map(), attrCoords: new Map(), nRandom: 0, next: 0 });
+    }
+    return presenceStates.get(kmlId);
+}
+
+// Distanza al quadrato fra due [lon, lat] (basta per confrontare chi è più vicino)
+function dist2(a, b) {
+    const dx = (b[0] - a[0]) * Math.cos(a[1] * Math.PI / 180);
+    const dy = b[1] - a[1];
+    return dx * dx + dy * dy;
+}
+
+// Assegna ogni persona in più all'attrattore più vicino che ha bisogno di gente (needs.need cala).
+// Restituisce chi non ha trovato posto.
+function assignToNearestNeed(movers, needs, onAssign) {
+    return movers.filter(m => {
+        let best = null;
+        let bestD = Infinity;
+        needs.forEach(nd => {
+            if (nd.need <= 0) return;
+            const d = dist2(m.from, nd.c);
+            if (d < bestD) { bestD = d; best = nd; }
+        });
+        if (!best) return true;
+        best.need--;
+        onAssign(m, best);
+        return false;
+    });
+}
+
+// Dentro il quartiere: porta ogni attrattore verso il numero atteso (targets: attrattore → persone).
+// Restituisce chi avanza (ancora registrato qui) e i posti scoperti.
+function rebalanceInsideArea(state, targets) {
+    const byAttr = new Map();
+    state.at.forEach((attrId, key) => {
+        if (!byAttr.has(attrId)) byAttr.set(attrId, []);
+        byAttr.get(attrId).push(key);
+    });
+    const movers = [];
+    byAttr.forEach((keys, attrId) => {
+        const extra = keys.length - (targets.get(attrId) || 0);
+        for (let i = 1; i <= extra; i++) movers.push({ key: keys[keys.length - i], from: state.attrCoords.get(attrId) });
+    });
+    const needs = [];
+    targets.forEach((n, attrId) => {
+        const need = n - (byAttr.get(attrId)?.length || 0);
+        if (need > 0) needs.push({ attrId, need, c: state.attrCoords.get(attrId) });
+    });
+    const left = assignToNearestNeed(movers, needs, (m, nd) => state.at.set(m.key, nd.attrId));
+    return { movers: left, needs: needs.filter(nd => nd.need > 0) };
+}
+
+// Fra quartieri: chi avanza in un quartiere che si svuota va al posto scoperto più vicino
+// in un quartiere che si riempie. Aggiorna movers e needs di ogni area con ciò che resta.
+function transferBetweenAreas(areas) {
+    const allNeeds = areas.flatMap(area => area.needs.map(nd => Object.assign(nd, { area })));
+    if (!allNeeds.length) return;
+    areas.forEach(area => {
+        area.movers = assignToNearestNeed(area.movers, allNeeds, (m, nd) => {
+            area.state.at.delete(m.key);
+            nd.area.state.at.set(m.key, nd.attrId);
+        });
+    });
+    areas.forEach(area => { area.needs = area.needs.filter(nd => nd.need > 0); });
+}
+
+// --- SPOSTAMENTO ANIMATO DEI PUNTINI FRA UN'ORA E L'ALTRA ---
+let displayedPositions = new Map(); // personKey → posizione disegnata adesso
+let presenceMoveFrame = null;
+let presenceMoveMs = PRESENCE_MOVE_MS;
+
+// Col Play della timeline lo spostamento deve finire prima dell'ora successiva:
+// se venisse interrotto a ogni passo, i puntini si ammasserebbero al centro del quartiere.
+export function setPresenceMoveDuration(ms) {
+    presenceMoveMs = Math.min(PRESENCE_MOVE_MS, ms);
+}
+const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+// Punto fuori città sulla stessa direzione dal centro dei quartieri, PRESENCE_EXIT_METERS più in là
+let cityCenter = null;
+function outsideCity(coords, key) {
+    if (!cityCenter) {
+        const [minLon, minLat, maxLon, maxLat] = turf.bbox(getFullKmlGeoJson());
+        cityCenter = [(minLon + maxLon) / 2, (minLat + maxLat) / 2];
+    }
+    const kx = 111320 * Math.cos(cityCenter[1] * Math.PI / 180);
+    let dx = (coords[0] - cityCenter[0]) * kx;
+    let dy = (coords[1] - cityCenter[1]) * 111320;
+    const len = Math.hypot(dx, dy);
+    if (len < 1) {
+        const angle = hash01(key + ':uscita') * 2 * Math.PI;
+        dx = Math.cos(angle); dy = Math.sin(angle);
+    } else {
+        dx /= len; dy /= len;
+    }
+    return [coords[0] + dx * PRESENCE_EXIT_METERS / kx, coords[1] + dy * PRESENCE_EXIT_METERS / 111320];
+}
+
+// Chi c'era anche prima scivola dalla vecchia alla nuova posizione; chi arriva in città entra dall'esterno
+// comparendo piano (fade in), chi la lascia esce verso l'esterno svanendo (fade out).
+function movePresencePointsTo(target, visible, arrivals = new Set(), leavers = []) {
+    if (presenceMoveFrame) cancelAnimationFrame(presenceMoveFrame);
+    presenceMoveFrame = null;
+    const map = getMapInstance();
+    const hadPoints = displayedPositions.size > 0;
+    const starts = target?.features.map(f => {
+        const key = f.properties.personKey;
+        return displayedPositions.get(key) ?? (arrivals.has(key) ? outsideCity(f.geometry.coordinates, key) : null);
+    }) ?? [];
+    const leaving = leavers
+        .map(key => ({ key, from: displayedPositions.get(key) }))
+        .filter(l => l.from)
+        .map(l => ({ ...l, to: outsideCity(l.from, l.key), color: getPreviousPersonColor(l.key) }));
+    const lerp = (a, b, e) => [a[0] + (b[0] - a[0]) * e, a[1] + (b[1] - a[1]) * e];
+    const frame = (e) => {
+        displayedPositions = new Map();
+        const features = (target?.features ?? []).map((f, i) => {
+            const key = f.properties.personKey;
+            const end = f.geometry.coordinates;
+            const coords = lerp(starts[i] ?? end, end, e);
+            displayedPositions.set(key, coords);
+            const properties = arrivals.has(key) ? { ...f.properties, fade: Math.min(1, 2 * e) } : f.properties;
+            return { ...f, properties, geometry: { type: 'Point', coordinates: coords } };
+        });
+        leaving.forEach(l => {
+            const coords = lerp(l.from, l.to, e);
+            displayedPositions.set(l.key, coords);
+            features.push({
+                type: 'Feature',
+                properties: { personKey: l.key, fade: Math.min(1, 2 * (1 - e)), ...(l.color && { color: l.color }) },
+                geometry: { type: 'Point', coordinates: coords }
+            });
+        });
+        return { type: 'FeatureCollection', features };
+    };
+    const source = map?.getSource(PRESENCE_POINTS_SOURCE_ID);
+    if (!visible || reduceMotion || !presenceMoveMs || !source || !hadPoints) {
+        displayedPositions = new Map();
+        target?.features.forEach(f => displayedPositions.set(f.properties.personKey, f.geometry.coordinates));
+        addOrUpdatePresencePointsLayer(target, visible);
+        return;
+    }
+    const t0 = performance.now();
+    const step = (now) => {
+        const t = Math.min(1, (now - t0) / presenceMoveMs);
+        const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; // parte e arriva piano
+        const src = map.getSource(PRESENCE_POINTS_SOURCE_ID);
+        if (!src) { presenceMoveFrame = null; return; }
+        if (t < 1) {
+            src.setData(frame(e));
+            presenceMoveFrame = requestAnimationFrame(step);
+        } else {
+            // Arrivati: chi lasciava la città sparisce
+            displayedPositions = new Map();
+            target?.features.forEach(f => displayedPositions.set(f.properties.personKey, f.geometry.coordinates));
+            addOrUpdatePresencePointsLayer(target, visible);
+            presenceMoveFrame = null;
+        }
+    };
+    setLayerVisibility(PRESENCE_POINTS_LAYER_ID, visible);
+    presenceMoveFrame = requestAnimationFrame(step);
+}
+
+// Ridisegna i puntini dell'ora corrente (es. dopo aver cambiato la colorazione)
+export function refreshPresencePoints(visible) {
+    if (lastPresenceArgs) updateAllPresencePoints(lastPresenceArgs[0], lastPresenceArgs[1], visible ?? lastPresenceArgs[2]);
+}
+
 // --- AGGIORNAMENTO COMPLESSIVO PUNTI PRESENZA (CON CAMPO DI FORZE STATICO) ---
-export function updateAllPresencePoints(timelineHourIndex, currentCrowdednessMap, initialVisibility = true, colors = null) {
+export function updateAllPresencePoints(timelineHourIndex, currentCrowdednessMap, initialVisibility = true) {
     const map = getMapInstance();
     const fullKml = getFullKmlGeoJson();
     const poiData = getPoiData();
@@ -583,88 +848,133 @@ export function updateAllPresencePoints(timelineHourIndex, currentCrowdednessMap
     const syntheticPoints = (syntheticGeoJson?.features || []).filter(f => (f.properties?.synthetic_crowdedness || 0) > 0);
     let allFinalPointsFeatures = [];
     const JITTER_METERS = 10;
+    const homeShare = getHomeShare(timelineHourIndex % 24);
+    lastPresenceArgs = [timelineHourIndex, currentCrowdednessMap, initialVisibility];
+    ensureHomesLoaded();
+    const presenceArrivals = new Set(); // chi arriva in città: entra dall'esterno e compare piano
+    const presenceLeavers = [];         // chi lascia la città: esce verso l'esterno e svanisce
     function metersToDegrees(meters, lat) {
         const latDeg = meters / 111320;
         const lonDeg = meters / (111320 * Math.cos(lat * Math.PI / 180));
         return { latDeg, lonDeg };
     }
     if (fullKml?.features?.length && poiData && Object.keys(poiData).length > 0) {
+        // Ogni persona ha un'identità (chiave) ricordata da un'ora all'altra. Quando cambia l'ora:
+        // 1. dentro il quartiere chi è in più a un attrattore cammina verso il più vicino che cresce;
+        // 2. se un quartiere nel complesso si svuota e un altro si riempie, chi avanza nel primo
+        //    cammina verso l'attrattore più vicino che cresce nel secondo;
+        // 3. solo il resto arriva da fuori città o se ne va fuori città (con dissolvenza).
+        // Di notte una quota va a casa (stessa casa ogni notte, nel quartiere dove si trova).
+        const areas = [];
         fullKml.features.forEach(kmlFeature => {
-            if (kmlFeature?.properties?.poi_data_available) {
-                const { averagePresence } = calculateAveragePresenceForFeature(kmlFeature, poiData, timelineHourIndex);
-                if (averagePresence <= 0) return;
-                // Trova i synthetic point interni all'area
-                const synthInArea = syntheticPoints.filter(synth =>
-                    turf.booleanPointInPolygon(synth, kmlFeature.geometry)
-                );
-                if (synthInArea.length === 0) return;
-                // Somma delle crowdedness
-                const totalCrowdedness = synthInArea.reduce((sum, s) => sum + (s.properties.synthetic_crowdedness || 0), 0);
-                // Se la somma è zero, distribuisci uniformemente
-                synthInArea.forEach(synth => {
-                    let n = 0;
-                    if (totalCrowdedness > 0) {
-                        n = Math.round((synth.properties.synthetic_crowdedness / totalCrowdedness) * averagePresence * 0.3);
-                    } else {
-                        n = Math.floor((averagePresence / synthInArea.length) * 0.3);
-                    }
-                    for (let i = 0; i < n; i++) {
-                        const angle = Math.random() * 2 * Math.PI;
-                        const radius = Math.random() * JITTER_METERS;
-                        const { latDeg, lonDeg } = metersToDegrees(radius, synth.geometry.coordinates[1]);
-                        const dx = Math.cos(angle) * lonDeg;
-                        const dy = Math.sin(angle) * latDeg;
-                        const lon = synth.geometry.coordinates[0] + dx;
-                        const lat = synth.geometry.coordinates[1] + dy;
-                        const props = {
-                            syntheticId: synth.id,
-                            kmlFeatureId: kmlFeature.id,
-                            originalCoordinates: [lon, lat],
-                            isStatic: false,
-                            noiseSeedX: Math.random() * 10000,
-                            noiseSeedY: Math.random() * 10000
-                        };
-                        if (colors) {
-                            props.color = colors[Math.floor(Math.random() * colors.length)];
-                        }
-                        const point = turf.point([lon, lat], props);
-                        allFinalPointsFeatures.push(point);
-                    }
-                });
-                // --- AGGIUNGI 20% RANDOM NELL'AREA ---
-                const nRandom = Math.round(averagePresence * 0.1);
-                // Calcola bounding box area
-                const bbox = turf.bbox(kmlFeature.geometry); // [minLon, minLat, maxLon, maxLat]
-                let randomTries = 0;
-                for (let i = 0; i < nRandom && randomTries < nRandom * 10; ) {
-                    // Genera punto random nel bbox
-                    const lon = bbox[0] + Math.random() * (bbox[2] - bbox[0]);
-                    const lat = bbox[1] + Math.random() * (bbox[3] - bbox[1]);
-                    // Verifica che sia dentro la KML
-                    if (turf.booleanPointInPolygon([lon, lat], kmlFeature.geometry)) {
-                        const props = {
-                            kmlFeatureId: kmlFeature.id,
-                            originalCoordinates: [lon, lat],
-                            isStatic: false,
-                            noiseSeedX: Math.random() * 10000,
-                            noiseSeedY: Math.random() * 10000
-                        };
-                        if (colors) {
-                            props.color = colors[Math.floor(Math.random() * colors.length)];
-                        }
-                        const point = turf.point([lon, lat], props);
-                        allFinalPointsFeatures.push(point);
-                        i++;
-                    }
-                    randomTries++;
+            if (!kmlFeature?.properties?.poi_data_available) return;
+            const { averagePresence } = calculateAveragePresenceForFeature(kmlFeature, poiData, timelineHourIndex);
+            // Trova i synthetic point interni all'area
+            const synthInArea = averagePresence > 0
+                ? syntheticPoints.filter(synth => turf.booleanPointInPolygon(synth, kmlFeature.geometry))
+                : [];
+            const state = getPresenceState(kmlFeature.id);
+            // Persone attese a ogni attrattore in quest'ora, in proporzione all'affollamento
+            const totalCrowdedness = synthInArea.reduce((sum, s) => sum + (s.properties.synthetic_crowdedness || 0), 0);
+            const targets = new Map();
+            synthInArea.forEach(synth => {
+                state.attrCoords.set(synth.id, synth.geometry.coordinates);
+                const n = totalCrowdedness > 0
+                    ? Math.round((synth.properties.synthetic_crowdedness / totalCrowdedness) * averagePresence * 0.3)
+                    : Math.floor((averagePresence / synthInArea.length) * 0.3); // somma zero: distribuisci uniformemente
+                if (n > 0) targets.set(synth.id, n);
+            });
+            const { movers, needs } = rebalanceInsideArea(state, targets);
+            areas.push({
+                kmlFeature, state, movers, needs,
+                homes: getHomesForFeature(kmlFeature),
+                nRandom: synthInArea.length ? Math.round(averagePresence * 0.1) : 0
+            });
+        });
+        transferBetweenAreas(areas);
+
+        areas.forEach(({ kmlFeature, state, movers, needs, homes, nRandom }) => {
+            const homeOf = (key) => homes ? homePosition(homes, key) : null;
+            // Chi avanza ancora lascia la città, i posti ancora scoperti si riempiono con chi arriva da fuori
+            movers.forEach(({ key }) => {
+                state.at.delete(key);
+                presenceLeavers.push(key);
+            });
+            needs.forEach(nd => {
+                for (; nd.need > 0; nd.need--) {
+                    const key = `${kmlFeature.id}:p${state.next++}`;
+                    state.at.set(key, nd.attrId);
+                    presenceArrivals.add(key);
                 }
+            });
+            const placePerson = (key, lon, lat, props) => {
+                if (homes && hash01(key + ':notte') < homeShare) {
+                    [lon, lat] = homeOf(key);
+                    props.atHome = true;
+                }
+                props.personKey = key;
+                props.originalCoordinates = [lon, lat];
+                allFinalPointsFeatures.push(turf.point([lon, lat], props));
+            };
+            state.at.forEach((attrId, key) => {
+                const [cLon, cLat] = state.attrCoords.get(attrId);
+                const angle = hash01(key + ':a') * 2 * Math.PI;
+                const radius = hash01(key + ':r') * JITTER_METERS;
+                const { latDeg, lonDeg } = metersToDegrees(radius, cLat);
+                placePerson(key, cLon + Math.cos(angle) * lonDeg, cLat + Math.sin(angle) * latDeg, {
+                    syntheticId: attrId,
+                    kmlFeatureId: kmlFeature.id,
+                    isStatic: false,
+                    noiseSeedX: Math.random() * 10000,
+                    noiseSeedY: Math.random() * 10000
+                });
+            });
+            // --- AGGIUNGI 10% RANDOM NELL'AREA (gente in giro, posto fisso per persona) ---
+            for (let i = nRandom; i < state.nRandom; i++) presenceLeavers.push(`${kmlFeature.id}:giro:${i}`);
+            for (let i = state.nRandom; i < nRandom; i++) presenceArrivals.add(`${kmlFeature.id}:giro:${i}`);
+            state.nRandom = nRandom;
+            // Solo dove la gente cammina davvero: celle costruite o pavimentate, mai fiume, boschi o prati
+            const streetCells = getStreetCellsForFeature(kmlFeature);
+            if (streetCells) {
+                for (let i = 0; i < nRandom; i++) {
+                    const key = `${kmlFeature.id}:giro:${i}`;
+                    const [w, s, e, n] = streetCells[Math.floor(hash01(key + ':cella') * streetCells.length)];
+                    placePerson(key, w + hash01(key + ':x') * (e - w), s + hash01(key + ':y') * (n - s), {
+                        kmlFeatureId: kmlFeature.id,
+                        isStatic: false,
+                        noiseSeedX: Math.random() * 10000,
+                        noiseSeedY: Math.random() * 10000
+                    });
+                }
+                return;
+            }
+            // Senza celle LCZ: punto a caso nel quartiere
+            const bbox = turf.bbox(kmlFeature.geometry); // [minLon, minLat, maxLon, maxLat]
+            let randomTries = 0;
+            for (let i = 0; i < nRandom && randomTries < nRandom * 10; ) {
+                // Genera punto nel bbox (sempre lo stesso per la stessa persona)
+                const key = `${kmlFeature.id}:giro:${i}`;
+                const lon = bbox[0] + hash01(key + ':x' + randomTries) * (bbox[2] - bbox[0]);
+                const lat = bbox[1] + hash01(key + ':y' + randomTries) * (bbox[3] - bbox[1]);
+                // Verifica che sia dentro la KML
+                if (turf.booleanPointInPolygon([lon, lat], kmlFeature.geometry)) {
+                    placePerson(key, lon, lat, {
+                        kmlFeatureId: kmlFeature.id,
+                        isStatic: false,
+                        noiseSeedX: Math.random() * 10000,
+                        noiseSeedY: Math.random() * 10000
+                    });
+                    i++;
+                }
+                randomTries++;
             }
         });
     }
+    if (fullKml?.features?.length && poiData) applyPresenceColors(allFinalPointsFeatures, fullKml, poiData, timelineHourIndex);
     currentPresencePoints = allFinalPointsFeatures.length > 0
         ? turf.featureCollection(allFinalPointsFeatures)
         : null;
-    addOrUpdatePresencePointsLayer(currentPresencePoints, initialVisibility);
+    movePresencePointsTo(currentPresencePoints, initialVisibility, presenceArrivals, presenceLeavers);
     
     // Aggiorna automaticamente la visualizzazione dinamica UHI se attivata
     if (uhiDynamicVisibilityEnabled && currentLczVisualizationType === 'UHI') {
@@ -790,100 +1100,76 @@ function addForceGridDebugLayer(map) {
 
 // --- PUNTI AFFOLLAMENTO SINTETICI (SYNTHETIC CROWDED POINTS) ---
 
+// Maestri di ogni spot: i K luoghi reali (crowded) più simili per etichette e più vicini.
+// Sono fissi per tutte le ore: un maestro chiuso conta 0 invece di essere sostituito da uno aperto lontano
+// (prima alle 3 di notte restava "aperto" il 66% degli spot copiando bar a 1 km di distanza).
+let syntheticMastersCache = null; // { spotsData, crowdedData, masters: [{ spot, coords, tags, knn: [{ cp, weight }] }] }
+
+function getSyntheticMasters(spotsData, crowdedData) {
+    if (syntheticMastersCache?.spotsData === spotsData && syntheticMastersCache?.crowdedData === crowdedData) {
+        return syntheticMastersCache.masters;
+    }
+    const EPSILON = 0.01; // km, per evitare divisione per zero
+    const K = 5; // Numero di maestri
+
+    // Similarità Jaccard tra due array di tag
+    function jaccardSimilarity(tagsA, tagsB) {
+        if (!tagsA.length || !tagsB.length) return 0;
+        const setA = new Set(tagsA);
+        const setB = new Set(tagsB);
+        const intersection = [...setA].filter(x => setB.has(x)).length;
+        return intersection / (setA.size + setB.size - intersection);
+    }
+    const parseTags = (s) => (s || '').toLowerCase().split(',').map(t => t.trim()).filter(Boolean);
+
+    const realCrowdedPoints = crowdedData
+        .filter(cp => typeof cp.longitude === 'number' && typeof cp.latitude === 'number')
+        .map(cp => ({ cp, tags: parseTags(cp.TAG), coords: [cp.longitude, cp.latitude] }));
+
+    const masters = spotsData.map((spot, idx) => {
+        const tags = parseTags(spot.TAG);
+        const coords = [spot.Longitudine, spot.Latitudine];
+        if (!tags.length || typeof coords[0] !== 'number' || typeof coords[1] !== 'number') return null;
+        const knn = realCrowdedPoints
+            .map(r => {
+                const tagSim = jaccardSimilarity(tags, r.tags);
+                if (tagSim === 0) return null;
+                const distKm = turf.distance(coords, r.coords, { units: 'kilometers' });
+                return { cp: r.cp, weight: tagSim / (distKm + EPSILON) };
+            })
+            .filter(Boolean)
+            .sort((a, b) => b.weight - a.weight)
+            .slice(0, K);
+        return { spot, idx, coords, knn };
+    }).filter(Boolean);
+    syntheticMastersCache = { spotsData, crowdedData, masters };
+    return masters;
+}
+
 export function generateSyntheticCrowdedPointsGeoJson(spotsData, crowdedData, crowdednessColumn) {
     if (!Array.isArray(spotsData) || !Array.isArray(crowdedData) || !crowdednessColumn) {
         console.warn("generateSyntheticCrowdedPointsGeoJson: Invalid input data or column name.");
         return null;
     }
-    if (typeof turf === 'undefined') {
-        console.error("generateSyntheticCrowdedPointsGeoJson: Turf.js is required.");
-        return null;
-    }
-    const realCrowdedPoints = crowdedData
-        .map(cp => {
-            const crowdedness = parseFloat(cp[crowdednessColumn]) || 0;
-            if (crowdedness > 0 && typeof cp.longitude === 'number' && typeof cp.latitude === 'number') {
-                return {
-                    ...cp,
-                    tags: (cp.TAG || '').toLowerCase().split(',').map(t => t.trim()).filter(Boolean),
-                    crowdedness: crowdedness,
-                    coords: [cp.longitude, cp.latitude]
-                };
-            }
-            return null;
-        })
-        .filter(cp => cp !== null);
-
-    if (realCrowdedPoints.length === 0) {
-        return { type: 'FeatureCollection', features: [] };
-    }
-
-    const EPSILON = 0.01; // km, per evitare divisione per zero
-    const K = 5; // Numero di vicini da considerare
-
-    // Funzione per similarità Jaccard tra due array di tag
-    function jaccardSimilarity(tagsA, tagsB) {
-        if (!tagsA.length || !tagsB.length) return 0;
-        const setA = new Set(tagsA);
-        const setB = new Set(tagsB);
-        const intersection = new Set([...setA].filter(x => setB.has(x)));
-        const union = new Set([...setA, ...setB]);
-        return intersection.size / union.size;
-    }
-
-    const syntheticFeatures = spotsData
-        .map((spot, idx) => {
-            const spotTags = (spot.TAG || '').toLowerCase().split(',').map(t => t.trim()).filter(Boolean);
-            const spotCoords = [spot.Longitudine, spot.Latitudine];
-            if (!spotTags.length || typeof spotCoords[0] !== 'number' || typeof spotCoords[1] !== 'number') {
-                return null;
-            }
-            const spotPoint = turf.point(spotCoords);
-            // Calcola peso combinato per ogni CP
-            const weightedCPs = realCrowdedPoints.map(cp => {
-                const tagSim = jaccardSimilarity(spotTags, cp.tags);
-                if (tagSim === 0) return null;
-                const distKm = turf.distance(spotPoint, turf.point(cp.coords), { units: 'kilometers' });
-                // Non limito la distanza, ma il peso sarà basso se lontano
-                const weight = tagSim * (1 / (distKm + EPSILON));
-                return { crowdedness: cp.crowdedness, weight, distKm, tagSim };
-            }).filter(x => x !== null && x.weight > 0);
-
-            // Ordina per peso decrescente e prendi i primi K
-            weightedCPs.sort((a, b) => b.weight - a.weight);
-            const knn = weightedCPs.slice(0, K);
-
-            let inheritedCrowdedness = 0;
-            if (knn.length > 0) {
-                let weightedSum = 0;
-                let weightSum = 0;
-                knn.forEach(({ crowdedness, weight }) => {
-                    weightedSum += crowdedness * weight;
-                    weightSum += weight;
-                });
-                if (weightSum > 0) {
-                    inheritedCrowdedness = weightedSum / weightSum;
-                }
-            }
-            return {
-                type: 'Feature',
-                id: spot.id || `spot_${idx}`,
-                properties: {
-                    ...spot,
-                    synthetic_crowdedness: inheritedCrowdedness
-                },
-                geometry: {
-                    type: 'Point',
-                    coordinates: spotCoords
-                }
-            };
-        })
-        .filter(f => f !== null);
-
-    return {
-        type: 'FeatureCollection',
-        features: syntheticFeatures
-    };
+    const syntheticFeatures = getSyntheticMasters(spotsData, crowdedData).map(({ spot, idx, coords, knn }) => {
+        // Media pesata dell'affollamento dei maestri in quest'ora, chiusi compresi (0)
+        let weightedSum = 0;
+        let weightSum = 0;
+        knn.forEach(({ cp, weight }) => {
+            weightedSum += (parseFloat(cp[crowdednessColumn]) || 0) * weight;
+            weightSum += weight;
+        });
+        return {
+            type: 'Feature',
+            id: spot.id || `spot_${idx}`,
+            properties: {
+                ...spot,
+                synthetic_crowdedness: weightSum > 0 ? weightedSum / weightSum : 0
+            },
+            geometry: { type: 'Point', coordinates: coords }
+        };
+    });
+    return { type: 'FeatureCollection', features: syntheticFeatures };
 }
 
 // --- LAYER PUNTI AFFOLLAMENTO SINTETICI ---

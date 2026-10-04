@@ -47,6 +47,16 @@ export const GRAVITATIONAL_DECAY = 2.5;
 // Percentuale di presence point statici (non attratti dagli attractor)
 export const PRESENCE_STATIC_POINTS_RATIO = 0.1;
 
+// Notte: quota di persone che tornano a casa, cioè su un edificio TUM del proprio quartiere
+// scelto in proporzione al volume (area × altezza: più piani, più famiglie). Gli altri restano ai locali.
+export const NIGHT_HOME_SHARE = 0.95;
+export const NIGHT_GO_HOME_HOURS = [22, 24]; // la quota sale da 0 a NIGHT_HOME_SHARE
+export const NIGHT_WAKE_UP_HOURS = [6, 8];   // e riscende a 0
+// Durata dello spostamento dei puntini quando cambia l'ora (0 = salto senza animazione)
+export const PRESENCE_MOVE_MS = 1000;
+// Chi arriva in città o la lascia entra/esce da questo punto, oltre la sua posizione in direzione opposta al centro
+export const PRESENCE_EXIT_METERS = 600;
+
 export const CHART_COLORS = {
     GENDER_CHART: {
       MALE: '#4A76E8',

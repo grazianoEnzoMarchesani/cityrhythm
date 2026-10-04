@@ -1,8 +1,9 @@
 // ui-layer-controls.js
-import { setLayerVisibility, addSyntheticCrowdedPointsLayer, removeSyntheticCrowdedPointsLayer, updateAllPresencePoints, addLczVitalityLayer, removeLczVitalityLayer, updateLczVitalityVisualization, setLczLayerOpacity, setUhiDynamicVisibility } from '../map/map-layers.js';
+import { refreshPresencePoints, setLayerVisibility, addSyntheticCrowdedPointsLayer, removeSyntheticCrowdedPointsLayer, updateAllPresencePoints, addLczVitalityLayer, removeLczVitalityLayer, updateLczVitalityVisualization, setLczLayerOpacity, setUhiDynamicVisibility } from '../map/map-layers.js';
 import { KML_LAYER_ID, CROWDED_LAYER_ID, PRESENCE_POINTS_LAYER_ID, SPOTS_LAYER_ID, LCZ_VITALITY_LAYER_ID, DEBUG_MODE } from '../data/config.js';
 import { getMapInstance } from '../map/map-setup.js';
 import { getSpotMapperData } from '../data/data-loader.js';
+import { PRESENCE_COLOR_VARIABLES, setPresenceColorBy } from '../map/presence-colors.js';
 
 let kmlToggle = null;
 let crowdedToggle = null;
@@ -52,6 +53,7 @@ export function setupLayerControls() {
         presenceToggle.checked = true;
         presenceToggle.addEventListener('change', (event) => handleToggleChange(event, PRESENCE_POINTS_LAYER_ID));
     }
+    setupPresenceColorSelector();
     if (spotsToggle) {
         spotsToggle.checked = false;
         spotsToggle.addEventListener('change', (event) => handleToggleChange(event, SPOTS_LAYER_ID));
@@ -219,6 +221,44 @@ export function getLayerToggleState(layerName) {
 }
 
 // --- FUNZIONI INTERNE ---
+// --- COLORAZIONE DEI PUNTINI (percentuali reali di ogni quartiere, stabile al cambio d'ora) ---
+function setupPresenceColorSelector() {
+    const group = document.getElementById('presence-color-by');
+    if (!group) return;
+    const options = [['none', 'Off'], ...Object.entries(PRESENCE_COLOR_VARIABLES).map(([key, v]) => [key, v.label])];
+    options.forEach(([key, label]) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.role = 'radio';
+        button.dataset.colorBy = key;
+        button.textContent = label;
+        button.setAttribute('aria-checked', String(key === 'none'));
+        button.addEventListener('click', () => setPresenceColorSelection(key));
+        group.appendChild(button);
+    });
+}
+
+// Usata anche dal clic su un grafico della barra laterale
+// (refresh = false: chi chiama ricolora i puntini da sé)
+export function setPresenceColorSelection(key, refresh = true) {
+    setPresenceColorBy(key);
+    const active = PRESENCE_COLOR_VARIABLES[key] ? key : 'none';
+    document.querySelectorAll('#presence-color-by button').forEach(b => {
+        b.setAttribute('aria-checked', String(b.dataset.colorBy === active));
+    });
+    const legend = document.getElementById('presence-color-legend');
+    if (legend) {
+        legend.innerHTML = '';
+        PRESENCE_COLOR_VARIABLES[key]?.categories.forEach(c => {
+            const item = document.createElement('span');
+            item.textContent = c.name;
+            item.style.setProperty('--dot', c.color);
+            legend.appendChild(item);
+        });
+    }
+    if (refresh) refreshPresencePoints(presenceToggle ? presenceToggle.checked : undefined);
+}
+
 function handleToggleChange(event, layerId) {
     const isChecked = event.target.checked;
     if (layerId === 'synthetic-crowded') {
