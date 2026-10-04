@@ -671,3 +671,71 @@ div[id$="-chart"] p {
 .map-error-message {
     display: none !important;
 }
+/* Selettore e legenda delle mappe LCZ */
+.lcz-view-title {
+    display: block;
+    font-size: 0.85em;
+    color: #555;
+    margin-bottom: 4px;
+}
+
+.lcz-view-select {
+    width: calc(100% - 10px);
+    padding: 5px 6px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    background: #fff;
+    font-size: 0.85em;
+    color: #333;
+}
+
+.lcz-legend {
+    margin-top: 8px;
+    max-width: 230px;
+    font-size: 0.75em;
+    color: #444;
+}
+
+.lcz-legend-categories {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 8px;
+}
+
+.lcz-legend-categories span::before {
+    content: '';
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    margin-right: 4px;
+    vertical-align: -1px;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    background: var(--swatch);
+}
+
+.lcz-legend-ramp {
+    height: 10px;
+    margin: 0 8px;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+.lcz-legend-ticks {
+    position: relative;
+    height: 14px;
+    margin: 2px 8px 0;
+}
+
+.lcz-legend-ticks span {
+    position: absolute;
+    transform: translateX(-50%);
+    white-space: nowrap;
+}
+
+.lcz-legend-ticks span:last-child {
+    transform: translateX(-70%);
+}
+
+.lcz-legend-note {
+    margin-top: 4px;
+    color: #777;
+}

@@ -1,5 +1,5 @@
 // ui-layer-controls.js
-import { refreshPresencePoints, setLayerVisibility, addSyntheticCrowdedPointsLayer, removeSyntheticCrowdedPointsLayer, updateAllPresencePoints, addLczVitalityLayer, removeLczVitalityLayer, updateLczVitalityVisualization, setLczLayerOpacity, setUhiDynamicVisibility } from '../map/map-layers.js';
+import { refreshPresencePoints, setLayerVisibility, addSyntheticCrowdedPointsLayer, removeSyntheticCrowdedPointsLayer, updateAllPresencePoints, addLczVitalityLayer, removeLczVitalityLayer, updateLczVitalityVisualization, setLczLayerOpacity, setUhiDynamicVisibility, getLczLegend } from '../map/map-layers.js';
 import { KML_LAYER_ID, CROWDED_LAYER_ID, PRESENCE_POINTS_LAYER_ID, SPOTS_LAYER_ID, LCZ_VITALITY_LAYER_ID, DEBUG_MODE } from '../data/config.js';
 import { getMapInstance } from '../map/map-setup.js';
 import { getSpotMapperData } from '../data/data-loader.js';
@@ -13,7 +13,7 @@ let spotTypeFilter = null;
 let syntheticCrowdedToggle = null;
 let lczVitalityToggle = null;
 let lczVisualizationSelector = null;
-let lczVisualizationRadios = null;
+let lczVisualizationSelect = null;
 let lczOpacitySlider = null;
 let lczOpacityValue = null;
 let uhiDynamicVisibilityToggle = null;
@@ -28,7 +28,7 @@ export function setupLayerControls() {
     syntheticCrowdedToggle = document.getElementById('toggle-synthetic-crowded');
     lczVitalityToggle = document.getElementById('toggle-lcz-vitality');
     lczVisualizationSelector = document.getElementById('lcz-visualization-selector');
-    lczVisualizationRadios = document.querySelectorAll('input[name="lcz-visualization"]');
+    lczVisualizationSelect = document.getElementById('lcz-visualization-select');
     lczOpacitySlider = document.getElementById('lcz-opacity-slider');
     lczOpacityValue = document.getElementById('lcz-opacity-value');
     uhiDynamicVisibilityToggle = document.getElementById('uhi-dynamic-visibility');
@@ -114,8 +114,9 @@ export function setupLayerControls() {
         lczVitalityToggle.addEventListener('change', (event) => {
             const isChecked = event.target.checked;
             if (isChecked) {
-                const selectedType = document.querySelector('input[name="lcz-visualization"]:checked').value;
+                const selectedType = lczVisualizationSelect?.value ?? 'LCZ';
                 addLczVitalityLayer(true, selectedType);
+                renderLczLegend(selectedType);
                 if (lczVisualizationSelector) {
                     lczVisualizationSelector.style.display = 'block';
                 }
@@ -128,17 +129,16 @@ export function setupLayerControls() {
         });
     }
     
-    // LCZ visualization type radio buttons
-    if (lczVisualizationRadios) {
-        lczVisualizationRadios.forEach(radio => {
-            radio.addEventListener('change', (event) => {
-                if (lczVitalityToggle && lczVitalityToggle.checked) {
-                    updateLczVitalityVisualization(event.target.value);
-                }
-            });
+    // Selettore della mappa LCZ: classi, rischio UHI o un parametro delle celle
+    if (lczVisualizationSelect) {
+        lczVisualizationSelect.addEventListener('change', (event) => {
+            renderLczLegend(event.target.value);
+            if (lczVitalityToggle && lczVitalityToggle.checked) {
+                updateLczVitalityVisualization(event.target.value);
+            }
         });
     }
-    
+
     // LCZ Opacity Slider
     if (lczOpacitySlider && lczOpacityValue) {
         lczOpacitySlider.addEventListener('input', (event) => {
@@ -257,6 +257,46 @@ export function setPresenceColorSelection(key, refresh = true) {
         });
     }
     if (refresh) refreshPresencePoints(presenceToggle ? presenceToggle.checked : undefined);
+}
+
+/** Legenda della mappa LCZ scelta; il controllo "UHI Dynamic Visibility" compare solo con UHI. */
+function renderLczLegend(type) {
+    const uhiControl = document.getElementById('uhi-dynamic-control');
+    if (uhiControl) uhiControl.style.display = type === 'UHI' ? 'block' : 'none';
+    const legend = document.getElementById('lcz-legend');
+    if (!legend) return;
+    legend.innerHTML = '';
+    const info = getLczLegend(type);
+    if (info.kind === 'categories') {
+        const list = document.createElement('div');
+        list.className = 'lcz-legend-categories';
+        info.items.forEach(({ color, label }) => {
+            const item = document.createElement('span');
+            item.textContent = label;
+            item.style.setProperty('--swatch', color);
+            list.appendChild(item);
+        });
+        legend.appendChild(list);
+        return;
+    }
+    // Soglie a passo regolare: la scala è lineare a tratti fra una soglia e l'altra
+    const pos = i => (i / (info.stops.length - 1) * 100).toFixed(1);
+    const bar = document.createElement('div');
+    bar.className = 'lcz-legend-ramp';
+    bar.style.background = `linear-gradient(to right, ${info.stops
+        .map(([, c], i) => `${c} ${pos(i)}%`).join(', ')})`;
+    const ticks = document.createElement('div');
+    ticks.className = 'lcz-legend-ticks';
+    info.stops.forEach(([v], i) => {
+        const tick = document.createElement('span');
+        tick.textContent = i === info.stops.length - 1 && info.unit && !info.unit.includes('–') ? `${v} ${info.unit}` : v;
+        tick.style.left = `${pos(i)}%`;
+        ticks.appendChild(tick);
+    });
+    const note = document.createElement('div');
+    note.className = 'lcz-legend-note';
+    note.textContent = info.unit.includes('–') ? `${info.note} (${info.unit})` : info.note;
+    legend.append(bar, ticks, note);
 }
 
 function handleToggleChange(event, layerId) {

@@ -2,7 +2,7 @@
 
 > Memoria condivisa del progetto. **Ogni agente la legge prima di iniziare.** Si aggiorna a fine sessione col comando `/second-brain` (vedi `.claude/skills/second-brain/SKILL.md`). Sintetico: decisioni e stato, non cronaca.
 
-Ultimo aggiornamento: 2026-10-05 (nona sessione)
+Ultimo aggiornamento: 2026-10-05 (decima sessione)
 
 ## 1. Progetto in breve
 - **CityRhythm**: dashboard geospaziale (**MapLibre GL 6.12** + PMTiles, ECharts 5.5, Turf 7, D3 + d3-cloud, PapaParse, Litepicker) su affollamento, demografia, POI, LCZ/UHI. 3 dimensioni spaziali + 1 temporale (timeline).
@@ -47,6 +47,7 @@ Aggiungere una **dimensione sonora** attivabile ("mappa sonora"). Scopo **divulg
 | Meteo | Open-Meteo archivio, Ascoli (42.854, 13.575), orario, fuso Europe/Rome, 5.904 ore, in **`public/data/meteo_ascoli.json`**: temperatura, percepita, umidità, radiazione globale **+ diretta, diffusa, DNI**, nuvole, vento (km/h), pioggia. Scaricato una volta, servito dal sito. |
 | Fonte LCZ | **Solo** `Lcz_neurali 2/FETCH+simoneAP/unified/lcz_grid_30m_lcz_params.gpkg` (progetto QGIS di Simone, EPSG:3004, tabelle verificate dall'utente). **Celle native da 30 m, mai raggruppate; sempre vettoriale, mai raster**; ritaglio **solo sul rettangolo dei quartieri** (non tutto il Comune). Il resto del progetto (raster, xlsx, CSV, griglia 100 m vuota) non serve. La cartella (2,7 GB) è in `.gitignore`. |
 | Campi LCZ | Bussola: `svf_mean` (0 = difetto → 0,4 di ripiego), `albedo`, `z0_value`, `pervious_frac`, `lcz_class`. Mappa: **tutti i campi di costruzione nel popup al clic** (scopo divulgativo, non per l'audio): classe in italiano, rischio (`lcz_vulnerability`, stessa tabella del vecchio "UHI risk"), parametri in accordo (su 10), correzione ESA, SVF, H/W, % edificata/impermeabile/permeabile, altezza, rugosità, z0, ammettenza, albedo, calore antropico e industriale. Il loader copia `lcz_class`→`LCZ` e `lcz_vulnerability`→`UHI risk` per i colori esistenti. |
+| Mappe dei parametri LCZ | Menu **Show** sotto LCZ Vitality (al posto delle radio LCZ/UHI): LCZ types, UHI risk e 13 parametri delle celle (accordo della classificazione, SVF, H/W, altezza, % edificata/impermeabile/permeabile, albedo, ammettenza, calore antropico e industriale, classe di rugosità, z0). Scale continue in `LCZ_DATA_VIEWS` (`config.js`) con tinte **assenti da LCZ e UHI** (blu notte, ciano, turchese, viola, lavanda, magenta, ardesia), soglie sui percentili 5–95, colori con `to-color` (senza, MapLibre rifiuta l'espressione). Legenda per ogni mappa (categorie o barra + frase). Trasparenti: SVF = 0 (difetto) e celle senza calore industriale. "UHI Dynamic Visibility" visibile solo con UHI. Esclusi `lcz_rmsep` e `lcz_esa_fix` (tecnici, restano nel popup). Approvato dall'utente ("molto bene"). |
 | Comportamento | **Isteresi**: lo stato cambia solo se il nuovo tiene **2 s** (`tenuta_s`; col Play della timeline la musica può restare ferma, è voluto). **Dissolvenza musica 3 s**. Centro della mappa fuori dalle celle LCZ: **silenzio**. |
 | Motore audio | `src/audio/audio-engine.js`, legge solo `audioEnabled` e `mood`. Interruttore **"Attiva mappa sonora"** nel riquadro in basso a sinistra (mirino, contorno e valori visibili solo ad audio acceso). Parte il brano dello stato attuale, gli altri si caricano in sottofondo; spegnendo, sfuma in 1 s. Asset in **`public/audio/`** (loops, sfx, `mix.json`); in `sound-lab/` restano **collegamenti simbolici** per la pagina di ascolto e gli script. |
 | Suoni urbani | Folla leggera/densa ↔ persone; traffico ↔ città; parco ↔ verde; cicale ↔ calore; grilli ↔ notte. |
@@ -102,6 +103,7 @@ Aggiungere una **dimensione sonora** attivabile ("mappa sonora"). Scopo **divulg
 - ~~Puntini rigenerati a caso a ogni ora, Play a 5 passi/s~~ → identità stabili e spostamenti animati; il Play interrompeva l'animazione e ammassava tutti al centro.
 - ~~Colori dei puntini solo dal clic sui grafici, solo per il quartiere selezionato, persi al cambio d'ora~~ → selettore "Color dots by" su tutti i quartieri, stabile (per genere, età, nazionalità, visite).
 - ~~Gente "in giro" in un punto a caso del quartiere~~ → finiva sul Tronto e nei prati; ora solo celle LCZ costruite o pavimentate.
+- ~~Selettore LCZ a due radio (LCZ Types / UHI Risk)~~ → menu con tutte le mappe dei parametri delle celle.
 - ~~Chi arriva esce di casa, chi se ne va rientra in casa~~ (passaggio intermedio) → si entra/esce dalla città con dissolvenza.
 
 ## 5. Stato degli asset audio
@@ -160,7 +162,7 @@ Giudizio dell'utente: i brani 2025 suonano "parenti"; la bussola di prova piace;
 2. **Ascolto sopra la mappa**: luglio alle 13 nel Centro (UTCI ~35, Fatica/Calca), alle 9/21 (Passeggiata/Festa), dicembre a mezzogiorno (sereno), mezzanotte (Notte + grilli), fuori dalle celle (silenzio). Giudicare volumi, rapidità dei cambi (isteresi 2 s), scelta dei brani.
 3. **Suoni urbani dai dati**: presenza degli effetti da persone (X), verde, UTCI e notte invece che dalle scene fisse.
 4. Clima più preciso (facoltativo): **SOLWEIG** (plugin UMEP di QGIS) con `dsm_10m`, terreno e chiome del progetto, su giorni tipo, per ombre vere e suolo caldo; oppure **tarare** l'isola di calore con stazioni in città (verificare la rete regionale delle Marche).
-5. **Stile Toner da verificare a occhio** (non visto dall'agente: nessun browser per gli screenshot): resa del verde nero a vari zoom (se troppo scuro → grigio con trame), edifici bianchi dall'alto e inclinati, leggibilità di puntini, celle LCZ e quartieri sul bianco e nero; orientamento senza etichette. Facoltativo: cancellare `sprites/light.*`.
+5. **Stile Toner da verificare a occhio** (non visto dall'agente: nessun browser per gli screenshot): resa del verde nero a vari zoom (se troppo scuro → grigio con trame), edifici bianchi dall'alto e inclinati, leggibilità di puntini, celle LCZ e quartieri sul bianco e nero; orientamento senza etichette; leggibilità delle scale chiare dei parametri LCZ sul bianco (se spariscono: più opacità o inizio scala più scuro). Facoltativo: cancellare `sprites/light.*`.
 6. **Puntini delle persone**: l'utente verifica i flussi fra quartieri, l'entrata/uscita dalla città (600 m adatti?) e la velocità del Play. Possibili ritocchi: anche la gente "in giro" (10%) fra quartieri; chi cambia quartiere dorme nel quartiere dove si trova. Verificare in mappa che fiume e prati restino vuoti (Tronto, Tue 20:00 e ore 11); se disturbano anche i gruppetti agli spot in celle verdi: ridurli o toglierli di sera. Il vecchio `animatePresencePoints`/campo di forze in `map-layers.js` non è mai avviato (codice morto, da togliere).
 7. Più avanti: ECharts 5.5 ha un avviso di sicurezza moderato (`npm audit`); valutare ECharts 6.
 
@@ -168,9 +170,9 @@ Giudizio dell'utente: i brani 2025 suonano "parenti"; la bussola di prova piace;
 - **2026-10-04 (1–4)**: strategia S2, bussola a 9 stati, loop ed effetti scelti, pagina di ascolto, meteo 246 giorni; Vite tutto locale e Pages; store centrale e modulo grafici; MapLibre + PMTiles (edifici TUM), niente token; regola **solo Comune di Ascoli**.
 - **2026-10-04 (5)**: LCZ dal progetto QGIS di Simone (12.496 celle da 30 m, popup con tutti i parametri). Bussola **per cella** in JS, verificata contro Python, con isteresi e mirino; **motore audio** con interruttore. Su richiesta dell'utente, i coefficienti inventati sostituiti dall'**UTCI** (Oke, RayMan, Bröde); verde tenuto come "bellezza".
 - **2026-10-04 (6)**: puntini delle persone: di notte il 95% va a casa (edifici TUM pesati per volume); identità stabili, spostamenti animati dentro e fra quartieri, entrata/uscita dalla città con dissolvenza; Play rallentato. Synthetic Crowded Points corretti (maestri fissi, chiusi = 0).
-- **2026-10-05 (7)**: selettore "Color dots by" (genere, età, nazionalità, visite): tutti i quartieri colorati con le proprie percentuali reali, stabile col Play; il clic sui grafici accende il pulsante.
-- **2026-10-05 (8)**: la "gente in giro" non finisce più su fiume e prati: solo celle LCZ costruite o pavimentate.
+- **2026-10-05 (7–8)**: selettore "Color dots by" su tutti i quartieri con le percentuali reali; la "gente in giro" solo su celle LCZ costruite o pavimentate.
 - **2026-10-05 (9)**: mappa in **stile Toner** rifatto sulle tessere Protomaps, trame locali, edifici 3D bianchi con contorno; poi tolte tutte le etichette; stile validato, resa visiva da giudicare.
+- **2026-10-05 (10)**: menu **Show** con 15 mappe delle celle LCZ (13 parametri in tinte proprie + legenda); espressioni verificate col validatore MapLibre.
 
 ## 9. Prompt per la prossima sessione
 ```
