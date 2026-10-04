@@ -2,14 +2,14 @@
 
 > Memoria condivisa del progetto. **Ogni agente la legge prima di iniziare.** Si aggiorna a fine sessione col comando `/second-brain` (vedi `.claude/skills/second-brain/SKILL.md`). Sintetico: decisioni e stato, non cronaca.
 
-Ultimo aggiornamento: 2026-10-05 (ottava sessione)
+Ultimo aggiornamento: 2026-10-05 (nona sessione)
 
 ## 1. Progetto in breve
 - **CityRhythm**: dashboard geospaziale (**MapLibre GL 6.12** + PMTiles, ECharts 5.5, Turf 7, D3 + d3-cloud, PapaParse, Litepicker) su affollamento, demografia, POI, LCZ/UHI. 3 dimensioni spaziali + 1 temporale (timeline).
 - Codice: JavaScript vanilla, ES modules, **Vite 8** (`npm run dev` / `npm run build` → `dist/`). Librerie da `node_modules` con versioni esatte in `package.json`; **nessun CDN**. Dati in `public/data/` (23 MB: mappa 14 MB, celle LCZ 7,3 MB, meteo, bussola) e audio in `public/audio/` (17 MB).
 - Stato: moduli con getter (`getCurrentHour()`, `getMapInstance()`, `getPoiData()`…). **Store centrale** `src/state/store.js` (contratto store Svelte: `subscribe`/`set`/`update`/`get`): `time` `{index, date}` (date = null nella settimana tipo), `viewport` `{bounds, zoom, center}`, `audioEnabled`, **`mood`** (stato della bussola: `stato` confermato, `proposto`, X, Y, UTCI, cella, quartiere). Scrivono: `updateAppStateForHour` in `ui-timeline.js` (unico punto per l'ora; `setHour(i)` per il calendario) e `moveend`/`load` in `map-setup.js`. `mood` lo scrive solo `src/compass/compass.js`; `audioEnabled` solo l'interruttore in `src/ui/ui-compass.js`. Log `[store]` solo in `npm run dev`. Globali rimasti: `window.selectedDateRange`, `window._timelineMap` (null con ≥ 7 giorni), evento `dateRangeChanged`.
 - Grafici: ECharts si importa **solo** in `src/charts/charts.js` (`createChart`); le opzioni dei grafici restano nel formato ECharts.
-- Mappa (`src/map/map-setup.js`): stile costruito in codice (`buildMapStyle`): base Protomaps "light" da `ascoli_base.pmtiles`, edifici TUM `buildings-3d` (fill-extrusion colorata per altezza, sotto le etichette), sorgente `terrain-dem` per l'interruttore terreno. Nessun token.
+- Mappa (`src/map/map-setup.js`): stile costruito in codice (`buildMapStyle`): base Protomaps da `ascoli_base.pmtiles` in **stile Toner** (`TONER_FLAVOR`), edifici TUM `buildings-3d` (fill-extrusion bianca + contorno `buildings-outline`, sotto le etichette), sorgente `terrain-dem` per l'interruttore terreno. Nessun token.
 - Trappole note col bundle: PapaParse **senza** `worker: true`; Litepicker come `{ Litepicker }`; KML con `@tmcw/togeojson`; MapLibre 6 si importa come `import * as maplibregl` e il worker come `maplibre-gl-worker.mjs?worker&url` con `worker: { format: 'es' }` in `vite.config.js`; URL di glyphs/sprite/sorgenti **assoluti** (le graffe `{fontstack}` fuori da `new URL`); i dati di una sorgente GeoJSON si leggono con `getGeoJsonSourceData()` (campo interno `_data.geojson`), mai `source._data.features` (era Mapbox).
 - Autore: Graziano Enzo Marchesani (Unicam). Non ha competenze musicali: spiegare le scelte sonore con analogie semplici, le decisioni tecnico-musicali le prende l'agente. Non sa scegliere i volumi a orecchio in percentuale: i mix vanno **calcolati**.
 
@@ -61,7 +61,7 @@ Aggiungere una **dimensione sonora** attivabile ("mappa sonora"). Scopo **divulg
 | Mappa | **MapLibre GL** + PMTiles locali. Base: estratto Protomaps (OSM) del riquadro 13.41–13.75 E, 42.77–42.94 N, z ≤ 15. Terreno: estratto Mapterhorn (terrarium, 512 px). Edifici: **GlobalBuildingAtlas del TUM** (scelti dall'utente dopo il confronto con OSM: "senza ombra di dubbio meglio"), GeoJSON con `height`. Crediti nella mappa: OSM, Protomaps, TUM (CC BY-NC 4.0, **solo uso non commerciale**), Mapterhorn. |
 | Edifici TUM | Si scaricano **una volta** dal rilascio HuggingFace (`zhu-xlab/GBA.ODbLPolygon` + `GBA.LoD1`, tassello `europe/e010_n45_e015_n40`, ~4,4 GB temporanei) e si ritagliano sul Comune con `sound-lab/estrai_edifici_gba.py`. **Mai** il WFS del TUM: gli autori lo vietano per scaricamenti automatici. Altezze stimate da satellite (centro: mediana ~6,7 m, forse sottostimate). |
 | Terreno 3D | Interruttore come prima: piatto dall'alto, rilievo inclinando la camera (`setTerrain` su `terrain-dem`). |
-| Aspetto mappa | Provvisorio: flavor Protomaps **"light"**. Lo stile Mapbox Studio non è portabile; l'utente darà indicazioni per rifarlo. |
+| Aspetto mappa | **Stile Toner** (Stamen/MapTiler, `openmaptiles/maptiler-toner-gl-style`), scelto dall'utente ("mi piace tantissimo"). Lo stile originale è per tessere OpenMapTiles: **rifatto sullo schema Protomaps** con una tavolozza personalizzata (`TONER_FLAVOR` in `map-setup.js`): bianco, acqua/strade/confini neri, etichette nere con alone bianco, nomi dell'acqua bianchi. Verde nero con le **trame originali** (boschi a puntini, cimiteri a crocette, resto a trattini), sprite locale `sprites/toner` (licenza BSD, crediti in mappa; nel `@2x` scaricato le coordinate erano sbagliate, corrette). Tolti POI, scudi, sensi unici, civici. **Edifici bianchi, niente tratteggio** (richiesta dell'utente), con contorno nero a terra per non sparire dall'alto. |
 | Framework | **Vite (vanilla)**, fatto. Svelte/React/Vue aggiungibili con un plugin in `vite.config.js` (`base: './'`). |
 | Intercambiabilità | Tutto deve poter essere sostituito (UI in Svelte/React/Vue, libreria dei grafici). **Fatto**: store centrale compatibile Svelte (React via `useSyncExternalStore(store.subscribe, store.get)`), ECharts isolato in `src/charts/charts.js`. Bussola e motore audio comunicano solo tramite lo store. Formato neutro per le opzioni dei grafici: solo se si cambia davvero libreria. |
 | Pubblicazione | **GitHub Pages** con `.github/workflows/deploy.yml` (build a ogni push su `main`). Serve Settings → Pages → Source: **GitHub Actions**. Nessun token da configurare. |
@@ -77,6 +77,7 @@ Aggiungere una **dimensione sonora** attivabile ("mappa sonora"). Scopo **divulg
 - ~~Unica eccezione all'autosufficienza: tessere Mapbox~~ → ora nessuna eccezione.
 - ~~Dati di Lucca, costa, San Benedetto, Pagliare~~ → regola "solo Comune di Ascoli Piceno".
 - ~~Edifici scaricati al volo dal WFS del TUM~~ → vietato dagli autori e contrario all'autosufficienza; estrazione una tantum.
+- ~~Flavor Protomaps "light" provvisorio, edifici colorati per altezza (crema → bruno)~~ → stile Toner con edifici bianchi.
 - ~~Edifici 3D di OpenStreetMap~~ → altezze spesso mancanti; scelti quelli del TUM.
 - ~~Pannello **Advanced** di finetuning.ai~~ → suona "a un solo strumento". Si resta su **Instrumental**.
 - ~~Seed 2024~~ → il 2025 era migliore; per i rifacimenti 2026/2027.
@@ -158,7 +159,7 @@ Giudizio dell'utente: i brani 2025 suonano "parenti"; la bussola di prova piace;
 2. **Ascolto sopra la mappa**: luglio alle 13 nel Centro (UTCI ~35, Fatica/Calca), alle 9/21 (Passeggiata/Festa), dicembre a mezzogiorno (sereno), mezzanotte (Notte + grilli), fuori dalle celle (silenzio). Giudicare volumi, rapidità dei cambi (isteresi 2 s), scelta dei brani.
 3. **Suoni urbani dai dati**: presenza degli effetti da persone (X), verde, UTCI e notte invece che dalle scene fisse.
 4. Clima più preciso (facoltativo): **SOLWEIG** (plugin UMEP di QGIS) con `dsm_10m`, terreno e chiome del progetto, su giorni tipo, per ombre vere e suolo caldo; oppure **tarare** l'isola di calore con stazioni in città (verificare la rete regionale delle Marche).
-5. **Grafica della mappa MapLibre** (più avanti): stile nuovo secondo le indicazioni dell'utente, al posto del "light" provvisorio.
+5. **Stile Toner da verificare a occhio** (non visto dall'agente: nessun browser per gli screenshot): resa del verde nero a vari zoom (se troppo scuro → grigio con trame), edifici bianchi dall'alto e inclinati, leggibilità di puntini, celle LCZ e quartieri sul bianco e nero.
 6. **Puntini delle persone**: l'utente verifica i flussi fra quartieri, l'entrata/uscita dalla città (600 m adatti?) e la velocità del Play. Possibili ritocchi: anche la gente "in giro" (10%) fra quartieri; chi cambia quartiere dorme nel quartiere dove si trova. Verificare in mappa che fiume e prati restino vuoti (Tronto, Tue 20:00 e ore 11); se disturbano anche i gruppetti agli spot in celle verdi: ridurli o toglierli di sera. Il vecchio `animatePresencePoints`/campo di forze in `map-layers.js` non è mai avviato (codice morto, da togliere).
 7. Più avanti: ECharts 5.5 ha un avviso di sicurezza moderato (`npm audit`); valutare ECharts 6.
 
@@ -168,6 +169,7 @@ Giudizio dell'utente: i brani 2025 suonano "parenti"; la bussola di prova piace;
 - **2026-10-04 (6)**: puntini delle persone: di notte il 95% va a casa (edifici TUM pesati per volume); identità stabili, spostamenti animati dentro e fra quartieri, entrata/uscita dalla città con dissolvenza; Play rallentato. Synthetic Crowded Points corretti (maestri fissi, chiusi = 0).
 - **2026-10-05 (7)**: selettore "Color dots by" (genere, età, nazionalità, visite): tutti i quartieri colorati con le proprie percentuali reali, stabile col Play; il clic sui grafici accende il pulsante.
 - **2026-10-05 (8)**: la "gente in giro" non finisce più su fiume e prati: solo celle LCZ costruite o pavimentate.
+- **2026-10-05 (9)**: mappa in **stile Toner** rifatto sulle tessere Protomaps, trame locali, edifici 3D bianchi con contorno; stile validato, resa visiva da giudicare.
 
 ## 9. Prompt per la prossima sessione
 ```
