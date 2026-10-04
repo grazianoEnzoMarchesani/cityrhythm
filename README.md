@@ -14,7 +14,7 @@ CityRhythm is an advanced, interactive geospatial data visualisation dashboard d
 
 This application goes beyond simple data plotting, incorporating several sophisticated features to provide a rich analytical experience:
 
-*   **Interactive Map Interface:** A fluid and responsive map built with **Mapbox GL JS**, serving as the central canvas for all data layers.
+*   **Interactive Map Interface:** A fluid and responsive map built with **MapLibre GL JS**, serving as the central canvas for all data layers.
 *   **Dynamic Timeline Control:** A sleek timeline allows users to scrub through a full week (168 hours) to observe how urban patterns change over time.
 *   **Detailed Analytics Sidebar:** When an area is selected, the sidebar populates with a rich set of interactive charts and statistics, powered by **ECharts**.
 *   **Multiple Data Layers:** Visualise distinct datasets simultaneously, including:
@@ -32,7 +32,7 @@ This application goes beyond simple data plotting, incorporating several sophist
 
 CityRhythm is built with a modern front-end stack, leveraging powerful open-source libraries:
 
-*   **Mapping:** [Mapbox GL JS](https://mapbox.com/mapbox-gl-js)
+*   **Mapping:** [MapLibre GL JS](https://maplibre.org), [PMTiles](https://protomaps.com) basemap from OpenStreetMap, 3D buildings from [GlobalBuildingAtlas (TUM)](https://github.com/zhu-xlab/GlobalBuildingAtlas), terrain from [Mapterhorn](https://mapterhorn.com)
 *   **Data Visualisation/Charts:** [Apache ECharts](https://echarts.apache.org/)
 *   **Geospatial Analysis:** [Turf.js](https://turfjs.org/)
 *   **Word Cloud Generation:** [D3.js](https://d3js.org/) + `d3-cloud`
@@ -64,12 +64,7 @@ You need a local web server to run the application, as modern browsers restrict 
     cd cityrhythm
     ```
 
-3.  **Configuration (Optional):**
-    The application uses a public Mapbox access token located in `config.js`. If you encounter any issues with the map loading, you may need to replace it with your own token.
-    ```javascript
-    // In config.js
-    export const MAPBOX_TOKEN = 'YOUR_OWN_MAPBOX_TOKEN';
-    ```
+3.  **Configuration:** none. No API keys or tokens are needed: map, terrain and buildings are local files (Ascoli Piceno only) in `public/data/mappa/`.
 
 4.  **Install and run:**
     ```bash
@@ -78,7 +73,7 @@ You need a local web server to run the application, as modern browsers restrict 
     ```
     Open the URL printed by Vite (typically `http://localhost:5173`).
 
-5.  **Production build:** `npm run build` writes a self-contained site to `dist/`. All libraries are bundled from `node_modules` and all data is served from `public/data/`: the site loads no code from external CDNs (only the Mapbox map tiles come from Mapbox). Pushing to `main` deploys `dist/` to GitHub Pages via `.github/workflows/deploy.yml`.
+5.  **Production build:** `npm run build` writes a self-contained site to `dist/`. All libraries are bundled from `node_modules` and all data is served from `public/data/`: the site loads nothing from external services, map tiles included. Pushing to `main` deploys `dist/` to GitHub Pages via `.github/workflows/deploy.yml`.
 
 ## Data Sources
 

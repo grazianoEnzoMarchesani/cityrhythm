@@ -1,10 +1,3 @@
-// MAPBOX_TOKEN richiesto per Mapbox GL JS.
-// Quello pubblico e' limitato agli URL del sito (cityrhythm.it ecc.) e non funziona su localhost:
-// in sviluppo si usa VITE_MAPBOX_TOKEN da .env.local (non versionato, vedi .env.example).
-const PUBLIC_MAPBOX_TOKEN = 'pk.eyJ1IjoiaW9ub25ob3Byb2JsZW1pIiwiYSI6ImNtYnFtb2dhazAxMmUyanM3bzEzdDc4bXQifQ.rmY4WI_G8YqBMpuuIsDV-A';
-// Il token di sviluppo e' usato solo da `npm run dev`: la build non lo include mai.
-export const MAPBOX_TOKEN = (import.meta.env.DEV && import.meta.env.VITE_MAPBOX_TOKEN) || PUBLIC_MAPBOX_TOKEN;
-
 // Dati serviti dal sito stesso (public/data/), non da servizi esterni
 const DATA_BASE = import.meta.env.BASE_URL + 'data/';
 
@@ -14,11 +7,11 @@ export const CROWDED_CSV_URL = DATA_BASE + 'cityrhythm_crowded_data.csv';
 export const SPOTS_CSV_URL = DATA_BASE + 'cityrhythm_spotMapper.csv';
 export const LCZ_VITALITY_CSV_URL = DATA_BASE + 'lcz_vitality.csv';
 
-export const INITIAL_CENTER = [12.5674, 41.8719];
-export const INITIAL_ZOOM = 5;
-// MODIFICATO: Usa lo style Mapbox personalizzato
-//export const MAP_STYLE = 'mapbox://styles/iononhoproblemi/cm9uelpgk01cg01quansz7pyz2';
-export const MAP_STYLE = 'mapbox://styles/iononhoproblemi/cm9v60wy9000z01qq3nhhecur';
+// Mappa di base, terreno ed edifici: file locali, solo Comune di Ascoli Piceno (vedi sound-lab/estrai_edifici_gba.py)
+export const MAP_DATA_BASE = DATA_BASE + 'mappa/';
+
+export const INITIAL_CENTER = [13.5786, 42.8545]; // Ascoli Piceno
+export const INITIAL_ZOOM = 13;
 
 
 export const KML_SOURCE_ID = 'kml-data-source';
@@ -309,7 +302,7 @@ export const MAP_STYLES = {
 
     // Labels
     LABELS: {
-        TEXT_FONT: ['Open Sans Regular', 'Arial Unicode MS Regular'], // Aggiunto font di fallback comune
+        TEXT_FONT: ['Noto Sans Regular'], // unico font ospitato in public/data/mappa/fonts
         TEXT_SIZE: 10, // Invariato
         TEXT_OFFSET: [0, 1.5], // Invariato
         TEXT_ALLOW_OVERLAP: false, // Invariato

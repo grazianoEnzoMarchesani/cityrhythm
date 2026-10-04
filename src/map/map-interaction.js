@@ -1,6 +1,6 @@
 import * as turf from '@turf/turf';
 // map-interaction.js
-import { getMapInstance } from './map-setup.js';
+import { getMapInstance, getGeoJsonSourceData } from './map-setup.js';
 // MODIFICATO: Assicurati che KML_SOURCE_ID sia importato se usato nel fallback ID
 import { KML_LAYER_ID, KML_SOURCE_ID } from '../data/config.js';
 import { resetSidebar } from '../ui/ui-sidebar.js';
@@ -53,7 +53,7 @@ function animateHoverAmount(featureId, target, duration = 200) {
 
 /**
  * Removes existing map listeners for KML interactions to prevent duplicates.
- * @param {mapboxgl.Map} map - The Mapbox map instance.
+ * @param {maplibregl.Map} map - The map instance.
  */
 function removeAllListeners(map) {
     // Rimuovi i listener solo se il layer esiste effettivamente
@@ -151,7 +151,7 @@ function handleMapClick(e) {
 
 /**
  * Changes the map cursor style.
- * @param {mapboxgl.Map} map - The Mapbox map instance.
+ * @param {maplibregl.Map} map - The map instance.
  * @param {string} style - The CSS cursor style (e.g., 'pointer', '').
  */
 function changeCursor(map, style) {
@@ -199,9 +199,9 @@ function handleKmlMouseEnter(e) {
         if (featureId === undefined) {
              if (DEBUG_MODE) console.warn("MouseEnter: Feature ID missing, attempting fallback search.");
              const source = map.getSource(KML_SOURCE_ID); // Usa costante
-             if (source && source._data && source._data.features) {
+             if (getGeoJsonSourceData(source)?.features) {
                 const featureGeom = JSON.stringify(feature.geometry);
-                const matchingFeatureIndex = source._data.features.findIndex(f =>
+                const matchingFeatureIndex = getGeoJsonSourceData(source).features.findIndex(f =>
                     JSON.stringify(f.geometry) === featureGeom ||
                     (feature.properties && f.properties &&
                      feature.properties.name === f.properties.name) // Fallback su nome se presente
@@ -209,7 +209,7 @@ function handleKmlMouseEnter(e) {
 
                 if (matchingFeatureIndex !== -1) {
                     // Assicurati che la feature trovata abbia un ID
-                    featureId = source._data.features[matchingFeatureIndex].id ?? source._data.features[matchingFeatureIndex].properties?.id;
+                    featureId = getGeoJsonSourceData(source).features[matchingFeatureIndex].id ?? getGeoJsonSourceData(source).features[matchingFeatureIndex].properties?.id;
                     // Se ancora manca, genera un ID fallback (meno ideale)
                     if (featureId === undefined) {
                         featureId = `fallback_${matchingFeatureIndex}`;
@@ -254,7 +254,7 @@ function handleKmlMouseLeave() {
 /**
  * Adds interaction listeners (click, hover) to the map for existing KML layers.
  * Removes previous listeners first.
- * @param {mapboxgl.Map} map - The Mapbox map instance.
+ * @param {maplibregl.Map} map - The map instance.
  */
 export function addMapInteraction(map) {
     if (!map || typeof map.on !== 'function') {
@@ -344,14 +344,14 @@ function handleMouseMove(e) {
             // Fallback se ID manca (come in handleKmlMouseEnter)
              if (featureId === undefined) {
                  const source = map.getSource(KML_SOURCE_ID);
-                 if (source && source._data && source._data.features) {
+                 if (getGeoJsonSourceData(source)?.features) {
                     const featureGeom = JSON.stringify(feature.geometry);
-                    const matchingFeatureIndex = source._data.features.findIndex(f =>
+                    const matchingFeatureIndex = getGeoJsonSourceData(source).features.findIndex(f =>
                         JSON.stringify(f.geometry) === featureGeom ||
                         (feature.properties && f.properties && f.properties.name === feature.properties.name)
                     );
                     if (matchingFeatureIndex !== -1) {
-                        featureId = source._data.features[matchingFeatureIndex].id ?? source._data.features[matchingFeatureIndex].properties?.id ?? `fallback_${matchingFeatureIndex}`;
+                        featureId = getGeoJsonSourceData(source).features[matchingFeatureIndex].id ?? getGeoJsonSourceData(source).features[matchingFeatureIndex].properties?.id ?? `fallback_${matchingFeatureIndex}`;
                     }
                  }
              }

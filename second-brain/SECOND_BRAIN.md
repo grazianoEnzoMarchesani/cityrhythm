@@ -2,22 +2,25 @@
 
 > Memoria condivisa del progetto. **Ogni agente la legge prima di iniziare.** Si aggiorna a fine sessione col comando `/second-brain` (vedi `.claude/skills/second-brain/SKILL.md`). Sintetico: decisioni e stato, non cronaca.
 
-Ultimo aggiornamento: 2026-10-04 (terza sessione)
+Ultimo aggiornamento: 2026-10-04 (quarta sessione)
 
 ## 1. Progetto in breve
-- **CityRhythm**: dashboard geospaziale (Mapbox GL 2.15, ECharts 5.5, Turf 7, D3 + d3-cloud, PapaParse, Litepicker) su affollamento, demografia, POI, LCZ/UHI. 3 dimensioni spaziali + 1 temporale (timeline).
-- Codice: JavaScript vanilla, ES modules, **Vite 8** (`npm run dev` / `npm run build` → `dist/`). Librerie da `node_modules` con versioni esatte in `package.json`; **nessun CDN**. Dati in `public/data/` (copie dei vecchi Gist, 2,8 MB). Circa 6.300 righe in `main.js` e `src/`.
-- Stato: quasi tutto dentro i moduli con getter (`getCurrentHour()`, `getMapInstance()`, `getPoiData()`…). Globali rimasti: `window.selectedDateRange`, `window._timelineMap`, evento `dateRangeChanged`. L'ora che cambia oggi non emette eventi (punto unico: `updateAppStateForHour` in `src/ui/ui-timeline.js`). ECharts viene creato in **un solo punto** (`src/ui/ui-sidebar.js`, `echarts.init`).
-- Trappole note col bundle: PapaParse **senza** `worker: true` (col bundle si blocca); Litepicker si importa come `{ Litepicker }`; KML con `@tmcw/togeojson` (stesse geometrie/nomi/ID del vecchio `@mapbox/togeojson`).
+- **CityRhythm**: dashboard geospaziale (**MapLibre GL 6.12** + PMTiles, ECharts 5.5, Turf 7, D3 + d3-cloud, PapaParse, Litepicker) su affollamento, demografia, POI, LCZ/UHI. 3 dimensioni spaziali + 1 temporale (timeline).
+- Codice: JavaScript vanilla, ES modules, **Vite 8** (`npm run dev` / `npm run build` → `dist/`). Librerie da `node_modules` con versioni esatte in `package.json`; **nessun CDN**. Dati in `public/data/` (15 MB, di cui 14 MB di mappa in `public/data/mappa/`). Circa 6.300 righe in `main.js` e `src/`.
+- Stato: moduli con getter (`getCurrentHour()`, `getMapInstance()`, `getPoiData()`…). **Store centrale** `src/state/store.js` (contratto store Svelte: `subscribe`/`set`/`update`/`get`): `time` `{index, date}` (date = null nella settimana tipo), `viewport` `{bounds, zoom, center}`, `audioEnabled`. Scrivono: `updateAppStateForHour` in `ui-timeline.js` (unico punto per l'ora; `setHour(i)` per il calendario) e `moveend`/`load` in `map-setup.js`. Log `[store]` solo in `npm run dev`. Globali rimasti: `window.selectedDateRange`, `window._timelineMap` (null con ≥ 7 giorni), evento `dateRangeChanged`.
+- Grafici: ECharts si importa **solo** in `src/charts/charts.js` (`createChart`); le opzioni dei grafici restano nel formato ECharts.
+- Mappa (`src/map/map-setup.js`): stile costruito in codice (`buildMapStyle`): base Protomaps "light" da `ascoli_base.pmtiles`, edifici TUM `buildings-3d` (fill-extrusion colorata per altezza, sotto le etichette), sorgente `terrain-dem` per l'interruttore terreno. Nessun token.
+- Trappole note col bundle: PapaParse **senza** `worker: true`; Litepicker come `{ Litepicker }`; KML con `@tmcw/togeojson`; MapLibre 6 si importa come `import * as maplibregl` e il worker come `maplibre-gl-worker.mjs?worker&url` con `worker: { format: 'es' }` in `vite.config.js`; URL di glyphs/sprite/sorgenti **assoluti** (le graffe `{fontstack}` fuori da `new URL`); i dati di una sorgente GeoJSON si leggono con `getGeoJsonSourceData()` (campo interno `_data.geojson`), mai `source._data.features` (era Mapbox).
 - Autore: Graziano Enzo Marchesani (Unicam). Non ha competenze musicali: spiegare le scelte sonore con analogie semplici, le decisioni tecnico-musicali le prende l'agente. Non sa scegliere i volumi a orecchio in percentuale: i mix vanno **calcolati**.
 
 ### Dati della piattaforma (verificati)
 | Dati | Periodo | Zona |
 |---|---|---|
 | **Presenze POI** (11 quartieri KML, `presenze_0..23` orarie) | **2024-06-01 → 2025-02-01**, 246 giorni, 1 sola ora mancante | Ascoli |
-| Affollamento luoghi (384 punti) | nessuna data: settimana tipo 168 h | Lucca, Ascoli, costa |
-| Spot (4.083 punti) | statici | Lucca, Ascoli, costa |
-| LCZ/UHI (5.020 celle) | statici | Ascoli e costa; **ad Ascoli copre solo il Centro Storico (97%)**, Porta Cartara 36%, Campo Parignano 18%, gli altri ≈ 0 |
+| Affollamento luoghi (87 punti) | nessuna data: settimana tipo 168 h | Comune di Ascoli |
+| Spot (1.186 punti) | statici | Comune di Ascoli |
+| LCZ/UHI (1.548 celle) | statici | **copre solo il Centro Storico (97%)**, Porta Cartara 36%, Campo Parignano 18%, gli altri quartieri ≈ 0 → da rifare |
+| Mappa (`public/data/mappa/`) | — | base Protomaps/OSM 5,2 MB, terreno Mapterhorn 4,7 MB (z ≤ 12), **11.341 edifici TUM** 3,6 MB, font Noto Sans e icone |
 | Simulazione locale (`cityrhythm_simulation_week.*`) | solo 3–9 giugno 2024 | Ascoli |
 
 Timeline: con un intervallo **< 7 giorni** mostra i giorni reali (`window._timelineMap` ha le date); con **≥ 7 giorni** (anche all'avvio) mostra la settimana tipo 168 h filtrata per giorno della settimana, **senza date**.
@@ -29,7 +32,8 @@ Aggiungere una **dimensione sonora** attivabile ("mappa sonora"). Scopo **divulg
 | Tema | Decisione |
 |---|---|
 | Strategia | **S2 – musica adattiva pre-generata**: un brano principale alla volta, dissolvenza verso lo stato d'animo corrente, più un **livello di suoni urbani** sovrapposto. |
-| Ambito | **Solo Ascoli**, **tutti i 246 giorni** (2024-06-01 → 2025-02-01), dal caldo al freddo. Niente "settimana tipo" per il meteo. |
+| Ambito geografico | **Regola permanente: solo il Comune di Ascoli Piceno** (confine OSM, relazione 42176, in `sound-lab/data/comune_ascoli.geojson`). Dati di Lucca, San Benedetto, Pagliare ecc. **cancellati**; non scaricare né aggiungere mai dati fuori dal Comune. |
+| Ambito audio | **Solo Ascoli**, **tutti i 246 giorni** (2024-06-01 → 2025-02-01), dal caldo al freddo. Niente "settimana tipo" per il meteo. |
 | Modello emotivo | **Bussola** (circomplesso di Russell) calcolata su **ciò che l'utente inquadra**. Formula in `sound-lab/compass.py` (coefficienti tutti nel dizionario `P`). |
 | Energia (X) | Persone/km² nell'ora (presenze POI ÷ area KML), scala log, ancorata al 10° e 90° percentile **delle sole ore di luce** (≈ 1.730 e 9.890 persone/km²). |
 | Piacevolezza (Y) | `0.75 × comfort termico + 0.25 × verde − 0.3 se piove`. Temperatura locale = percepita Open-Meteo + sole diretto (radiazione × SVF) − fresco del verde (di giorno) + isola di calore (UHI risk, più forte di notte). Comfort +1 fra **16 e 26 °C**, −1 a 36 °C o a **−4 °C** (il freddo pesa meno: ci si copre). È un *indicatore*, non una misura. |
@@ -48,14 +52,22 @@ Aggiungere una **dimensione sonora** attivabile ("mappa sonora"). Scopo **divulg
 | Post-produzione musica | Taglio sfumature, loop su battuta con dissolvenza incrociata di 2 s, **−18 LUFS**, picco ≤ −1 dBFS, MP3 160k. |
 | Post-produzione effetti | Taglio della sfumatura finale (tratto entro 3 dB dalla mediana), micro-fade 50 ms, **−20 LUFS**, limitatore sui picchi isolati, MP3 160k. |
 | Settimana tipo e audio | Opzione **(a)**: con ≥ 7 giorni (nessuna data vera) la musica segue **solo l'energia**, piacevolezza fissa a Neutro (Attesa/Routine/Corrente), con avviso "scegli dei giorni per sentire il clima". |
-| Autosufficienza | **Il sito fornisce tutto da sé**: niente librerie né dati da siti esterni (richiesta esplicita dell'utente). Unica eccezione inevitabile: le tessere della mappa da Mapbox. |
+| Autosufficienza | **Il sito fornisce tutto da sé**, mappa compresa: nessuna libreria, dato, tessera o token da siti esterni (verificato sulla build). |
+| Mappa | **MapLibre GL** + PMTiles locali. Base: estratto Protomaps (OSM) del riquadro 13.41–13.75 E, 42.77–42.94 N, z ≤ 15. Terreno: estratto Mapterhorn (terrarium, 512 px). Edifici: **GlobalBuildingAtlas del TUM** (scelti dall'utente dopo il confronto con OSM: "senza ombra di dubbio meglio"), GeoJSON con `height`. Crediti nella mappa: OSM, Protomaps, TUM (CC BY-NC 4.0, **solo uso non commerciale**), Mapterhorn. |
+| Edifici TUM | Si scaricano **una volta** dal rilascio HuggingFace (`zhu-xlab/GBA.ODbLPolygon` + `GBA.LoD1`, tassello `europe/e010_n45_e015_n40`, ~4,4 GB temporanei) e si ritagliano sul Comune con `sound-lab/estrai_edifici_gba.py`. **Mai** il WFS del TUM: gli autori lo vietano per scaricamenti automatici. Altezze stimate da satellite (centro: mediana ~6,7 m, forse sottostimate). |
+| Terreno 3D | Interruttore come prima: piatto dall'alto, rilievo inclinando la camera (`setTerrain` su `terrain-dem`). |
+| Aspetto mappa | Provvisorio: flavor Protomaps **"light"**. Lo stile Mapbox Studio non è portabile; l'utente darà indicazioni per rifarlo. |
 | Framework | **Vite (vanilla)**, fatto. Svelte/React/Vue aggiungibili con un plugin in `vite.config.js` (`base: './'`). |
-| Intercambiabilità | Tutto deve poter essere sostituito (UI in Svelte/React/Vue, libreria dei grafici). Quindi: **store centrale** con contratto `subscribe` compatibile con gli store Svelte (React via `useSyncExternalStore`, Vue con poche righe); **modulo "grafici"** che isola ECharts; il motore audio legge solo dallo store. |
-| Pubblicazione | **GitHub Pages** con `.github/workflows/deploy.yml` (build a ogni push su `main`). Serve Settings → Pages → Source: **GitHub Actions**. Se non c'è dominio proprio, aggiungere `https://<utente>.github.io` alle URL del token pubblico. |
-| Token Mapbox | Pubblico (limitato a cityrhythm.it/altervista) nel codice. Quello di **sviluppo** (senza restrizioni) **solo** in `.env.local` (ignorato da git, modello in `.env.example`) e usato solo in `npm run dev`: la build non lo contiene (verificato). **Non deve mai andare online**: se capita, avvisare subito l'utente per eliminarlo su Mapbox. |
+| Intercambiabilità | Tutto deve poter essere sostituito (UI in Svelte/React/Vue, libreria dei grafici). **Fatto**: store centrale compatibile Svelte (React via `useSyncExternalStore(store.subscribe, store.get)`), ECharts isolato in `src/charts/charts.js`. Il motore audio leggerà solo dallo store. Formato neutro per le opzioni dei grafici: solo se si cambia davvero libreria. |
+| Pubblicazione | **GitHub Pages** con `.github/workflows/deploy.yml` (build a ogni push su `main`). Serve Settings → Pages → Source: **GitHub Actions**. Nessun token da configurare. |
 | Stem | Al momento non servono. Se servissero: StemDeck o UVR5 (locali), MVSEP (web). |
 
 ## 4. Decisioni superate
+- ~~Mapbox GL 2.15 con stile Mapbox Studio, token pubblico nel codice e token di sviluppo in `.env.local`~~ → MapLibre + PMTiles locali, nessun token. I token Mapbox vanno eliminati (quello di sviluppo è finito in chat).
+- ~~Unica eccezione all'autosufficienza: tessere Mapbox~~ → ora nessuna eccezione.
+- ~~Dati di Lucca, costa, San Benedetto, Pagliare~~ → regola "solo Comune di Ascoli Piceno".
+- ~~Edifici scaricati al volo dal WFS del TUM~~ → vietato dagli autori e contrario all'autosufficienza; estrazione una tantum.
+- ~~Edifici 3D di OpenStreetMap~~ → altezze spesso mancanti; scelti quelli del TUM.
 - ~~Pannello **Advanced** di finetuning.ai~~ → suona "a un solo strumento". Si resta su **Instrumental**.
 - ~~Seed 2024~~ → il 2025 era migliore; per i rifacimenti 2026/2027.
 - ~~Tag Mood/Energy~~ → solo testo aggiunto al prompt.
@@ -104,6 +116,8 @@ Giudizio dell'utente: i brani 2025 suonano "parenti"; la bussola di prova piace;
 - `mix.json`: regola del mix effetti e scene per stato.
 - `compass.py [cartella dati]`: prototipo della bussola su tutte le ore e quartieri. Di default legge `../public/data/` (`cityrhythm_blimp.csv`, `lcz_vitality.csv`, `cityrhythm_blimp_areas.kml`). È il **riferimento** per verificare la versione JS. Scrive `data/aree_ascoli.json` (km², uhi, svf, verde, copertura LCZ per quartiere) e `data/bussola_prova.csv` (non versionato, 6 MB).
 - `data/meteo_ascoli_2024-06-01_2025-02-01.json`: meteo orario.
+- `estrai_edifici_gba.py <uscita.geojson>`: ritaglia gli edifici TUM sul Comune (istruzioni di scaricamento in testa al file; serve `ijson`). `data/comune_ascoli.geojson`: confine del Comune, da usare per **ogni** ritaglio.
+- Mappa di base e terreno si rigenerano con la CLI `pmtiles` (brew): `pmtiles extract https://build.protomaps.com/AAAAMMGG.pmtiles ascoli_base.pmtiles --bbox=13.41,42.77,13.75,42.94 --maxzoom=15` e lo stesso da `https://download.mapterhorn.com/planet.pmtiles` con `--maxzoom=12`.
 - `index.html`: bussola 3×3 cliccabile, bottone Notte, dissolvenza (default 3 s), sezione "Suoni urbani" con 6 cursori e casella **"Mix calcolato per stato"**.
 - Avvio:
   ```bash
@@ -112,34 +126,38 @@ Giudizio dell'utente: i brani 2025 suonano "parenti"; la bussola di prova piace;
   python3 -m http.server 8765
   ```
   Poi http://localhost:8765. I file vanno caricati uno alla volta (il server di Python si inceppa con molte richieste parallele).
-- **Piattaforma**: `npm install && npm run dev` dalla radice (serve `.env.local` col token di sviluppo, altrimenti Mapbox rifiuta localhost).
+- **Piattaforma**: `npm install && npm run dev` dalla radice. Nessun token né `.env.local`.
 
 ## 7. Prossimi passi
-1. **Store centrale** `src/state/store.js`: ora della timeline, data vera (se < 7 giorni), area inquadrata, interruttore audio. Collegarlo a `ui-timeline.js`, al calendario in `main.js` e a `map-setup.js` (evento `moveend`). Log in console per la verifica.
-2. **Modulo "grafici"** che isola l'unico `echarts.init`.
-3. **Bussola in JS** (da `compass.py`): energia/piacevolezza sull'area inquadrata (quartieri visibili pesati per la frazione visibile), SunCalc (già installato), meteo da `public/`, isteresi. Verificarla contro `compass.py` su ore campione.
-4. **Motore audio** con interruttore "Attiva mappa sonora": loop e effetti copiati in `public/audio/`, dissolvenza 3 s, mix da `mix.json`. Poi ascolto sopra la mappa.
-5. Colmare il buco LCZ nei quartieri scoperti (dataset più esteso o verde da OpenStreetMap).
-6. Più avanti: ECharts 5.5 ha un avviso di sicurezza moderato (`npm audit`); valutare ECharts 6.
+0. **A mano (utente)**: cancellare `.env.local`, `prova-mappa.html`, `prova-mappa.js`; eliminare **entrambi** i token su Mapbox.
+1. **Rifare le LCZ per tutto il Comune**: oggi coprono solo il centro storico. Valutare la fonte (mappa LCZ europea WUDAPT a 100 m già pronta, oppure calcolo nostro di SVF/verde/calore da edifici TUM + verde OSM/Copernicus), controllarne licenza e qualità, ritagliarla sul Comune. Deve dare i campi usati da bussola e mappa (LCZ, UHI risk, PER_PC, SVF): sostituire `lcz_vitality.csv` (o affiancarlo), aggiornare il livello LCZ in mappa, rigenerare `aree_ascoli.json` con `compass.py` e ricontrollare la distribuzione degli stati.
+2. **Bussola in JS** (da `compass.py`): energia/piacevolezza sull'area inquadrata (`viewport` dello store, quartieri visibili pesati per la frazione visibile), SunCalc (già installato), meteo da `public/`, isteresi. Verificarla contro `compass.py` su ore campione.
+3. **Motore audio** con interruttore "Attiva mappa sonora" (`audioEnabled`): loop ed effetti copiati in `public/audio/`, dissolvenza 3 s, mix da `mix.json`, avviso per la settimana tipo. Poi ascolto sopra la mappa.
+4. **Grafica della mappa MapLibre** (più avanti): stile nuovo secondo le indicazioni dell'utente, al posto del "light" provvisorio.
+5. Più avanti: ECharts 5.5 ha un avviso di sicurezza moderato (`npm audit`); valutare ECharts 6.
 
 ## 8. Diario delle sessioni
 - **2026-10-04 (1)**: strategia S2, bussola a 9 stati, workflow finetuning.ai; 17 brani generati, 10 loop scelti; script di analisi/post-produzione, pagina di ascolto, second brain.
 - **2026-10-04 (2)**: 6 effetti urbani (11 varianti) analizzati, puliti e in pagina con alternanza casuale e mix calcolato; dissolvenza 3 s. Scoperto che i dati coprono 246 giorni (non una settimana) e che LCZ copre solo il centro; scaricato il meteo e scritto il prototipo `compass.py` (stagioni → righe della bussola).
 - **2026-10-04 (3)**: mix approvato "per ora". Migrazione a **Vite** con librerie e dati locali (nessun CDN), pubblicazione via GitHub Actions su Pages, token Mapbox di sviluppo solo in `.env.local`. Corretti PapaParse (worker) e Litepicker (import); verificato dall'utente che la piattaforma funziona. Scelta (a) per la settimana tipo.
+- **2026-10-04 (4)**: store centrale e modulo grafici fatti (corretti 2 difetti di timeline/calendario). Mapbox sostituito da **MapLibre + PMTiles locali** (base OSM/Protomaps, edifici 3D **TUM GlobalBuildingAtlas**, terreno Mapterhorn): niente più token. Nuova regola **solo Comune di Ascoli**: dati tagliati sul confine (affollamento 87, spot 1.186, LCZ 1.548). Migrazione provata dall’utente; corretta la colorazione dei pallini dai grafici a ciambella.
 
 ## 9. Prompt per la prossima sessione
 ```
 Riprendiamo la mappa sonora di CityRhythm, branch Music.
 Leggi second-brain/SECOND_BRAIN.md e riassumimi in 3 righe dove siamo.
+Ricorda la regola: solo il Comune di Ascoli Piceno.
 
-Obiettivo: punti 1 e 2 dei "Prossimi passi".
-1. Crea lo store centrale src/state/store.js (ora, data vera, area inquadrata,
-   interruttore audio), compatibile con gli store Svelte, e collegalo a timeline,
-   calendario e mappa. Aggiungi un log in console così verifico io che i valori
-   seguono quando muovo timeline e mappa.
-2. Isola ECharts in un modulo "grafici", senza cambiare l'aspetto dei grafici.
+Obiettivo: punto 1 dei "Prossimi passi", le Local Climate Zone per tutto il Comune.
+1. Proponimi 2-3 fonti possibili (es. mappa LCZ europea WUDAPT, oppure calcolo
+   nostro da edifici TUM + verde), con licenza, risoluzione, peso e pro/contro,
+   e consigliamene una. Non scaricare niente prima del mio ok.
+2. Dopo il mio ok: ritaglio sul confine del Comune, stessi campi usati oggi
+   (LCZ, UHI risk, PER_PC, SVF), livello LCZ aggiornato in mappa, aree_ascoli.json
+   rigenerato con compass.py e confronto della distribuzione degli stati prima/dopo.
+
+Poi, se c'è tempo, punto 2: la bussola in JS collegata allo store.
 
 Prima di toccare ogni file della piattaforma dimmi cosa cambi. Un passo alla volta:
 dopo ognuno mi dici cosa provare con npm run dev e aspetti il mio ok.
-Il token di sviluppo resta solo in .env.local: se lo vedi finire altrove, avvisami.
 ```

@@ -7,5 +7,6 @@ export default defineConfig({
     server: {
         watch: { ignored: ['**/music/**', '**/sound-lab/**', '**/.cache_data/**', '**/cityrhythm_simulation_week.*'] },
     },
+    worker: { format: 'es' }, // worker di MapLibre come modulo ES (map-setup.js)
     build: { outDir: 'dist', chunkSizeWarningLimit: 3000 },
 });
