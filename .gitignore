@@ -1,0 +1,6 @@
+.DS_Store
+.cache_data/
+cityrhythm_simulation_week.csv
+cityrhythm_simulation_week.geojson
+cityrhythm_simulation_week.gpkg
+export_qgis_simulation.py
