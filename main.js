@@ -13,7 +13,7 @@ import {
 } from './src/map/map-layers.js';
 import { fitMapToBounds } from './src/utils/utils.js';
 import { updateStatusMessage, initializeSidebar } from './src/ui/ui-sidebar.js';
-import { setupTimelineControls, getCurrentHour } from './src/ui/ui-timeline.js';
+import { setupTimelineControls, getCurrentHour, setHour } from './src/ui/ui-timeline.js';
 import { setupLayerControls, initializeSpotTypeFilter } from './src/ui/ui-layer-controls.js';
 
 // Main DOM references
@@ -74,61 +74,41 @@ function setupCalendarDateRange() {
 // Funzione di utilità per aggiornare la timeline in base al range selezionato
 function updateTimelineForDateRange() {
     const slider = document.getElementById('timeSlider');
-    const timeDisplay = document.getElementById('timeDisplay');
     if (!slider) return;
     const { min, max } = window.selectedDateRange || {};
-    if (!min || !max) {
-        slider.min = 0;
-        slider.max = 167;
-        slider.value = 0;
-        if (timeDisplay) timeDisplay.textContent = '';
-        return;
-    }
     // Calcola i giorni unici (UTC) nell'intervallo
     const days = [];
-    let d = new Date(min.getTime());
-    d.setUTCHours(0,0,0,0);
-    const maxDay = new Date(max.getTime());
-    maxDay.setUTCHours(0,0,0,0);
-    while (d <= maxDay) {
-        days.push(new Date(d.getTime()));
-        d.setUTCDate(d.getUTCDate() + 1);
-    }
-    if (days.length >= 7) {
-        slider.min = 0;
-        slider.max = 167;
-        if (parseInt(slider.value) > 167) slider.value = 0;
-        return;
-    }
-    // Mappa: per ogni giorno, 24 ore
-    const timelineMap = [];
-    days.forEach((day, i) => {
-        for (let h = 0; h < 24; h++) {
-            timelineMap.push({
-                date: new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), h)),
-                label: day.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: '2-digit' }) + ` ${h.toString().padStart(2,'0')}:00`
-            });
-        }
-    });
-    slider.min = 0;
-    slider.max = timelineMap.length - 1;
-    if (parseInt(slider.value) > timelineMap.length - 1) slider.value = 0;
-    // Aggiorna la label della timeline
-    function updateLabel() {
-        const idx = parseInt(slider.value);
-        if (timelineMap[idx] && timeDisplay) {
-            timeDisplay.textContent = timelineMap[idx].label;
+    if (min && max) {
+        let d = new Date(min.getTime());
+        d.setUTCHours(0,0,0,0);
+        const maxDay = new Date(max.getTime());
+        maxDay.setUTCHours(0,0,0,0);
+        while (d <= maxDay) {
+            days.push(new Date(d.getTime()));
+            d.setUTCDate(d.getUTCDate() + 1);
         }
     }
-    slider.removeEventListener('_customInput', slider._customInputListener || (()=>{}));
-    slider._customInputListener = function(e) {
-        updateLabel();
-        // Puoi qui lanciare eventuali eventi custom per aggiornare la mappa
-    };
-    slider.addEventListener('input', slider._customInputListener);
-    updateLabel();
-    // Salva la mappa per uso da ui-timeline.js (override temporaneo)
+    // >= 7 giorni (o nessun intervallo): settimana tipo 168 h, senza date
+    let timelineMap = null;
+    if (days.length > 0 && days.length < 7) {
+        // Mappa: per ogni giorno, 24 ore
+        timelineMap = [];
+        days.forEach(day => {
+            for (let h = 0; h < 24; h++) {
+                timelineMap.push({
+                    date: new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), h)),
+                    label: day.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: '2-digit' }) + ` ${h.toString().padStart(2,'0')}:00`
+                });
+            }
+        });
+    }
+    // Letta da ui-timeline.js (etichette e data vera)
     window._timelineMap = timelineMap;
+    const maxIdx = timelineMap ? timelineMap.length - 1 : 167;
+    slider.min = 0;
+    slider.max = maxIdx;
+    const hour = parseInt(slider.value, 10);
+    setHour(hour > maxIdx ? 0 : hour);
 }
 
 // Tutta l'inizializzazione della app dentro una funzione async

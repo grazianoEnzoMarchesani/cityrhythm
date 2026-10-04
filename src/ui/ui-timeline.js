@@ -11,6 +11,7 @@ import { getCrowdedData } from '../data/data-loader.js';
 import { getLayerToggleState } from './ui-layer-controls.js';
 import { getMapInstance } from '../map/map-setup.js';
 import { DEBUG_MODE } from '../data/config.js';
+import { time } from '../state/store.js';
 
 const timeSlider = document.getElementById('timeSlider');
 const timeDisplay = document.getElementById('timeDisplay');
@@ -37,6 +38,14 @@ export function setupTimelineControls() {
 
 export function getCurrentHour() {
     return currentHour;
+}
+
+// Porta la timeline a un'ora (es. dopo un cambio di intervallo nel calendario).
+export function setHour(hourIndex) {
+    currentHour = hourIndex;
+    if(timeSlider) timeSlider.value = currentHour;
+    if(timeDisplay) timeDisplay.textContent = hourToLabelDynamic(currentHour);
+    return updateAppStateForHour(currentHour);
 }
 
 // --- FUNZIONI INTERNE ---
@@ -71,6 +80,7 @@ function updateDirectionButton() {
 }
 
 function updateAppStateForHour(hourIndex) {
+    time.set({ index: hourIndex, date: window._timelineMap?.[hourIndex]?.date ?? null });
     return new Promise((resolve) => {
         const map = getMapInstance();
         const crowdedData = getCrowdedData();
