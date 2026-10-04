@@ -144,7 +144,7 @@ Giudizio dell'utente: i brani 2025 suonano "parenti"; la bussola di prova piace;
 
 ## 7. Prossimi passi
 0. **A mano (utente)**: cancellare `.env.local`, `prova-mappa.html`, `prova-mappa.js`; eliminare **entrambi** i token su Mapbox.
-1. **Commit** del lavoro della quinta sessione (LCZ, bussola UTCI, motore audio): ancora da fare.
+1. Fatto: commit `7ee7a36` su `Music` (LCZ, bussola UTCI, motore audio).
 2. **Ascolto sopra la mappa**: luglio alle 13 nel Centro (UTCI ~35, Fatica/Calca), alle 9/21 (Passeggiata/Festa), dicembre a mezzogiorno (sereno), mezzanotte (Notte + grilli), fuori dalle celle (silenzio). Giudicare volumi, rapidità dei cambi (isteresi 2 s), scelta dei brani.
 3. **Suoni urbani dai dati**: presenza degli effetti da persone (X), verde, UTCI e notte invece che dalle scene fisse.
 4. Clima più preciso (facoltativo): **SOLWEIG** (plugin UMEP di QGIS) con `dsm_10m`, terreno e chiome del progetto, su giorni tipo, per ombre vere e suolo caldo; oppure **tarare** l'isola di calore con stazioni in città (verificare la rete regionale delle Marche).
@@ -164,11 +164,19 @@ Riprendiamo la mappa sonora di CityRhythm, branch Music.
 Leggi second-brain/SECOND_BRAIN.md e riassumimi in 3 righe dove siamo.
 Ricorda la regola: solo il Comune di Ascoli Piceno.
 
-1. Fai il commit del lavoro della quinta sessione (prima mostrami cosa includi).
-2. Ascoltiamo la mappa sonora: guidami nelle prove del punto 2 dei "Prossimi passi"
-   e correggi volumi, isteresi o brani in base a quello che ti dico.
-3. Poi punto 3: suoni urbani guidati dai dati.
+Obiettivo 1 – Ascolto sopra la mappa (punto 2 dei "Prossimi passi").
+Guidami prova per prova (luglio alle 13 nel Centro, luglio alle 9 e alle 21,
+dicembre a mezzogiorno, mezzanotte, mirino fuori dalle celle): per ognuna dimmi
+cosa dovrei vedere nel pannello e sentire, poi aspetta il mio giudizio.
+Io non ho competenze musicali: fammi domande semplici (es. "la musica copre
+le voci della folla?", "il cambio è troppo lento?") e traduci tu le mie
+risposte in numeri (volumi in dB, isteresi, dissolvenza).
+
+Obiettivo 2 – Suoni urbani guidati dai dati (punto 3): proponimi come legare
+folla, traffico, parco, cicale e grilli a persone, verde, UTCI e notte della
+cella, con il mix sempre calcolato. Niente codice prima del mio ok.
 
 Prima di toccare ogni file della piattaforma dimmi cosa cambi. Un passo alla volta:
 dopo ognuno mi dici cosa provare con npm run dev e aspetti il mio ok.
+A fine sessione aggiorna il second brain e fai commit e push su Music.
 ```
