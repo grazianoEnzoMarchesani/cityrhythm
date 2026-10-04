@@ -164,16 +164,7 @@ export function setupLayerControls() {
             const map = getMapInstance();
             if (!map || !map.isStyleLoaded()) return;
             if (event.target.checked) {
-                // Aggiungi la sorgente terrain se non esiste
-                if (!map.getSource('mapbox-dem')) {
-                    map.addSource('mapbox-dem', {
-                        type: 'raster-dem',
-                        url: 'mapbox://mapbox.terrain-rgb',
-                        tileSize: 512,
-                        maxzoom: 14
-                    });
-                }
-                map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.2 });
+                map.setTerrain({ source: 'terrain-dem', exaggeration: 1.2 }); // sorgente definita in map-setup.js
             } else {
                 map.setTerrain(null);
             }

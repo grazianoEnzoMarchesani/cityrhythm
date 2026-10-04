@@ -1,7 +1,55 @@
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
+import * as maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
+import { Protocol } from 'pmtiles';
+import { layers, namedFlavor } from '@protomaps/basemaps';
 import { viewport } from '../state/store.js';
-import { INITIAL_CENTER, INITIAL_ZOOM, MAP_STYLE, KML_SOURCE_ID, MAPBOX_TOKEN } from '../data/config.js';
+import { INITIAL_CENTER, INITIAL_ZOOM, MAP_DATA_BASE, KML_SOURCE_ID } from '../data/config.js';
+
+// Vite impacchetta il worker di MapLibre in un file unico; pmtiles:// legge i file .pmtiles locali.
+maplibregl.setWorkerUrl(workerUrl);
+maplibregl.addProtocol('pmtiles', new Protocol().tile);
+
+// MapLibre vuole URL assoluti per font, icone e sorgenti.
+const mapDataUrl = (path) => new URL(MAP_DATA_BASE + path, location.href).href;
+
+const BUILDING_HEIGHT_COLOR = ['interpolate', ['linear'], ['coalesce', ['get', 'height'], 0],
+    0, '#f2e6c9', 6, '#e3b778', 12, '#c9784a', 20, '#8f3b2c', 35, '#4a1c1c'];
+
+// Stile: mappa di base Protomaps (OSM) + edifici TUM in 3D sotto le etichette + terreno per setTerrain.
+function buildMapStyle() {
+    const base = layers('protomaps', namedFlavor('light'), { lang: 'it' });
+    const firstLabel = base.findIndex(l => l.type === 'symbol');
+    base.splice(firstLabel, 0, {
+        id: 'buildings-3d', type: 'fill-extrusion', source: 'buildings',
+        paint: {
+            'fill-extrusion-color': BUILDING_HEIGHT_COLOR,
+            'fill-extrusion-height': ['coalesce', ['get', 'height'], 0],
+            'fill-extrusion-opacity': 0.9
+        }
+    });
+    return {
+        version: 8,
+        glyphs: mapDataUrl('fonts/') + '{fontstack}/{range}.pbf', // URL() codificherebbe le graffe
+        sprite: mapDataUrl('sprites/light'),
+        sources: {
+            protomaps: {
+                type: 'vector', url: 'pmtiles://' + mapDataUrl('ascoli_base.pmtiles'),
+                attribution: '© <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> · <a href="https://protomaps.com">Protomaps</a>'
+            },
+            buildings: {
+                type: 'geojson', data: mapDataUrl('gba_ascoli.geojson'),
+                attribution: 'Edifici: <a href="https://github.com/zhu-xlab/GlobalBuildingAtlas">GlobalBuildingAtlas, TUM</a> (CC BY-NC 4.0)'
+            },
+            'terrain-dem': {
+                type: 'raster-dem', url: 'pmtiles://' + mapDataUrl('ascoli_terreno.pmtiles'),
+                encoding: 'terrarium', tileSize: 512,
+                attribution: '<a href="https://mapterhorn.com/attribution">© Mapterhorn</a>'
+            }
+        },
+        layers: base
+    };
+}
 
 let mapInstance = null;
 let currentSelectedKmlFeatureId = null;
@@ -12,20 +60,15 @@ export function initializeMap(containerId) {
     }
 
     try {
-        // MODIFICATO: Imposto mapboxgl.accessToken
-        mapboxgl.accessToken = MAPBOX_TOKEN;
-
-        // MODIFICATO: Usato mapboxgl
-        mapInstance = new mapboxgl.Map({
+        mapInstance = new maplibregl.Map({
             container: containerId,
-            style: MAP_STYLE,
+            style: buildMapStyle(),
             center: INITIAL_CENTER,
             zoom: INITIAL_ZOOM,
             trackResize: true,
         });
 
-        // MODIFICATO: Usato mapboxgl
-        mapInstance.addControl(new mapboxgl.NavigationControl());
+        mapInstance.addControl(new maplibregl.NavigationControl());
 
         const publishViewport = () => {
             const b = mapInstance.getBounds();
@@ -69,14 +112,20 @@ export function initializeMap(containerId) {
          console.error("Failed to initialize map:", error);
          const mapContainer = document.getElementById(containerId);
          if (mapContainer) {
-             mapContainer.innerHTML = `<div style="padding: 20px; color: red; background: #fdd; border: 1px solid red;">Failed to initialize map: ${error.message}. Please ensure Mapbox GL JS is loaded correctly.</div>`;
+             mapContainer.innerHTML = `<div style="padding: 20px; color: red; background: #fdd; border: 1px solid red;">Failed to initialize map: ${error.message}. Please ensure MapLibre GL JS is loaded correctly.</div>`;
          }
          throw error; // Rilancia l'errore per bloccare eventualmente l'esecuzione
     }
 }
 
+// Dati attuali (lo stesso oggetto passato a setData) di una sorgente GeoJSON.
+// ponytail: campo interno di MapLibre (_data.geojson); se cambia, passare a `await source.getData()`
+// (pubblico ma asincrono: modificare le properties non arriverebbe più all'animazione dei punti).
+export function getGeoJsonSourceData(source) {
+    return source?._data?.geojson ?? null;
+}
+
 export function getMapInstance() {
-    // Nessuna modifica necessaria qui, ma ora ritorna un'istanza mapboxgl.Map
     if (!mapInstance) {
         // Considera un messaggio di errore più robusto o un ritorno gestito
         console.error("Map instance is not available. Was initializeMap called successfully?");

@@ -7,7 +7,7 @@ import {
   PRESENCE_POINTS_SOURCE_ID,
   CHART_PALETTE
 } from '../data/config.js';
-import { setKmlFeatureSelectedState, getMapInstance } from '../map/map-setup.js';
+import { setKmlFeatureSelectedState, getMapInstance, getGeoJsonSourceData } from '../map/map-setup.js';
 import { updateTagCloud } from './tag-cloud.js';
 import { getSpotMapperData, getCrowdedData } from '../data/data-loader.js';
 import { getCrowdednessColumnName, generateSyntheticCrowdedPointsGeoJson } from '../map/map-layers.js';
@@ -1214,7 +1214,7 @@ function getPresencePointsForFeature(kmlFeature) {
     const source = map.getSource(PRESENCE_POINTS_SOURCE_ID);
     if (!source) return null;
 
-    const data = source._data;
+    const data = getGeoJsonSourceData(source);
     if (!data || !data.features) return null;
 
     return data.features.filter(feature => feature.properties.kmlFeatureId === kmlFeature.id);
@@ -1229,13 +1229,14 @@ function updatePresencePointsColors(kmlFeatureId, chartData, colors) {
         return;
     }
     const source = map.getSource(PRESENCE_POINTS_SOURCE_ID);
-    if (!source || !source._data || !source._data.features) {
+    const sourceData = getGeoJsonSourceData(source);
+    if (!sourceData || !sourceData.features) {
         if (DEBUG_MODE) console.log("Source dei punti non trovata o vuota:", PRESENCE_POINTS_SOURCE_ID);
         return;
     }
 
     // Get ALL points from the source
-    const allPoints = source._data.features;
+    const allPoints = sourceData.features;
     if (!allPoints || allPoints.length === 0) {
         if (DEBUG_MODE) console.log("Nessun punto presente nella source.");
         // Anche se non ci sono punti, potremmo dover 'pulire' la sorgente se setData è stato chiamato prima
