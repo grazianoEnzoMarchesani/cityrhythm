@@ -81,6 +81,19 @@ function buildMapStyle() {
 
 let mapInstance = null;
 let currentSelectedKmlFeatureId = null;
+let mapReady = false;
+
+// Dopo 'load' lo stile accetta sorgenti, livelli e proprietà. Non usare map.isStyleLoaded() né
+// l'evento 'idle': sono falso / non arrivano mentre una sorgente GeoJSON si aggiorna, cioè quasi
+// sempre col brulichio dei puntini (setData ~30 volte al secondo).
+export function isMapReady() {
+    return mapReady;
+}
+
+export function whenMapReady(fn) {
+    if (mapReady) fn();
+    else mapInstance.once('load', fn);
+}
 
 export function initializeMap(containerId) {
     if (mapInstance) {
@@ -95,6 +108,7 @@ export function initializeMap(containerId) {
             zoom: INITIAL_ZOOM,
             trackResize: true,
         });
+        mapInstance.once('load', () => { mapReady = true; });
 
         mapInstance.addControl(new maplibregl.NavigationControl());
 
@@ -164,7 +178,7 @@ export function getMapInstance() {
 
 export function setKmlFeatureSelectedState(featureId) {
     // Nessuna modifica necessaria qui, usa l'API standard setFeatureState
-    if (!mapInstance || !mapInstance.isStyleLoaded()) {
+    if (!mapInstance || !mapReady) {
         // Considera un logging o un tentativo di ritardo se lo stile non è caricato
         console.warn("setKmlFeatureSelectedState called before style loaded or map not ready.");
         return;

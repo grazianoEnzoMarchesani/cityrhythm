@@ -1,6 +1,6 @@
 import * as turf from '@turf/turf';
 // map-interaction.js
-import { getMapInstance, getGeoJsonSourceData } from './map-setup.js';
+import { getMapInstance, getGeoJsonSourceData, isMapReady } from './map-setup.js';
 // MODIFICATO: Assicurati che KML_SOURCE_ID sia importato se usato nel fallback ID
 import { KML_LAYER_ID, KML_SOURCE_ID } from '../data/config.js';
 import { resetSidebar } from '../ui/ui-sidebar.js';
@@ -23,7 +23,7 @@ const hoverAnimations = {};
  */
 function animateHoverAmount(featureId, target, duration = 200) {
     const map = getMapInstance();
-    if (!map || !map.isStyleLoaded() || !map.getSource(KML_SOURCE_ID)) return;
+    if (!map || !isMapReady() || !map.getSource(KML_SOURCE_ID)) return;
     // Se c'è già un'animazione su questa feature, cancella
     if (hoverAnimations[featureId]) {
         cancelAnimationFrame(hoverAnimations[featureId].rafId);
@@ -166,7 +166,7 @@ function changeCursor(map, style) {
  */
 function setHoveredFeatureState(featureId) {
     const map = getMapInstance();
-    if (!map || !map.isStyleLoaded() || !map.getSource(KML_SOURCE_ID)) {
+    if (!map || !isMapReady() || !map.getSource(KML_SOURCE_ID)) {
         return;
     }
     // Rimuovi hover dal precedente feature, se diverso dal nuovo e valido
@@ -310,7 +310,7 @@ export function addMapInteraction(map) {
 function handleMouseMove(e) {
     const map = getMapInstance();
     // Esci subito se la mappa non è pronta o non è in interazione
-    if (!map || !map.isStyleLoaded() || map.isMoving() || map.isZooming() || map.isRotating()) {
+    if (!map || !isMapReady() || map.isMoving() || map.isZooming() || map.isRotating()) {
         return;
     }
 

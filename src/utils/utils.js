@@ -124,11 +124,6 @@ export function fitMapToBounds(map, geojsonData, options = {}) {
         console.error("fitMapToBounds: Map instance is required.");
         return;
     }
-     if (!map.isStyleLoaded()) {
-         console.warn("fitMapToBounds: Style not loaded yet. Retrying on 'idle'.");
-         map.once('idle', () => fitMapToBounds(map, geojsonData, options));
-         return;
-     }
     if (!geojsonData) {
         console.error("fitMapToBounds: GeoJSON data is required.");
         return;

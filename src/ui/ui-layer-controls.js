@@ -1,7 +1,7 @@
 // ui-layer-controls.js
 import { refreshPresencePoints, setLayerVisibility, addSyntheticCrowdedPointsLayer, removeSyntheticCrowdedPointsLayer, updateAllPresencePoints, addLczVitalityLayer, removeLczVitalityLayer, updateLczVitalityVisualization, setLczLayerOpacity, setUhiDynamicVisibility, getLczLegend } from '../map/map-layers.js';
 import { KML_LAYER_ID, CROWDED_LAYER_ID, PRESENCE_POINTS_LAYER_ID, SPOTS_LAYER_ID, LCZ_VITALITY_LAYER_ID, DEBUG_MODE } from '../data/config.js';
-import { getMapInstance } from '../map/map-setup.js';
+import { getMapInstance, isMapReady } from '../map/map-setup.js';
 import { getSpotMapperData } from '../data/data-loader.js';
 import { PRESENCE_COLOR_VARIABLES, setPresenceColorBy } from '../map/presence-colors.js';
 
@@ -164,7 +164,7 @@ export function setupLayerControls() {
     if (terrainToggle) {
         terrainToggle.addEventListener('change', (event) => {
             const map = getMapInstance();
-            if (!map || !map.isStyleLoaded()) return;
+            if (!map || !isMapReady()) return;
             if (event.target.checked) {
                 map.setTerrain({ source: 'terrain-dem', exaggeration: 1.2 }); // sorgente definita in map-setup.js
             } else {
@@ -177,7 +177,7 @@ export function setupLayerControls() {
     if (buildingsToggle) {
         buildingsToggle.addEventListener('change', (event) => {
             const map = getMapInstance();
-            if (!map || !map.isStyleLoaded()) return;
+            if (!map || !isMapReady()) return;
             const isVisible = event.target.checked ? 'visible' : 'none';
             // Trova tutti i layer con paint.fill-extrusion-height (3D buildings)
             map.getStyle().layers.forEach(layer => {
