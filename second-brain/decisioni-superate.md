@@ -30,6 +30,7 @@ Decisioni che non valgono più, barrate, con il perché e cosa le sostituisce. N
 - ~~Inverno → Attesa/Routine/Corrente~~ → con l'UTCI le giornate invernali sono senza stress: serene.
 - ~~Fuori dalle aree coperte: brano neutro~~ → silenzio.
 - ~~Spot che copiano solo dai luoghi reali aperti in quell'ora (anche a ~1 km)~~ → maestri fissi, i chiusi contano 0: di notte restava "aperto" il 66% degli spot.
+- ~~Brulichio a ~30 immagini/s rispedendo ogni puntino come feature singola con tutte le proprietà~~ → teneva 2 core occupati di continuo (computer sempre più lento): ora gruppi MultiPoint a 32 strati e ridisegno a passi di 1 pixel fisico (`persone.md`).
 - ~~Puntini rigenerati a caso a ogni ora, Play a 5 passi/s~~ → identità stabili e spostamenti animati; il Play interrompeva l'animazione e ammassava tutti al centro.
 - ~~Colori dei puntini solo dal clic sui grafici, solo per il quartiere selezionato, persi al cambio d'ora~~ → selettore "Color dots by" su tutti i quartieri, stabile (per genere, età, nazionalità, visite).
 - ~~Gente "in giro" in un punto a caso del quartiere~~ → finiva sul Tronto e nei prati; ora solo celle LCZ costruite o pavimentate.
