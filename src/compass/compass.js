@@ -1,17 +1,22 @@
-// Bussola emotiva collegata allo store: legge ora (time) e centro della mappa (viewport),
-// trova la cella LCZ al centro e scrive lo stato in `mood`, con isteresi.
-// Il futuro motore audio leggerà solo `mood`.
+// Bussola emotiva collegata allo store: legge ora (time), centro della mappa (viewport) e puntini
+// delle persone (presence), trova la cella LCZ al centro e scrive lo stato in `mood`, con isteresi.
+// Il motore audio legge solo `mood`.
 import * as turf from '@turf/turf';
-import { time, viewport, mood } from '../state/store.js';
-import { getLczVitalityData, getPoiData } from '../data/data-loader.js';
+import { time, viewport, mood, presence } from '../state/store.js';
+import { getLczVitalityData } from '../data/data-loader.js';
 import { getDateTimeFromIndex } from '../utils/utils.js';
 import { BUSSOLA_URL, METEO_URL } from '../data/config.js';
-import { romeTime, sunElevation, areaEnergy, cellEnergy, cellTraits, weatherAt, evaluate } from './compass-core.js';
+import { romeTime, sunElevation, localEnergy, cellTraits, cellClimate, weatherAt, evaluate } from './compass-core.js';
+import { buildCrowdIndex, peopleAround } from './crowd.js';
 
 let cfg = null;
 let met = null, metIndex = null;
 let cells = [];
-const poiByDay = new Map(); // 'nome quartiere|AAAA-MM-GG' -> riga del CSV presenze
+let crowd = null; // indice dei puntini dell'ora corrente
+
+let resolveReady;
+/** Si risolve quando i dati della bussola sono caricati (usato da cell-map.js). */
+export const compassReady = new Promise(r => { resolveReady = r; });
 
 let committed;             // stato confermato (undefined = ancora nessuno)
 let pending = null, pendingTimer = null, last = null;
@@ -21,12 +26,15 @@ export async function startCompass() {
     cfg = c;
     met = m.hourly;
     metIndex = new Map(met.time.map((t, i) => [t, i]));
-    cells = getLczVitalityData().map(f => ({ f, bbox: turf.bbox(f), traits: cellTraits(f.properties, cfg) }));
-    for (const [name, records] of Object.entries(getPoiData() || {})) {
-        records.forEach(r => r.parsedDate && poiByDay.set(name + '|' + r.parsedDate.toISOString().slice(0, 10), r));
-    }
+    cells = getLczVitalityData().map(f => {
+        const bbox = turf.bbox(f);
+        return { f, bbox, center: [(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2], traits: cellTraits(f.properties, cfg) };
+    });
+    resolveReady({ cfg, cells, climateChoices, pickDay, crowdFor });
     time.subscribe(update);
     viewport.subscribe(update);
+    presence.subscribe(update);
+    document.addEventListener('dateRangeChanged', update);
 }
 
 function findCell([lng, lat]) {
@@ -35,53 +43,78 @@ function findCell([lng, lat]) {
         lng >= x0 && lng <= x1 && lat >= y0 && lat <= y1 && turf.booleanPointInPolygon(pt, f));
 }
 
-/** Media delle presenze del quartiere per giorno della settimana e ora, nell'intervallo scelto. */
-function typicalPeople(area, jsDay, hour) {
-    const { min, max } = window.selectedDateRange || {};
-    let sum = 0, n = 0;
-    for (const r of getPoiData()?.[area.toLowerCase()] || []) {
-        const d = r.parsedDate;
-        if (!d || d.getUTCDay() !== jsDay || (min && d < min) || (max && d > max)) continue;
-        const v = parseFloat(r[`presenze_${hour}`]);
-        if (!isNaN(v)) { sum += v; n++; }
-    }
-    return n ? sum / n : 0;
+/** Indice dei puntini se corrispondono all'ora `t` della timeline, altrimenti null (in arrivo). */
+function crowdFor(t) {
+    const p = presence.get();
+    if (!p || p.index !== t.index) return null;
+    if (crowd?.p !== p) crowd = buildCrowdIndex(p, cfg.energia_cella.raggio_m);
+    return crowd;
 }
 
-/** Ora 'AAAA-MM-GGTHH:MM' di un giorno tipo (a metà dell'intervallo scelto) per calcolare il sole. */
-function typicalKey(jsDay, hour) {
-    const { min, max } = window.selectedDateRange || {};
-    const mid = min && max ? new Date((min.getTime() + max.getTime()) / 2) : new Date(Date.UTC(2024, 9, 1));
-    const d = new Date(Date.UTC(mid.getUTCFullYear(), mid.getUTCMonth(), mid.getUTCDate() + (jsDay - mid.getUTCDay() + 7) % 7, hour));
-    return d.toISOString().slice(0, 16);
+/** Giorni veri dell'intervallo scelto (tutto il periodo dei dati se non c'è) che cadono nel giorno della settimana. */
+function matchingDays(jsDay) {
+    let { min, max } = window.selectedDateRange || {};
+    min = min || new Date(met.time[0].slice(0, 10));
+    max = max || new Date(met.time[met.time.length - 1].slice(0, 10));
+    const days = [];
+    const d = new Date(Date.UTC(min.getUTCFullYear(), min.getUTCMonth(), min.getUTCDate()));
+    d.setUTCDate(d.getUTCDate() + (jsDay - d.getUTCDay() + 7) % 7);
+    for (; d <= max; d.setUTCDate(d.getUTCDate() + 7)) days.push(d.toISOString().slice(0, 10));
+    return days;
+}
+
+/**
+ * Ore vere da cui prendere meteo e sole: con una data vera solo quella; nella settimana tipo
+ * tutti i giorni dell'intervallo che cadono in quel giorno della settimana (vedi pickDay).
+ * @returns {Array<{key: string, weather: object|null, sun: number}>}
+ */
+function climateChoices(t) {
+    const keys = t.date ? [t.date.toISOString().slice(0, 16)] : (() => { // ora "da orologio" di Roma
+        const { jsDayOfWeek, hour } = getDateTimeFromIndex(t.index);
+        const hh = String(hour).padStart(2, '0');
+        return matchingDays(jsDayOfWeek).map(day => `${day}T${hh}:00`);
+    })();
+    return keys.map(key => {
+        const i = metIndex.get(key);
+        return { key, weather: i !== undefined ? weatherAt(met, i) : null, sun: sunElevation(romeTime(key)) };
+    });
+}
+
+/**
+ * Settimana tipo: fra i giorni veri si prende quello al percentile `percentile_utci_settimana_tipo`
+ * dell'UTCI della cella (0,9 = una giornata calda, superata 1 volta su 10) e se ne usano meteo e sole.
+ * Né media né maggioranza del meteo: i giorni miti, più numerosi, cancellavano il caldo.
+ * Con una sola ora (data vera) restituisce quella.
+ */
+function pickDay(cell, choices) {
+    if (choices.length === 1) return choices[0];
+    const days = choices.filter(c => c.weather)
+        .map(c => ({ c, T: cellClimate(c.weather, c.sun, cell.traits, cfg.fisica).utci }))
+        .sort((a, b) => a.T - b.T);
+    if (!days.length) return null;
+    return days[Math.max(0, Math.ceil(cfg.parametri.percentile_utci_settimana_tipo * days.length) - 1)].c;
 }
 
 function update() {
     const t = time.get(), v = viewport.get();
     if (!cfg || !v) return;
+    const index = crowdFor(t);
+    if (!index) return; // i puntini di quest'ora non sono ancora pronti: si aggiorna quando arrivano
     const cell = findCell(v.center);
     if (!cell) return propose({ stato: null, fuori: true });
 
     const p = cell.f.properties;
-    let key, people, weather = null;
-    if (t.date) {
-        key = t.date.toISOString().slice(0, 16); // ora "da orologio" di Roma
-        const h = t.date.getUTCHours();
-        people = parseFloat(poiByDay.get(p.quartiere.toLowerCase() + '|' + key.slice(0, 10))?.[`presenze_${h}`]);
-        if (isNaN(people)) people = typicalPeople(p.quartiere, t.date.getUTCDay(), h); // l'unica ora mancante
-        const i = metIndex.get(key);
-        if (i !== undefined) weather = weatherAt(met, i);
-    } else {
-        const { jsDayOfWeek, hour } = getDateTimeFromIndex(t.index);
-        key = typicalKey(jsDayOfWeek, hour);
-        people = typicalPeople(p.quartiere, jsDayOfWeek, hour);
-    }
-    const sun = sunElevation(romeTime(key));
-    const X = cellEnergy(areaEnergy(people, cfg.aree_km2[p.quartiere], cfg), p.quartiere_dist_m, cfg);
-    const r = evaluate({ X, sun, weather, traits: cell.traits }, cfg);
+    const choices = climateChoices(t);
+    const day = pickDay(cell, choices);
+    if (!day) return propose({ stato: null, fuori: true });
+    const people = peopleAround(index, cell.center);
+    const X = localEnergy(people, cfg);
+    const r = evaluate({ X, sun: day.sun, weather: day.weather, traits: cell.traits }, cfg);
     propose({
-        ...r, sun, people, cella: p.id, lcz: p.lcz_class, quartiere: p.quartiere,
-        distanzaQuartiere: p.quartiere_dist_m, settimanaTipo: !weather, geometry: cell.f.geometry
+        ...r, sun: day.sun, people, raggio: cfg.energia_cella.raggio_m,
+        giorni: t.date ? null : { totale: choices.filter(c => c.weather).length, scelto: day.key.slice(0, 10) },
+        cella: p.id, lcz: p.lcz_class, quartiere: p.quartiere,
+        distanzaQuartiere: p.quartiere_dist_m, geometry: cell.f.geometry
     });
 }
 

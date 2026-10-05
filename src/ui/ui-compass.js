@@ -66,11 +66,12 @@ export function initCompassUI(map) {
         const dove = m.distanzaQuartiere > 0 ? `a ${m.distanzaQuartiere} m da ${quartiere}` : quartiere;
         info.innerHTML = `<div style="font-size:14px"><b>Bussola: ${nome(m.stato)}</b>`
             + (m.proposto ? ` <span style="color:#888">→ ${nome(m.proposto)}?</span>` : '') + '</div>'
-            + `Energia ${segno(m.X)} · Piacevolezza ${m.settimanaTipo ? 'neutra' : segno(m.Y)}`
-            + '<br>'
+            + `Energia ${segno(m.X)} · Piacevolezza ${segno(m.Y)}`
+            + `<br>≈ ${Math.round(m.people)} persone in giro entro ${m.raggio} m<br>`
             + (m.T !== null ? `UTCI ≈ ${Math.round(m.T)} °C · ${stress(m.T)} <span style="color:#888">(stima)</span><br>` : '')
             + `Cella ${m.cella} (LCZ ${m.lcz}) · ${dove}`
-            + (m.settimanaTipo ? '<br><i>Settimana tipo: scegli dei giorni per sentire il clima.</i>' : '');
+            + (m.giorni ? `<br><i>Settimana tipo: meteo del ${new Date(m.giorni.scelto).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })}, `
+                + `una giornata calda per questa cella: solo 1 su 10 dei ${m.giorni.totale} giorni dell'intervallo è stata più calda.</i>` : '');
     };
     mood.subscribe(render);
     audioEnabled.subscribe(render);

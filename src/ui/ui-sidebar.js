@@ -157,7 +157,7 @@ function calculateAndDisplayAverages(kmlFeature, timelineHourIndex) {
     }
 
     const { jsDayOfWeek, hour } = getDateTimeFromIndex(timelineHourIndex);
-    const currentTimelineLabel = hourToLabel(timelineHourIndex);
+    const currentTimelineLabel = window._timelineMap?.[timelineHourIndex]?.label ?? hourToLabel(timelineHourIndex);
 
     // --- AGGIUNTA: filtro per range date selezionato ---
     let dateMin = null, dateMax = null;

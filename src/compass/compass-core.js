@@ -28,7 +28,18 @@ export function areaEnergy(people, km2, cfg) {
     return Math.max(-1, Math.min(1, x));
 }
 
-/** Energia della cella: fuori dai quartieri sfuma verso -1 con la distanza. */
+/**
+ * Energia della cella (-1 vuoto, +1 affollato) dalle persone fuori casa entro `raggio_m`,
+ * scala log tarata da sound-lab/taratura_energia.mjs (bussola.json → energia_cella).
+ */
+export function localEnergy(people, cfg) {
+    const { log_lo: lo, log_hi: hi, raggio_m: r } = cfg.energia_cella;
+    const perKm2 = people / (Math.PI * (r / 1000) ** 2);
+    const x = 2 * (Math.log10(perKm2 + 1) - lo) / (hi - lo) - 1;
+    return Math.max(-1, Math.min(1, x));
+}
+
+/** Energia della cella dal quartiere (riferimento Python): fuori dai quartieri sfuma verso -1 con la distanza. */
 export function cellEnergy(areaX, distM, cfg) {
     const fade = Math.min(1, distM / cfg.parametri.energia_svanisce_m);
     return areaX - (areaX + 1) * fade;
@@ -61,9 +72,22 @@ const vapourHpa = t => 6.112 * Math.exp(17.62 * t / (243.12 + t)); // Magnus
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 
 /** Polinomio UTCI (Broede et al. 2012). pa in kPa, v a 10 m. */
+// Coefficienti ed esponenti in array piatti e potenze precalcolate: stesso risultato, ~30 volte più veloce.
+const UTCI_C = Float64Array.from(UTCI_TERMS, t => t[0]);
+const UTCI_E = Uint8Array.from(UTCI_TERMS.flatMap(t => t.slice(1)));
+const UTCI_MAXE = Math.max(...UTCI_E);
+const POW = Array.from({ length: 4 }, () => new Float64Array(UTCI_MAXE + 1));
 export function utciPoly(ta, v, dtr, pa) {
+    const x = [ta, v, dtr, pa];
+    for (let j = 0; j < 4; j++) {
+        POW[j][0] = 1;
+        for (let k = 1; k <= UTCI_MAXE; k++) POW[j][k] = POW[j][k - 1] * x[j];
+    }
+    const [p0, p1, p2, p3] = POW;
     let s = 0;
-    for (const [c, i, j, k, l] of UTCI_TERMS) s += c * ta ** i * v ** j * dtr ** k * pa ** l;
+    for (let i = 0, e = 0; i < UTCI_C.length; i++, e += 4) {
+        s += UTCI_C[i] * p0[UTCI_E[e]] * p1[UTCI_E[e + 1]] * p2[UTCI_E[e + 2]] * p3[UTCI_E[e + 3]];
+    }
     return s;
 }
 

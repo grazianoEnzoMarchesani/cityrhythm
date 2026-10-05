@@ -713,6 +713,41 @@ div[id$="-chart"] p {
     background: var(--swatch);
 }
 
+.lcz-legend-compass {
+    display: grid;
+    grid-template-columns: auto repeat(3, 1fr);
+    gap: 2px;
+    align-items: center;
+}
+
+.lcz-legend-compass-row {
+    padding-right: 4px;
+    color: #666;
+}
+
+.lcz-legend-compass-cell {
+    padding: 2px 3px;
+    border-radius: 3px;
+    text-align: center;
+    font-size: 0.95em;
+}
+
+.lcz-legend-compass-axis {
+    grid-column: 2 / 5;
+    text-align: center;
+    color: #666;
+}
+
+.lcz-legend-compass-night {
+    margin-top: 4px;
+    color: #666;
+}
+
+.lcz-legend-compass-night .lcz-legend-compass-cell {
+    display: inline-block;
+    padding: 2px 8px;
+}
+
 .lcz-legend-ramp {
     height: 10px;
     margin: 0 8px;

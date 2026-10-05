@@ -9,7 +9,7 @@ import {
 } from './src/data/data-loader.js';
 import {
     addKmlLayer, updateAllPresencePoints, addCrowdedPointsLayer,
-    updateCrowdedPointsLayerStyle, getCrowdednessColumnName, addSpotsLayer, addLczVitalityLayer
+    updateCrowdedPointsLayerStyle, getTimelineCrowdednessColumn, addSpotsLayer, addLczVitalityLayer
 } from './src/map/map-layers.js';
 import { fitMapToBounds } from './src/utils/utils.js';
 import { updateStatusMessage, initializeSidebar } from './src/ui/ui-sidebar.js';
@@ -190,7 +190,7 @@ async function startApp() {
                 setupTimelineControls();
                 const initialHour = getCurrentHour();
 
-                const initialColumnName = getCrowdednessColumnName(initialHour);
+                const initialColumnName = getTimelineCrowdednessColumn(initialHour);
                 const initialCrowdednessMap = new Map();
                 if (initialColumnName && crowdedData?.length > 0) {
                     let maxCrowdedness = 0;

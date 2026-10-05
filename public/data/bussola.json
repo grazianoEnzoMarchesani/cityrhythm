@@ -9,7 +9,8 @@
     "cut": 0.3333333,
     "svf_ripiego": 0.4,
     "energia_svanisce_m": 300,
-    "tenuta_s": 2
+    "tenuta_s": 1,
+    "percentile_utci_settimana_tipo": 0.9
   },
   "griglia": [
     [
@@ -67,5 +68,10 @@
     "cielo": "Brutsaert 1975 (emissivita a cielo sereno), Crawford & Duchon 1999 (nuvole)",
     "vento": "Wieringa 1986, WMO-No. 8 (altezza di miscelamento 60 m, z0 aperta campagna 0.03)",
     "popolazione": "Ascoli Piceno, circa 46.000 abitanti (ISTAT 2024)"
+  },
+  "energia_cella": {
+    "raggio_m": 50,
+    "log_lo": 1.79246,
+    "log_hi": 4.15825
   }
 }

@@ -34,28 +34,32 @@ export function hourToLabel(hourIndex) {
     return `${dayName} ${hourString}:00`;
 }
 
+/** Data vera della posizione della timeline (intervallo < 7 giorni), o null nella settimana tipo. */
+export function getTimelineDate(timelineHourIndex) {
+    const map = typeof window !== 'undefined' ? window._timelineMap : null;
+    return map?.[timelineHourIndex]?.date ?? null;
+}
+
 /**
- * Converts a timeline hour index (0-167, Mon 00:00 to Sun 23:00)
- * to a JavaScript Date object day of the week (0=Sun, 1=Mon, ..., 6=Sat) and hour (0-23).
- * @param {number} timelineHourIndex - The index from 0 to 167.
- * @returns {{jsDayOfWeek: number, hour: number}} Object containing jsDayOfWeek (-1 if invalid) and hour (-1 if invalid).
+ * Posizione della timeline -> giorno della settimana JS (0=Dom … 6=Sab) e ora (0-23).
+ * Con giorni veri usa la data vera; nella settimana tipo l'indice va da 0 (lun 00:00) a 167 (dom 23:00).
+ * @param {number} timelineHourIndex
+ * @returns {{jsDayOfWeek: number, hour: number}} -1 se non valido
  */
 export function getDateTimeFromIndex(timelineHourIndex) {
+    const date = getTimelineDate(timelineHourIndex);
+    if (date) return { jsDayOfWeek: date.getUTCDay(), hour: date.getUTCHours() };
     if (typeof timelineHourIndex !== 'number' || timelineHourIndex < 0 || timelineHourIndex > 167) {
         return { jsDayOfWeek: -1, hour: -1 };
     }
-    // timelineDayIndex: 0=Mon, 1=Tue, ..., 6=Sun
-    const timelineDayIndex = Math.floor(timelineHourIndex / 24);
-    const hour = timelineHourIndex % 24;
+    const timelineDayIndex = Math.floor(timelineHourIndex / 24); // 0 = lunedì
+    return { jsDayOfWeek: (timelineDayIndex + 1) % 7, hour: timelineHourIndex % 24 };
+}
 
-    // Convert timelineDayIndex to JavaScript day index (0=Sun, 1=Mon, ...)
-    // Monday (index 0) -> 1
-    // Tuesday (index 1) -> 2
-    // ...
-    // Sunday (index 6) -> 0
-    const jsDayOfWeek = (timelineDayIndex + 1) % 7;
-
-    return { jsDayOfWeek, hour };
+/** Posizione della timeline -> indice della settimana tipo (0 = lun 00:00 … 167), anche con giorni veri. */
+export function getWeekIndex(timelineHourIndex) {
+    const { jsDayOfWeek, hour } = getDateTimeFromIndex(timelineHourIndex);
+    return jsDayOfWeek < 0 ? -1 : ((jsDayOfWeek + 6) % 7) * 24 + hour;
 }
 
 
@@ -207,41 +211,28 @@ export function calculateAveragePresenceForFeature(kmlFeature, poiData, timeline
         console.warn("Invalid timelineHourIndex provided:", timelineHourIndex);
         return { averagePresence: 0, recordCount: 0 };
     }
+    const presenzeKey = `presenze_${hour}`;
+    const value = r => parseFloat(r[presenzeKey]);
 
-    // Determine the correct column name for presence data at the given hour
-    const presenzeKey = `presenze_${hour}`; // Assumes column names like "presenze_0", "presenze_1", ...
+    // Giorno vero: le presenze di quel giorno (se manca l'ora, si ripiega sulla media qui sotto)
+    const date = getTimelineDate(timelineHourIndex);
+    if (date) {
+        const day = date.toISOString().slice(0, 10);
+        const rec = poiRecords.find(r => r.parsedDate instanceof Date && r.parsedDate.toISOString().slice(0, 10) === day);
+        if (rec && !isNaN(value(rec))) return { averagePresence: value(rec), recordCount: 1 };
+    }
 
-    // --- Calculation ---
+    // Settimana tipo: media dello stesso giorno della settimana, nei soli giorni dell'intervallo scelto
+    const { min, max } = (typeof window !== 'undefined' && window.selectedDateRange) || {};
     let sumPresenzeOra = 0;
     let count = 0;
-
     poiRecords.forEach(record => {
-        // Check if the record has a valid parsedDate and matches the day of the week
-        if (record.parsedDate instanceof Date && !isNaN(record.parsedDate.getTime())) {
-            // Check day of week match (UTC day needed as parsedDate is UTC)
-            if (record.parsedDate.getUTCDay() === jsDayOfWeek) {
-                 // Check if the presence key exists and is a number
-                if (record.hasOwnProperty(presenzeKey)) {
-                    const presenceValue = record[presenzeKey];
-                    // Try to convert to number, handle potential strings
-                    const numValue = parseFloat(presenceValue);
-
-                    if (!isNaN(numValue)) {
-                        sumPresenzeOra += numValue;
-                        count++;
-                    } else {
-                        // Optional: Log if a value exists but isn't a number
-                        // console.warn(`Record for ${normalizedPoiName} on ${record.parsedDate.toISOString().slice(0,10)} has non-numeric value for ${presenzeKey}:`, presenceValue);
-                    }
-                }
-            }
-        } else {
-            // Optional: Log records without valid dates if needed for debugging
-            // console.warn("POI record skipped due to invalid 'parsedDate':", record);
-        }
+        const d = record.parsedDate;
+        if (!(d instanceof Date) || isNaN(d.getTime()) || d.getUTCDay() !== jsDayOfWeek) return;
+        if (!date && ((min && d < min) || (max && d > max))) return;
+        const v = value(record);
+        if (!isNaN(v)) { sumPresenzeOra += v; count++; }
     });
-
-    // Calculate the average, handle division by zero
     const averagePresence = count > 0 ? sumPresenzeOra / count : 0;
 
     // console.log(`Calculated average presence for ${poiName} at index ${timelineHourIndex} (${hourToLabel(timelineHourIndex)}): ${averagePresence.toFixed(2)} from ${count} records.`);

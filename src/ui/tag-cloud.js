@@ -3,7 +3,7 @@ import cloud from 'd3-cloud';
 import * as turf from '@turf/turf';
 // tag-cloud.js
 import { getCrowdedData, getFullKmlGeoJson, getSpotMapperData } from '../data/data-loader.js';
-import { getCrowdednessColumnName, generateSyntheticCrowdedPointsGeoJson } from '../map/map-layers.js';
+import { getTimelineCrowdednessColumn, generateSyntheticCrowdedPointsGeoJson } from '../map/map-layers.js';
 import { DEBUG_MODE } from '../data/config.js';
 
 
@@ -97,7 +97,7 @@ function extractTagsFromAttractorMode(columnName, kmlFeatureId = null) {
  * @param {HTMLElement|null} parentElement - Parent element to add the tag cloud container
  */
 export function updateTagCloud(timelineHourIndex, kmlFeatureId = null, parentElement = null) {
-    const columnName = getCrowdednessColumnName(timelineHourIndex);
+    const columnName = getTimelineCrowdednessColumn(timelineHourIndex);
     if (!columnName) return;
     
     const tagData = extractTagsFromAttractorMode(columnName, kmlFeatureId);

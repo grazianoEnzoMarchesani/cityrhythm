@@ -489,4 +489,33 @@ export const LCZ_DATA_VIEWS = {
   }
 };
 
+// Mappe orarie calcolate dalla bussola (src/compass/cell-map.js), lette dal feature-state delle celle.
+// UTCI: 10 fasce ufficiali di stress termico [soglia inferiore in °C, colore, nome, nome italiano].
+export const UTCI_BANDS = [
+  [-Infinity, '#0b1847', 'Extreme cold stress', 'stress da freddo estremo'],
+  [-40, '#16367f', 'Very strong cold stress', 'stress da freddo molto forte'],
+  [-27, '#2364b4', 'Strong cold stress', 'stress da freddo forte'],
+  [-13, '#4f9bd9', 'Moderate cold stress', 'stress da freddo moderato'],
+  [0, '#a6d8f0', 'Slight cold stress', 'leggero stress da freddo'],
+  [9, '#66bd63', 'No thermal stress', 'nessuno stress termico'],
+  [26, '#fdae61', 'Moderate heat stress', 'stress da caldo moderato'],
+  [32, '#f46d43', 'Strong heat stress', 'stress da caldo forte'],
+  [38, '#d7191c', 'Very strong heat stress', 'stress da caldo molto forte'],
+  [46, '#6e0000', 'Extreme heat stress', 'stress da caldo estremo']
+];
+// Scala continua della mappa UTCI: soglie ufficiali, verde pieno a metà della fascia senza stress.
+// [°C, colore, etichetta nella legenda (null = nessuna)]
+export const UTCI_RAMP = [
+  [-13, '#2364b4', '−13'], [0, '#8cc8ec', '0'], [9, '#b9e0a5', '9'], [17.5, '#66bd63', null],
+  [26, '#fee08b', '26'], [32, '#f46d43', '32'], [38, '#d7191c', '38'], [46, '#6e0000', '46 °C']
+];
+// Stati della bussola: riga = piacevolezza (sereno verde-azzurro, neutro grigio-viola, opprimente arancio-rosso),
+// colonna = energia (poca gente chiaro, tanta gente scuro). Stessa griglia di bussola.json.
+export const SOUND_STATE_COLORS = {
+  rifugio: '#b8e3d6', passeggiata: '#4fb39a', festa: '#17725c',
+  attesa: '#ddd8e8', routine: '#9a8fb5', corrente: '#5d4f85',
+  afa: '#fdc9a0', fatica: '#f0803c', calca: '#b33a0e',
+  notte: '#14204a'
+};
+
 export const DEBUG_MODE = false;

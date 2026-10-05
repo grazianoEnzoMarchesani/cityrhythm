@@ -11,13 +11,15 @@ import {
     LCZ_VITALITY_SOURCE_ID, LCZ_VITALITY_LAYER_ID,
     ATTRACTION_MIN_CROWDEDNESS,
     MAP_DATA_BASE, NIGHT_HOME_SHARE, NIGHT_GO_HOME_HOURS, NIGHT_WAKE_UP_HOURS, PRESENCE_MOVE_MS, PRESENCE_EXIT_METERS,
-    MAP_STYLES, LCZ_DATA_VIEWS,
+    MAP_STYLES, LCZ_DATA_VIEWS, UTCI_BANDS, UTCI_RAMP, SOUND_STATE_COLORS,
     DEBUG_MODE // <-- aggiunto
 } from '../data/config.js';
-import { calculateAveragePresenceForFeature, generatePointsForFeature, perlin2d, hash01 } from '../utils/utils.js';
+import { calculateAveragePresenceForFeature, generatePointsForFeature, perlin2d, hash01, getWeekIndex } from '../utils/utils.js';
 import { applyPresenceColors, getPreviousPersonColor } from './presence-colors.js';
 import { getFullKmlGeoJson, getPoiData, getCrowdedData, getSpotMapperData, getLczVitalityData } from '../data/data-loader.js';
 import { addMapInteraction } from './map-interaction.js';
+import { cellMap, presence } from '../state/store.js';
+import { setCellMapActive } from '../compass/cell-map.js';
 
 let fullCrowdedGeoJson = null;
 let preparedCrowdedPoints = []; // prepared attractor points
@@ -50,7 +52,7 @@ function generateForceGrid(fullKml, timelineHourIndex) {
     // Ottieni synthetic crowded points
     const spotsData = getSpotMapperData();
     const crowdedData = getCrowdedData();
-    const crowdednessColumn = getCrowdednessColumnName(timelineHourIndex);
+    const crowdednessColumn = getTimelineCrowdednessColumn(timelineHourIndex);
     const syntheticGeoJson = generateSyntheticCrowdedPointsGeoJson(spotsData, crowdedData, crowdednessColumn);
     const attractors = (syntheticGeoJson?.features || [])
         .filter(f => (f.properties?.synthetic_crowdedness || 0) > 0)
@@ -433,6 +435,11 @@ export function removeCrowdedPointsLayer() {
     const map = getMapInstance(); if (!map) return;
     try { if (map.getLayer(CROWDED_LAYER_ID)) map.removeLayer(CROWDED_LAYER_ID); } catch (e) { /* ignore */ }
     try { if (map.getSource(CROWDED_SOURCE_ID)) map.removeSource(CROWDED_SOURCE_ID); } catch (e) { /* ignore */ }
+}
+
+/** Colonna dei luoghi affollati (settimana tipo) per una posizione della timeline, anche con giorni veri. */
+export function getTimelineCrowdednessColumn(timelineHourIndex) {
+    return getCrowdednessColumnName(getWeekIndex(timelineHourIndex));
 }
 
 export function getCrowdednessColumnName(hourIndex) {
@@ -843,10 +850,11 @@ export function updateAllPresencePoints(timelineHourIndex, currentCrowdednessMap
     const poiData = getPoiData();
     const spotsData = getSpotMapperData();
     const crowdedData = getCrowdedData();
-    const crowdednessColumn = getCrowdednessColumnName(timelineHourIndex);
+    const crowdednessColumn = getTimelineCrowdednessColumn(timelineHourIndex);
     const syntheticGeoJson = generateSyntheticCrowdedPointsGeoJson(spotsData, crowdedData, crowdednessColumn);
     const syntheticPoints = (syntheticGeoJson?.features || []).filter(f => (f.properties?.synthetic_crowdedness || 0) > 0);
     let allFinalPointsFeatures = [];
+    const areas = [];
     const JITTER_METERS = 10;
     const homeShare = getHomeShare(timelineHourIndex % 24);
     lastPresenceArgs = [timelineHourIndex, currentCrowdednessMap, initialVisibility];
@@ -865,7 +873,6 @@ export function updateAllPresencePoints(timelineHourIndex, currentCrowdednessMap
         //    cammina verso l'attrattore più vicino che cresce nel secondo;
         // 3. solo il resto arriva da fuori città o se ne va fuori città (con dissolvenza).
         // Di notte una quota va a casa (stessa casa ogni notte, nel quartiere dove si trova).
-        const areas = [];
         fullKml.features.forEach(kmlFeature => {
             if (!kmlFeature?.properties?.poi_data_available) return;
             const { averagePresence } = calculateAveragePresenceForFeature(kmlFeature, poiData, timelineHourIndex);
@@ -886,7 +893,7 @@ export function updateAllPresencePoints(timelineHourIndex, currentCrowdednessMap
             });
             const { movers, needs } = rebalanceInsideArea(state, targets);
             areas.push({
-                kmlFeature, state, movers, needs,
+                kmlFeature, state, movers, needs, averagePresence,
                 homes: getHomesForFeature(kmlFeature),
                 nRandom: synthInArea.length ? Math.round(averagePresence * 0.1) : 0
             });
@@ -970,6 +977,7 @@ export function updateAllPresencePoints(timelineHourIndex, currentCrowdednessMap
             }
         });
     }
+    publishPresence(timelineHourIndex, allFinalPointsFeatures, areas);
     if (fullKml?.features?.length && poiData) applyPresenceColors(allFinalPointsFeatures, fullKml, poiData, timelineHourIndex);
     currentPresencePoints = allFinalPointsFeatures.length > 0
         ? turf.featureCollection(allFinalPointsFeatures)
@@ -987,6 +995,24 @@ export function updateAllPresencePoints(timelineHourIndex, currentCrowdednessMap
     
     if (animationFrameId) cancelAnimationFrame(animationFrameId);
     if (DEBUG_MODE) addForceGridDebugLayer(map);
+}
+
+/**
+ * Passa alla bussola (store `presence`) le persone fuori casa dell'ora: ogni puntino pesa
+ * (persone vere del quartiere ÷ puntini del quartiere), così il totale resta quello dei dati.
+ * Chi è a casa non conta: sta dentro e non si sente.
+ */
+function publishPresence(index, features, areas) {
+    const dots = new Map();
+    features.forEach(f => dots.set(f.properties.kmlFeatureId, (dots.get(f.properties.kmlFeatureId) || 0) + 1));
+    const weight = new Map(areas.map(a => [a.kmlFeature.id, a.averagePresence / (dots.get(a.kmlFeature.id) || 1)]));
+    const out = features.filter(f => !f.properties.atHome);
+    const lon = new Float64Array(out.length), lat = new Float64Array(out.length), w = new Float64Array(out.length);
+    out.forEach((f, i) => {
+        [lon[i], lat[i]] = f.properties.originalCoordinates;
+        w[i] = weight.get(f.properties.kmlFeatureId) ?? 0;
+    });
+    presence.set({ index, lon, lat, w });
 }
 
 // Funzione di animazione fluida dei punti density
@@ -1189,7 +1215,7 @@ export function addSyntheticCrowdedPointsLayer(timelineHourIndex, initialVisibil
     }
     const spotsData = getSpotMapperData();
     const crowdedData = getCrowdedData();
-    const crowdednessColumn = getCrowdednessColumnName(timelineHourIndex);
+    const crowdednessColumn = getTimelineCrowdednessColumn(timelineHourIndex);
     if (!spotsData?.length || !crowdedData?.length || !crowdednessColumn) {
         console.warn("addSyntheticCrowdedPointsLayer: Missing data to generate synthetic points.");
         removeSyntheticCrowdedPointsLayer();
@@ -1397,6 +1423,7 @@ export function removeLczVitalityLayer() {
     try { if (map.getLayer(LCZ_VITALITY_LAYER_ID + '-stroke')) map.removeLayer(LCZ_VITALITY_LAYER_ID + '-stroke'); } catch (e) { /* ignore */ }
     try { if (map.getLayer(LCZ_VITALITY_LAYER_ID)) map.removeLayer(LCZ_VITALITY_LAYER_ID); } catch (e) { /* ignore */ }
     try { if (map.getSource(LCZ_VITALITY_SOURCE_ID)) map.removeSource(LCZ_VITALITY_SOURCE_ID); } catch (e) { /* ignore */ }
+    setCellMapActive(false);
 }
 
 /**
@@ -1502,6 +1529,8 @@ export function addLczVitalityLayer(initialVisibility = true, visualizationType 
 
         // Salva il tipo di visualizzazione corrente
         currentLczVisualizationType = visualizationType;
+        syncCellMap(visualizationType);
+        applyCellMap(lastCellMap); // il feature-state si perde quando la sorgente viene ricreata
 
         if (DEBUG_MODE) {
             console.log(`LCZ Vitality layer added with ${geoJsonData.features.length} features using ${visualizationType} visualization.`);
@@ -1564,6 +1593,16 @@ const LCZ_PARAMS = [
  */
 function getLczFillColor(type) {
     if (type === 'LCZ') return MAP_STYLES.LCZ_VITALITY.LCZ_COLORS;
+    if (type === 'utci') {
+        const v = ['feature-state', 'utci'];
+        return ['case', ['==', ['typeof', v], 'number'],
+            ['interpolate-lab', ['linear'], v, ...UTCI_RAMP.flatMap(([t, c]) => [t, ['to-color', c]])],
+            'rgba(0,0,0,0)'];
+    }
+    if (type === 'stato') {
+        return ['match', ['coalesce', ['feature-state', 'stato'], ''],
+            ...Object.entries(SOUND_STATE_COLORS).flatMap(([k, c]) => [k, c]), 'rgba(0,0,0,0)'];
+    }
     const view = LCZ_DATA_VIEWS[type];
     if (!view) return MAP_STYLES.LCZ_VITALITY.UHI_COLORS;
     const value = ['get', type];
@@ -1581,6 +1620,20 @@ function getLczFillColor(type) {
  * @returns {{kind: 'categories', items: Array<{color: string, label: string}>} | {kind: 'ramp', stops: Array, unit: string, note: string}}
  */
 export function getLczLegend(type) {
+    if (type === 'utci') {
+        return {
+            kind: 'ramp', stops: UTCI_RAMP.map(([t, c, label]) => [label, c]), unit: '',
+            note: 'Estimated "feels like" temperature of a person standing in each cell, at the timeline hour: '
+                + '9–26 °C no thermal stress, from 26 moderate, 32 strong, 38 very strong heat stress. '
+                + 'Typical week: a hot day (90th percentile).'
+        };
+    }
+    if (type === 'stato') {
+        return {
+            kind: 'compass', colors: SOUND_STATE_COLORS,
+            note: 'What the sound map plays in each cell at the timeline hour.'
+        };
+    }
     const view = LCZ_DATA_VIEWS[type];
     if (view) return { kind: 'ramp', stops: view.stops, unit: view.unit, note: view.note };
     // Le espressioni 'case' hanno coppie [condizione, colore]: la condizione è ['==', ['get', campo], valore]
@@ -1611,17 +1664,50 @@ function bindLczPopup(map) {
             .map(([key, label, unit]) => `<tr><td>${label}</td><td style="text-align:right;padding-left:8px"><b>${fmt(p[key])}</b> ${unit}</td></tr>`)
             .join('');
         const fix = p.lcz_esa_fix && p.lcz_esa_fix !== '-' ? `<br>Corretta con ESA WorldCover: ${p.lcz_esa_fix}` : '';
+        const k = lastCellMap && cellMapIndex?.get(p.id);
+        const now = k === undefined || k === null ? '' : (() => {
+            const u = lastCellMap.utci[k], st = lastCellMap.stato[k];
+            const band = Number.isNaN(u) ? null : [...UTCI_BANDS].reverse().find(([t]) => u >= t);
+            return `<div style="margin-top:6px;padding:4px 6px;background:#f3f3f3;border-radius:4px">In quest'ora: `
+                + (band ? `UTCI ≈ <b>${Math.round(u)} °C</b> (${band[3]}, stima) · ` : '')
+                + `mappa sonora <b>${st ? st[0].toUpperCase() + st.slice(1) : '—'}</b>`
+                + ` · ≈ ${Math.round(lastCellMap.people[k])} persone in giro qui intorno</div>`;
+        })();
         new Popup({ maxWidth: '340px' })
             .setLngLat(e.lngLat)
             .setHTML(`<div style="font-size:12px;line-height:1.4">
                 <div style="font-size:14px"><b>LCZ ${p.lcz_class} – ${LCZ_NAMES[p.lcz_class] ?? 'sconosciuta'}</b></div>
                 Rischio isola di calore: <b>${UHI_NAMES[p.lcz_vulnerability] ?? p.lcz_vulnerability}</b><br>
-                Parametri in accordo con la classe: <b>${p.lcz_matches} su 10</b> · scarto ${fmt(p.lcz_rmsep)}${fix}
+                Parametri in accordo con la classe: <b>${p.lcz_matches} su 10</b> · scarto ${fmt(p.lcz_rmsep)}${fix}${now}
                 <table style="margin-top:6px;border-collapse:collapse">${rows}</table>
                 <div style="color:#888;margin-top:4px">Cella ${p.id} · 30 × 30 m</div></div>`)
             .addTo(map);
     });
 }
+
+// --- Mappe orarie della bussola (UTCI e Sound map): colori dal feature-state delle celle ---
+const CELL_MAP_TYPES = new Set(['utci', 'stato']);
+let lastCellMap = null, cellMapIndex = null; // ultimo risultato e id cella -> posizione
+
+/** Accende il calcolo per cella solo se il livello LCZ è visibile con una mappa oraria. */
+function syncCellMap(type) {
+    const on = CELL_MAP_TYPES.has(type) && !!getMapInstance().getLayer(LCZ_VITALITY_LAYER_ID);
+    setCellMapActive(on);
+}
+
+function applyCellMap(result) {
+    lastCellMap = result;
+    if (result && !cellMapIndex) cellMapIndex = new Map(result.ids.map((id, k) => [id, k]));
+    if (!result) return;
+    const map = getMapInstance();
+    if (!map.getSource(LCZ_VITALITY_SOURCE_ID)) return;
+    for (let k = 0; k < result.ids.length; k++) {
+        const u = result.utci[k];
+        map.setFeatureState({ source: LCZ_VITALITY_SOURCE_ID, id: result.ids[k] },
+            { utci: Number.isNaN(u) ? null : u, stato: result.stato[k] });
+    }
+}
+cellMap.subscribe(applyCellMap);
 
 /**
  * Cambia il tipo di visualizzazione del layer LCZ Vitality.
@@ -1638,6 +1724,7 @@ export function updateLczVitalityVisualization(visualizationType) {
 
         map.setPaintProperty(LCZ_VITALITY_LAYER_ID, 'fill-color', fillColor);
         currentLczVisualizationType = visualizationType;
+        syncCellMap(visualizationType);
 
         // Se stiamo passando a UHI e la visualizzazione dinamica è attiva, aggiorna
         if (visualizationType === 'UHI' && uhiDynamicVisibilityEnabled) {
