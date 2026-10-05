@@ -12,7 +12,7 @@ import {
     ATTRACTION_MIN_CROWDEDNESS,
     MAP_DATA_BASE, HOME_SHARE_URL, PRESENCE_HOME_OPACITY, PRESENCE_MOVE_MS, PRESENCE_EXIT_METERS,
     PRESENCE_STAGGER, PRESENCE_BEND_MAX_M, PRESENCE_WIGGLE_PX, PRESENCE_WIGGLE_MIN_M, PRESENCE_WIGGLE_MAX_M,
-    MAP_STYLES, LCZ_DATA_VIEWS, UTCI_BANDS, UTCI_RAMP, SOUND_STATE_COLORS,
+    PRESENCE_WIGGLE_STEP_PX, MAP_STYLES, LCZ_DATA_VIEWS, UTCI_BANDS, UTCI_RAMP, SOUND_STATE_COLORS,
     DEBUG_MODE // <-- aggiunto
 } from '../data/config.js';
 
@@ -390,7 +390,10 @@ export function addOrUpdatePresencePointsLayer(pointsGeoJson, initialVisibility 
         try {
             map.addSource(PRESENCE_POINTS_SOURCE_ID, {
                 type: 'geojson',
-                data: pointsGeoJson
+                data: pointsGeoJson,
+                // Niente bordo attorno alle tessere: i cerchi fuori dalla tessera MapLibre li scarta comunque
+                // (circle_bucket.ts), il bordo farebbe solo rielaborare due volte i puntini vicini ai margini.
+                buffer: 0
             });
 
             map.addLayer({
@@ -753,8 +756,6 @@ function transferBetweenAreas(areas) {
 }
 
 // --- SPOSTAMENTO ANIMATO DEI PUNTINI FRA UN'ORA E L'ALTRA ---
-let displayedPositions = new Map(); // personKey → posizione disegnata adesso
-let displayedHome = new Map();      // personKey → quanto è "in casa" adesso (0 fuori, 1 dentro)
 let presenceMoveFrame = null;
 let presenceMoveMs = PRESENCE_MOVE_MS;
 
@@ -785,15 +786,28 @@ function outsideCity(coords, key) {
     return [coords[0] + dx * PRESENCE_EXIT_METERS / kx, coords[1] + dy * PRESENCE_EXIT_METERS / 111320];
 }
 
-// Ogni persona ha un suo modo di muoversi, calcolato una volta dalla chiave
-const antParams = new Map();
+// Un gruppo per colore disegnerebbe un colore sempre sopra gli altri, e negli assembramenti sembrerebbe
+// più numeroso: ogni gruppo si divide in PRESENCE_LAYERS strati e l'ordine dei colori si inverte da uno strato
+// all'altro, così nessun colore copre gli altri (come quando l'ordine era per persona). Lo strato viene dalla
+// posizione nell'elenco, non da hash01: hash01 della stessa chiave con suffissi diversi non è indipendente
+// (prova: con hash01(chiave + ':strato') gli uomini stavano in media più in alto delle donne).
+const PRESENCE_LAYERS = 32;
+
+// Ogni persona ha un suo modo di muoversi, calcolato una volta dalla chiave.
+// Ritmi del brulichio (rad/s): passi lenti e scatti rapidi, pesati 0,65 e 0,35 in antWiggle.
+const ANT_SLOW = [0.4, 1.0], ANT_FAST = [1.5, 3.0];
+// Velocità massima di un puntino, in ampiezze al secondo: derivata delle due sinusoidi al massimo, sui due assi
+const ANT_PEAK_SPEED = Math.SQRT2 * (0.65 * ANT_SLOW[1] + 0.35 * ANT_FAST[1]);
+let antParams = new Map();
 function getAntParams(key) {
     let p = antParams.get(key);
     if (!p) {
         const h = (s) => hash01(key + s);
+        const slow = (s) => ANT_SLOW[0] + (ANT_SLOW[1] - ANT_SLOW[0]) * h(s);
+        const fast = (s) => ANT_FAST[0] + (ANT_FAST[1] - ANT_FAST[0]) * h(s);
         p = {
-            f1: 0.4 + 0.6 * h(':f1'), f2: 1.5 + 1.5 * h(':f2'),     // passi lenti e scatti rapidi (rad/s)
-            f3: 0.4 + 0.6 * h(':f3'), f4: 1.5 + 1.5 * h(':f4'),
+            f1: slow(':f1'), f2: fast(':f2'),
+            f3: slow(':f3'), f4: fast(':f4'),
             p1: 6.283 * h(':p1'), p2: 6.283 * h(':p2'), p3: 6.283 * h(':p3'), p4: 6.283 * h(':p4'),
             delay: PRESENCE_STAGGER * h(':parte'),                  // chi parte prima e chi dopo
             bend: 2 * h(':curva') - 1                               // da che parte curva il percorso
@@ -829,7 +843,12 @@ function walkPosition(a, b, p, t) {
 
 // Il movimento continuo: un solo ciclo disegna sia gli spostamenti fra un'ora e l'altra
 // sia il brulichio "a formichine" di chi sta fermo. Chi è a casa resta immobile.
-let presenceAnim = null; // { target, starts, arrivals, leaving, homeFrom, t0 }
+// A ogni ridisegno MapLibre copia i puntini, li manda al worker e li ricodifica in tessere: era il lavoro più
+// pesante della pagina. Per questo gli arrivano solo le proprietà usate dallo stile e i puntini con lo stesso
+// aspetto (in casa, colore) e lo stesso strato come un'unica feature MultiPoint; resta un punto a sé solo chi
+// sta cambiando aspetto (compare, svanisce, entra o esce di casa). Le feature restano le stesse finché non
+// cambia l'aspetto di qualcuno: a ogni immagine cambiano solo le coordinate.
+let presenceAnim = null; // { dots, leaving, collection, t0, settled }
 let presenceLastDraw = 0;
 
 function presenceLayerShown(map) {
@@ -837,62 +856,133 @@ function presenceLayerShown(map) {
         && map.getLayoutProperty(PRESENCE_POINTS_LAYER_ID + '-zoom', 'visibility') !== 'none';
 }
 
-function drawPresenceFrame(now) {
-    const map = getMapInstance();
-    const src = map?.getSource(PRESENCE_POINTS_SOURCE_ID);
-    const anim = presenceAnim;
-    if (!anim) { presenceMoveFrame = null; return; }
-    if (!src) { presenceMoveFrame = requestAnimationFrame(drawPresenceFrame); return; } // livello non ancora creato
-    const t = presenceMoveMs ? Math.min(1, (now - anim.t0) / presenceMoveMs) : 1;
-    const moving = t < 1;
-    // Da fermi basta ~30 immagini al secondo; se il livello è nascosto non si disegna nulla
-    if ((moving || now - presenceLastDraw >= 33) && presenceLayerShown(map)) {
-        presenceLastDraw = now;
-        const s = now / 1000;
-        const center = map.getCenter();
-        const metersPerPixel = 40075016.686 * Math.cos(center.lat * Math.PI / 180) / (512 * Math.pow(2, map.getZoom()));
-        const amp = Math.min(PRESENCE_WIGGLE_MAX_M, Math.max(PRESENCE_WIGGLE_MIN_M, PRESENCE_WIGGLE_PX * metersPerPixel));
-        const kx = 111320 * Math.cos(center.lat * Math.PI / 180);
-        const place = (base, key, atHome) => {
-            if (atHome) return base;
-            const [wx, wy] = antWiggle(getAntParams(key), s, amp);
-            return [base[0] + wx / kx, base[1] + wy / 111320];
-        };
-        if (!moving) { displayedPositions = new Map(); displayedHome = new Map(); }
-        const features = anim.target.features.map((f, i) => {
-            const key = f.properties.personKey;
-            const end = f.geometry.coordinates;
-            let base = end;
-            let properties = f.properties;
-            let homeT = f.properties.atHome ? 1 : 0;
-            if (moving) {
-                const w = walkPosition(anim.starts[i] ?? end, end, getAntParams(key), t);
-                base = w.coords;
-                if (anim.arrivals.has(key)) properties = { ...properties, fade: Math.min(1, 2 * w.e) };
-                // Si attenua solo arrivando all'edificio (ultimo 20% del tragitto), si riaccende appena esce
-                const from = anim.homeFrom.get(key) ?? 0;
-                const k = homeT > from ? Math.max(0, (w.e - 0.8) / 0.2) : Math.min(1, w.e / 0.2);
-                homeT = from + (homeT - from) * k;
-                properties = { ...properties, homeT };
-            }
-            displayedPositions.set(key, base);
-            displayedHome.set(key, homeT);
-            return { ...f, properties, geometry: { type: 'Point', coordinates: place(base, key, f.properties.atHome) } };
-        });
-        if (moving) {
-            anim.leaving.forEach(l => {
-                const w = walkPosition(l.from, l.to, getAntParams(l.key), t);
-                displayedPositions.set(l.key, w.coords);
-                features.push({
-                    type: 'Feature',
-                    properties: { personKey: l.key, fade: Math.min(1, 2 * (1 - w.e)), homeT: 0, ...(l.color && { color: l.color }) },
-                    geometry: { type: 'Point', coordinates: place(w.coords, l.key, false) }
-                });
+// Quanto è "in casa" a metà strada: si attenua solo arrivando all'edificio (ultimo 20% del tragitto), si riaccende appena esce
+function homeTAt(dot, e) {
+    const to = dot.atHome ? 1 : 0;
+    const k = to > dot.homeFrom ? Math.max(0, (e - 0.8) / 0.2) : Math.min(1, e / 0.2);
+    return dot.homeFrom + (to - dot.homeFrom) * k;
+}
+
+const changesLook = (d) => d.arriving || d.homeFrom !== (d.atHome ? 1 : 0);
+
+function rebuildPresenceCollection(anim) {
+    const groups = new Map();
+    const singles = [];
+    anim.dots.forEach(d => {
+        if (!anim.settled && changesLook(d)) {
+            singles.push(d);
+            return;
+        }
+        const { homeT, color } = d.properties;
+        const look = `${homeT}|${color ?? ''}`;
+        const k = `${d.layer}|${look}`;
+        if (!groups.has(k)) {
+            groups.set(k, {
+                layer: d.layer, look,
+                feature: { type: 'Feature', properties: { homeT, ...(color && { color }) }, geometry: { type: 'MultiPoint', coordinates: [] } }
             });
         }
-        src.setData({ type: 'FeatureCollection', features });
-    }
+        groups.get(k).feature.geometry.coordinates.push(d.c);
+    });
+    if (!anim.settled) singles.push(...anim.leaving);
+    // Strato per strato; dentro lo strato l'ordine degli aspetti si inverte fra strati pari e dispari
+    const byLayer = (a, b) => a.layer - b.layer || (a.layer % 2 ? -1 : 1) * a.look.localeCompare(b.look);
+    anim.collection = {
+        type: 'FeatureCollection',
+        features: [
+            ...[...groups.values()].sort(byLayer).map(g => g.feature),
+            ...singles.map(d => ({ type: 'Feature', properties: d.properties, geometry: { type: 'Point', coordinates: d.c } }))
+        ]
+    };
+}
+
+// Persone dell'ora, ognuna con le sue properties (kmlFeatureId, colore...): per la colorazione dai grafici.
+// Dopo aver cambiato le properties chiamare redrawPresenceDots().
+export function getPresenceDots() {
+    return presenceAnim ? [...presenceAnim.dots] : [];
+}
+
+export function redrawPresenceDots() {
+    if (!presenceAnim) return;
+    rebuildPresenceCollection(presenceAnim);
+    if (presenceMoveFrame) presenceLastDraw = -Infinity; // il ciclo li spedisce alla prossima immagine
+    else getMapInstance()?.getSource(PRESENCE_POINTS_SOURCE_ID)?.setData(presenceAnim.collection); // "riduci movimento"
+}
+
+// Scrive in c la posizione col brulichio (chi è a casa resta fermo)
+function placeDot(c, [lon, lat], p, s, amp, kx, still) {
+    if (still) { c[0] = lon; c[1] = lat; return; }
+    const [wx, wy] = antWiggle(p, s, amp);
+    c[0] = lon + wx / kx;
+    c[1] = lat + wy / 111320;
+}
+
+// Fine dello spostamento: valori definitivi, tutti nei gruppi, e chi ha lasciato la città sparisce
+function settlePresence(anim) {
+    anim.dots.forEach(d => {
+        delete d.properties.fade;
+        d.properties.homeT = d.atHome ? 1 : 0;
+    });
+    anim.settled = true;
+    rebuildPresenceCollection(anim);
+}
+
+function drawPresenceFrame(now) {
+    const anim = presenceAnim;
+    if (!anim) { presenceMoveFrame = null; return; }
     presenceMoveFrame = requestAnimationFrame(drawPresenceFrame);
+    const map = getMapInstance();
+    const src = map?.getSource(PRESENCE_POINTS_SOURCE_ID);
+    if (!src || !presenceLayerShown(map)) return; // livello non ancora creato, o nascosto: nulla da disegnare
+    const t = presenceMoveMs ? Math.min(1, (now - anim.t0) / presenceMoveMs) : 1;
+    const moving = t < 1;
+    const center = map.getCenter();
+    const metersPerPixel = 40075016.686 * Math.cos(center.lat * Math.PI / 180) / (512 * Math.pow(2, map.getZoom()));
+    const amp = Math.min(PRESENCE_WIGGLE_MAX_M, Math.max(PRESENCE_WIGGLE_MIN_M, PRESENCE_WIGGLE_PX * metersPerPixel));
+    // Al massimo ~30 immagini al secondo, anche negli spostamenti (prima il worker di MapLibre non ne reggeva di più).
+    // Da fermi solo quando il puntino più veloce ha fatto un passo visibile (PRESENCE_WIGGLE_STEP_PX pixel
+    // fisici): a zoom 13 su schermo Retina ~10 volte al secondo.
+    let frameMs = 33;
+    if (!moving && anim.settled) {
+        const peakPxPerS = ANT_PEAK_SPEED * amp / metersPerPixel * (window.devicePixelRatio || 1);
+        frameMs = Math.max(frameMs, 1000 * PRESENCE_WIGGLE_STEP_PX / peakPxPerS);
+    }
+    if (now - presenceLastDraw < frameMs) return;
+    presenceLastDraw = now;
+    if (!moving && !anim.settled) settlePresence(anim);
+    const s = now / 1000;
+    const kx = 111320 * Math.cos(center.lat * Math.PI / 180);
+    anim.dots.forEach(d => {
+        let base = d.end;
+        if (moving) {
+            const w = walkPosition(d.start, d.end, d.p, t);
+            base = w.coords;
+            if (d.arriving) d.properties.fade = Math.min(1, 2 * w.e);
+            d.properties.homeT = homeTAt(d, w.e);
+        }
+        placeDot(d.c, base, d.p, s, amp, kx, d.atHome);
+    });
+    if (moving) {
+        anim.leaving.forEach(l => {
+            const w = walkPosition(l.from, l.to, l.p, t);
+            l.properties.fade = Math.min(1, 2 * (1 - w.e));
+            placeDot(l.c, w.coords, l.p, s, amp, kx, false);
+        });
+    }
+    src.setData(anim.collection);
+}
+
+// Dove si trova adesso ogni puntino (senza brulichio) e quanto è "in casa": da qui parte lo spostamento successivo
+function displayedNow(anim, now) {
+    const shown = new Map();
+    if (!anim) return shown;
+    const t = presenceMoveMs ? Math.min(1, (now - anim.t0) / presenceMoveMs) : 1;
+    anim.dots.forEach(d => {
+        if (t >= 1) { shown.set(d.key, { pos: d.end, homeT: d.atHome ? 1 : 0 }); return; }
+        const w = walkPosition(d.start, d.end, d.p, t);
+        shown.set(d.key, { pos: w.coords, homeT: homeTAt(d, w.e) });
+    });
+    return shown;
 }
 
 // Chi c'era anche prima scivola dalla vecchia alla nuova posizione; chi arriva in città entra dall'esterno
@@ -900,35 +990,46 @@ function drawPresenceFrame(now) {
 function movePresencePointsTo(target, visible, arrivals = new Set(), leavers = []) {
     if (presenceMoveFrame) cancelAnimationFrame(presenceMoveFrame);
     presenceMoveFrame = null;
+    const now = performance.now();
+    const shown = displayedNow(presenceAnim, now);
     presenceAnim = null;
     const map = getMapInstance();
-    const hadPoints = displayedPositions.size > 0;
     const source = map?.getSource(PRESENCE_POINTS_SOURCE_ID);
-    const animate = visible && presenceMoveMs && source && hadPoints;
-    const starts = animate ? target?.features.map(f => {
+    const animate = visible && presenceMoveMs && source && shown.size > 0 && !reduceMotion;
+    const dots = (target?.features ?? []).map((f, i) => {
         const key = f.properties.personKey;
-        return displayedPositions.get(key) ?? (arrivals.has(key) ? outsideCity(f.geometry.coordinates, key) : null);
-    }) ?? [] : [];
-    const leaving = animate ? leavers
-        .map(key => ({ key, from: displayedPositions.get(key) }))
-        .filter(l => l.from)
-        .map(l => ({ ...l, to: outsideCity(l.from, l.key), color: getPreviousPersonColor(l.key) })) : [];
-    const homeFrom = displayedHome;
-    displayedPositions = new Map();
-    displayedHome = new Map();
-    target?.features.forEach(f => {
-        displayedPositions.set(f.properties.personKey, f.geometry.coordinates);
-        displayedHome.set(f.properties.personKey, f.properties.atHome ? 1 : 0);
+        const end = f.geometry.coordinates;
+        const atHome = f.properties.atHome === true;
+        const was = shown.get(key);
+        const properties = { kmlFeatureId: f.properties.kmlFeatureId, homeT: atHome ? 1 : 0 };
+        if (f.properties.color) properties.color = f.properties.color;
+        return {
+            key, end, atHome, properties, p: getAntParams(key), c: [...end], layer: i % PRESENCE_LAYERS,
+            start: animate ? was?.pos ?? (arrivals.has(key) ? outsideCity(end, key) : end) : end,
+            homeFrom: was?.homeT ?? 0,
+            arriving: animate && arrivals.has(key)
+        };
     });
-    if (!animate || reduceMotion || !target?.features.length) {
+    const leaving = animate ? leavers.filter(key => shown.has(key)).map(key => {
+        const from = shown.get(key).pos;
+        const color = getPreviousPersonColor(key);
+        return {
+            key, from, to: outsideCity(from, key), p: getAntParams(key), c: [...from],
+            properties: { homeT: 0, fade: 1, ...(color && { color }) }
+        };
+    }) : [];
+    // Ritmi solo di chi è in scena: col Play arriva sempre gente nuova e la tabella crescerebbe senza fine
+    antParams = new Map([...dots, ...leaving].map(d => [d.key, d.p]));
+    const anim = { dots, leaving, t0: animate ? now : -Infinity, settled: !animate };
+    rebuildPresenceCollection(anim);
+    presenceAnim = dots.length ? anim : null;
+    if (!animate || !dots.length) {
         // Salto senza animazione (o primo disegno): crea il livello se serve
-        addOrUpdatePresencePointsLayer(target, visible);
-        if (reduceMotion || !target?.features.length) return;
+        addOrUpdatePresencePointsLayer(anim.collection, visible);
     } else {
         setLayerVisibility(PRESENCE_POINTS_LAYER_ID, visible);
     }
-    presenceAnim = { target, starts, arrivals, leaving, homeFrom, t0: animate ? performance.now() : -Infinity };
-    presenceMoveFrame = requestAnimationFrame(drawPresenceFrame);
+    if (presenceAnim && !reduceMotion) presenceMoveFrame = requestAnimationFrame(drawPresenceFrame);
 }
 
 // Ridisegna i puntini dell'ora corrente (es. dopo aver cambiato la colorazione)

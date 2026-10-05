@@ -65,6 +65,9 @@ export const PRESENCE_BEND_MAX_M = 60;
 export const PRESENCE_WIGGLE_PX = 3;
 export const PRESENCE_WIGGLE_MIN_M = 1.5;
 export const PRESENCE_WIGGLE_MAX_M = 15;
+// Da fermi i puntini si ridisegnano quando il più veloce ha fatto un passo di questi pixel fisici dello schermo:
+// passi più piccoli lo schermo non li mostra, e ogni ridisegno fa rielaborare a MapLibre tutti i puntini
+export const PRESENCE_WIGGLE_STEP_PX = 1;
 
 export const CHART_COLORS = {
     GENDER_CHART: {

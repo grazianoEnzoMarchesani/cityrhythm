@@ -4,13 +4,12 @@ import { hourToLabel, getDateTimeFromIndex, calculateAveragePresenceForFeature }
 import { getPoiData } from '../data/data-loader.js';
 import { 
   CHART_COLORS, 
-  PRESENCE_POINTS_SOURCE_ID,
   CHART_PALETTE
 } from '../data/config.js';
-import { setKmlFeatureSelectedState, getMapInstance, getGeoJsonSourceData } from '../map/map-setup.js';
+import { setKmlFeatureSelectedState } from '../map/map-setup.js';
 import { updateTagCloud } from './tag-cloud.js';
 import { getSpotMapperData, getCrowdedData } from '../data/data-loader.js';
-import { getCrowdednessColumnName, generateSyntheticCrowdedPointsGeoJson } from '../map/map-layers.js';
+import { getCrowdednessColumnName, generateSyntheticCrowdedPointsGeoJson, getPresenceDots, redrawPresenceDots } from '../map/map-layers.js';
 import { exportArrayToCSV } from '../utils/utils.js';
 import { setPresenceColorSelection } from './ui-layer-controls.js';
 import { DEBUG_MODE } from '../data/config.js';
@@ -1218,35 +1217,14 @@ function handleChartClick(chartId) {
 }
 
 function getPresencePointsForFeature(kmlFeature) {
-    const map = getMapInstance();
-    if (!map) return null;
-
-    const source = map.getSource(PRESENCE_POINTS_SOURCE_ID);
-    if (!source) return null;
-
-    const data = getGeoJsonSourceData(source);
-    if (!data || !data.features) return null;
-
-    return data.features.filter(feature => feature.properties.kmlFeatureId === kmlFeature.id);
+    return getPresenceDots().filter(dot => dot.properties.kmlFeatureId === kmlFeature.id);
 }
 
 function updatePresencePointsColors(kmlFeatureId, chartData, colors) {
     if (DEBUG_MODE) console.log(`Inizio aggiornamento colori per KML Feature ID: ${kmlFeatureId}`);
 
-    const map = getMapInstance();
-    if (!map) {
-        if (DEBUG_MODE) console.log("Istanza della mappa non trovata");
-        return;
-    }
-    const source = map.getSource(PRESENCE_POINTS_SOURCE_ID);
-    const sourceData = getGeoJsonSourceData(source);
-    if (!sourceData || !sourceData.features) {
-        if (DEBUG_MODE) console.log("Source dei punti non trovata o vuota:", PRESENCE_POINTS_SOURCE_ID);
-        return;
-    }
-
-    // Get ALL points from the source
-    const allPoints = sourceData.features;
+    // Una voce per persona (nella sorgente della mappa i puntini uguali sono raggruppati)
+    const allPoints = getPresenceDots();
     if (!allPoints || allPoints.length === 0) {
         if (DEBUG_MODE) console.log("Nessun punto presente nella source.");
         // Anche se non ci sono punti, potremmo dover 'pulire' la sorgente se setData è stato chiamato prima
@@ -1347,12 +1325,8 @@ function updatePresencePointsColors(kmlFeatureId, chartData, colors) {
         // ma dobbiamo comunque aggiornare la sorgente con allPoints.
     }
 
-    // Aggiorna la source della mappa con TUTTI i punti (aggiornati e non)
-    if (DEBUG_MODE) console.log("Aggiorno la source della mappa con TUTTI i punti.");
-    source.setData({
-        type: 'FeatureCollection',
-        features: allPoints // Usa l'array completo di tutti i punti
-    });
+    // Ridisegna i puntini coi nuovi colori
+    redrawPresenceDots();
 }
 
 function createOrUpdateRealBarCharts(filteredRecords, hour) {
