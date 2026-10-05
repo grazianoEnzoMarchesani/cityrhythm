@@ -1,7 +1,7 @@
 // ui-layer-controls.js
 import { refreshPresencePoints, setLayerVisibility, addSyntheticCrowdedPointsLayer, removeSyntheticCrowdedPointsLayer, updateAllPresencePoints, addLczVitalityLayer, removeLczVitalityLayer, updateLczVitalityVisualization, setLczLayerOpacity, setUhiDynamicVisibility, getLczLegend } from '../map/map-layers.js';
 import { KML_LAYER_ID, CROWDED_LAYER_ID, PRESENCE_POINTS_LAYER_ID, SPOTS_LAYER_ID, LCZ_VITALITY_LAYER_ID, DEBUG_MODE } from '../data/config.js';
-import { getMapInstance, isMapReady } from '../map/map-setup.js';
+import { getMapInstance, whenMapReady } from '../map/map-setup.js';
 import { getSpotMapperData } from '../data/data-loader.js';
 import { PRESENCE_COLOR_VARIABLES, setPresenceColorBy } from '../map/presence-colors.js';
 
@@ -159,33 +159,25 @@ export function setupLayerControls() {
             }
         });
     }
-    // --- 3D Terrain toggle ---
+    // --- 3D Terrain e 3D Buildings ---
+    // Applicati anche all'avvio: al ricaricamento il browser può ricordare la casella com'era.
     const terrainToggle = document.getElementById('toggle-3d-terrain');
     if (terrainToggle) {
-        terrainToggle.addEventListener('change', (event) => {
-            const map = getMapInstance();
-            if (!map || !isMapReady()) return;
-            if (event.target.checked) {
-                map.setTerrain({ source: 'terrain-dem', exaggeration: 1.2 }); // sorgente definita in map-setup.js
-            } else {
-                map.setTerrain(null);
-            }
+        const applyTerrain = () => whenMapReady(() => {
+            getMapInstance().setTerrain(terrainToggle.checked
+                ? { source: 'terrain-dem', exaggeration: 1.2 } // sorgente definita in map-setup.js
+                : null);
         });
+        terrainToggle.addEventListener('change', applyTerrain);
+        applyTerrain();
     }
-    // --- 3D Buildings toggle ---
     const buildingsToggle = document.getElementById('toggle-3d-buildings');
     if (buildingsToggle) {
-        buildingsToggle.addEventListener('change', (event) => {
-            const map = getMapInstance();
-            if (!map || !isMapReady()) return;
-            const isVisible = event.target.checked ? 'visible' : 'none';
-            // Trova tutti i layer con paint.fill-extrusion-height (3D buildings)
-            map.getStyle().layers.forEach(layer => {
-                if (layer.type === 'fill-extrusion' && layer.paint && layer.paint['fill-extrusion-height'] !== undefined) {
-                    map.setLayoutProperty(layer.id, 'visibility', isVisible);
-                }
-            });
+        const applyBuildings = () => whenMapReady(() => {
+            getMapInstance().setLayoutProperty('buildings-3d', 'visibility', buildingsToggle.checked ? 'visible' : 'none');
         });
+        buildingsToggle.addEventListener('change', applyBuildings);
+        applyBuildings();
     }
 }
 

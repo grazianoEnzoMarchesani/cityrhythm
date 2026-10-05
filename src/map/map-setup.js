@@ -47,7 +47,9 @@ function buildMapStyle() {
         id: 'buildings-outline', type: 'line', source: 'buildings',
         paint: { 'line-color': BLACK, 'line-width': ['interpolate', ['linear'], ['zoom'], 13, 0.3, 17, 1.5] }
     }, {
+        // Spento all'avvio (interruttore "3D Buildings"): restano le impronte 2D col contorno.
         id: 'buildings-3d', type: 'fill-extrusion', source: 'buildings',
+        layout: { visibility: 'none' },
         paint: {
             'fill-extrusion-color': WHITE,
             'fill-extrusion-height': ['coalesce', ['get', 'height'], 0],
