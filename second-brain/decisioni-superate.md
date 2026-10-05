@@ -12,6 +12,7 @@ Decisioni che non valgono più, barrate, con il perché e cosa le sostituisce. N
 - ~~Mapbox GL 2.15 con stile Mapbox Studio, token nel codice e in `.env.local`; tessere Mapbox come unica eccezione all'autosufficienza~~ → MapLibre + PMTiles locali, nessun token né eccezione. I token Mapbox vanno eliminati (quello di sviluppo è finito in chat).
 - ~~Dati di Lucca, costa, San Benedetto, Pagliare~~ → regola "solo Comune di Ascoli Piceno".
 - ~~Edifici scaricati al volo dal WFS del TUM~~ → vietato dagli autori e contrario all'autosufficienza; estrazione una tantum.
+- ~~Agire sulla mappa solo se `map.isStyleLoaded()`, altrimenti rimandare a `map.once('idle')`~~ → col brulichio dei puntini la mappa non è mai "ferma": LCZ, UHI e interruttori 3D smettevano di funzionare. Ora `isMapReady()` / `whenMapReady()` (dopo `load`).
 - ~~Etichette e icone della mappa di base; flavor Protomaps "light" con edifici colorati per altezza; edifici 3D di OpenStreetMap~~ → mappa muta in stile Toner con edifici bianchi del TUM (OSM: altezze spesso mancanti).
 - ~~Pannello **Advanced** di finetuning.ai; seed 2024; tag Mood/Energy~~ → Advanced suona "a un solo strumento": si resta su **Instrumental**, seed 2025 (rifacimenti 2026/2027), solo testo aggiunto al prompt.
 - ~~Meteo della "settimana simulata 3–9 giugno 2024"~~ → i dati reali coprono 246 giorni: si usa tutto il periodo 2024-06-01 → 2025-02-01.

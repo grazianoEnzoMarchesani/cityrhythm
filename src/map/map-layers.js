@@ -1,7 +1,7 @@
 import * as turf from '@turf/turf';
 import { Popup } from 'maplibre-gl';
 // src/map/map-layers.js
-import { getMapInstance } from './map-setup.js';
+import { getMapInstance, isMapReady, whenMapReady } from './map-setup.js';
 import {
     KML_SOURCE_ID, KML_LAYER_ID,
     PRESENCE_POINTS_SOURCE_ID, PRESENCE_POINTS_LAYER_ID,
@@ -175,8 +175,8 @@ export function setLayerVisibility(layerId, isVisible) {
         }
     };
 
-    if (!map.isStyleLoaded()) {
-        map.once('idle', applyVisibility);
+    if (!isMapReady()) {
+        whenMapReady(applyVisibility);
     } else {
         applyVisibility();
     }
@@ -190,9 +190,9 @@ export function setLayerVisibility(layerId, isVisible) {
 export function addKmlLayer(geoJson, initialVisibility = true) {
     const map = getMapInstance();
     // Attendi che la mappa e lo stile siano pronti
-    if (!map || !map.isStyleLoaded()) {
+    if (!map || !isMapReady()) {
         // console.log("addKmlLayer: Map or style not ready, deferring.");
-        map.once('idle', () => addKmlLayer(geoJson, initialVisibility));
+        whenMapReady(() => addKmlLayer(geoJson, initialVisibility));
         return;
     }
 
@@ -333,7 +333,7 @@ export function addKmlLayer(geoJson, initialVisibility = true) {
         // Funzione globale per aggiornare lo stato hover
         window.updateKmlHoverState = function(featureId, isHovered) {
              const currentMap = getMapInstance(); // Prendi l'istanza corrente
-             if (!currentMap || !currentMap.isStyleLoaded() || !currentMap.getSource(KML_SOURCE_ID)) return;
+             if (!currentMap || !isMapReady() || !currentMap.getSource(KML_SOURCE_ID)) return;
              try {
                  currentMap.setFeatureState(
                      { source: KML_SOURCE_ID, id: featureId },
@@ -365,8 +365,8 @@ export function removePresencePointsLayer() {
 
 export function addOrUpdatePresencePointsLayer(pointsGeoJson, initialVisibility = true) {
     const map = getMapInstance();
-    if (!map || !map.isStyleLoaded()) {
-        map.once('idle', () => addOrUpdatePresencePointsLayer(pointsGeoJson, initialVisibility));
+    if (!map || !isMapReady()) {
+        whenMapReady(() => addOrUpdatePresencePointsLayer(pointsGeoJson, initialVisibility));
         return;
     }
 
@@ -503,8 +503,8 @@ function convertAndStoreCrowdedGeoJson(crowdedData) {
 export function addCrowdedPointsLayer(initialVisibility = true) {
     if (!DEBUG_MODE) return; // Non caricare layer in modalità non-debug
     const map = getMapInstance();
-    if (!map || !map.isStyleLoaded()) {
-        map.once('idle', () => addCrowdedPointsLayer(initialVisibility));
+    if (!map || !isMapReady()) {
+        whenMapReady(() => addCrowdedPointsLayer(initialVisibility));
         return;
     }
     if (!fullCrowdedGeoJson) {
@@ -547,7 +547,7 @@ export function addCrowdedPointsLayer(initialVisibility = true) {
 export function updateCrowdedPointsLayerStyle(timelineHourIndex, currentCrowdednessMap) {
     if (!DEBUG_MODE) return; // Non aggiornare layer in modalità non-debug
     const map = getMapInstance();
-    if (!map || !map.isStyleLoaded() || !fullCrowdedGeoJson?.features?.length || !currentCrowdednessMap) {
+    if (!map || !isMapReady() || !fullCrowdedGeoJson?.features?.length || !currentCrowdednessMap) {
         return;
     }
     const source = map.getSource(CROWDED_SOURCE_ID);
@@ -1113,7 +1113,7 @@ function publishPresence(index, features, areas) {
 function animatePresencePoints(timelineHourIndex, fullKml) {
     if (!currentPresencePoints) return;
     const map = getMapInstance();
-    if (!map || !map.isStyleLoaded()) return;
+    if (!map || !isMapReady()) return;
     const noiseTime = performance.now() * 0.00005; // più lento e fluido
     const NOISE_AMPLITUDE = 0.0003; // movimento più percepibile
     const features = currentPresencePoints.features.map(point => {
@@ -1303,8 +1303,8 @@ export function removeSyntheticCrowdedPointsLayer() {
 
 export function addSyntheticCrowdedPointsLayer(timelineHourIndex, initialVisibility = true) {
     const map = getMapInstance();
-    if (!map || !map.isStyleLoaded()) {
-        map.once('idle', () => addSyntheticCrowdedPointsLayer(timelineHourIndex, initialVisibility));
+    if (!map || !isMapReady()) {
+        whenMapReady(() => addSyntheticCrowdedPointsLayer(timelineHourIndex, initialVisibility));
         return;
     }
     const spotsData = getSpotMapperData();
@@ -1414,8 +1414,8 @@ export function removeSpotsLayer() {
 
 export function addSpotsLayer(initialVisibility = true) {
     const map = getMapInstance();
-    if (!map || !map.isStyleLoaded()) {
-        map.once('idle', () => addSpotsLayer(initialVisibility));
+    if (!map || !isMapReady()) {
+        whenMapReady(() => addSpotsLayer(initialVisibility));
         return;
     }
     if (!fullSpotsGeoJson) {
@@ -1527,8 +1527,8 @@ export function removeLczVitalityLayer() {
  */
 export function addLczVitalityLayer(initialVisibility = true, visualizationType = 'LCZ') {
     const map = getMapInstance();
-    if (!map || !map.isStyleLoaded()) {
-        map.once('idle', () => addLczVitalityLayer(initialVisibility, visualizationType));
+    if (!map || !isMapReady()) {
+        whenMapReady(() => addLczVitalityLayer(initialVisibility, visualizationType));
         return;
     }
 
@@ -1809,7 +1809,7 @@ cellMap.subscribe(applyCellMap);
  */
 export function updateLczVitalityVisualization(visualizationType) {
     const map = getMapInstance();
-    if (!map || !map.isStyleLoaded() || !map.getLayer(LCZ_VITALITY_LAYER_ID)) {
+    if (!map || !isMapReady() || !map.getLayer(LCZ_VITALITY_LAYER_ID)) {
         return;
     }
 
@@ -1850,7 +1850,7 @@ export function getCurrentLczVisualizationType() {
  */
 export function setLczLayerOpacity(opacity) {
     const map = getMapInstance();
-    if (!map || !map.isStyleLoaded() || !map.getLayer(LCZ_VITALITY_LAYER_ID)) {
+    if (!map || !isMapReady() || !map.getLayer(LCZ_VITALITY_LAYER_ID)) {
         return;
     }
 
@@ -1893,7 +1893,7 @@ export function updateUhiDynamicVisualization() {
     console.log('🎯 updateUhiDynamicVisualization called');
     
     const map = getMapInstance();
-    if (!map || !map.isStyleLoaded() || !map.getLayer(LCZ_VITALITY_LAYER_ID)) {
+    if (!map || !isMapReady() || !map.getLayer(LCZ_VITALITY_LAYER_ID)) {
         console.log('❌ Map, style, or LCZ layer not ready');
         return;
     }

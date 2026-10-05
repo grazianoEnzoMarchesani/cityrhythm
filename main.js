@@ -227,7 +227,7 @@ async function startApp() {
                                 updateAllPresencePoints(initialHour, initialCrowdednessMap, presenceVisible);
                                 
                                 if (boundsHaveData) {
-                                    map.once('idle', () => fitMapToBounds(map, fullKmlGeoJson));
+                                    fitMapToBounds(map, fullKmlGeoJson);
                                 }
                                 
                                 updateStatusMessage("Map ready.");
@@ -235,7 +235,7 @@ async function startApp() {
                         }, 700);
                     } else {
                         if (boundsHaveData) {
-                            map.once('idle', () => fitMapToBounds(map, fullKmlGeoJson));
+                            fitMapToBounds(map, fullKmlGeoJson);
                         }
                         updateStatusMessage("Map ready.");
                     }

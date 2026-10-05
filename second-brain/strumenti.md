@@ -26,3 +26,4 @@
   ```
   Poi http://localhost:8765. I file vanno caricati uno alla volta (il server di Python si inceppa con molte richieste parallele).
 - **Piattaforma**: `npm install && npm run dev` dalla radice. Nessun token né `.env.local`.
+- **Prove nel browser (agente)**: Chrome for Testing già presente in `~/.cache/puppeteer/chrome/mac_arm-*/`; `npm install puppeteer-core` in una cartella temporanea (non nel progetto), avvio con `--use-angle=swiftshader --enable-unsafe-swiftshader` (WebGL senza GPU), `npx vite --port 5179` dalla radice. Per raggiungere la mappa dalla pagina: `import()` dello **stesso URL** di `map-setup.js` letto da `performance.getEntriesByType('resource')` (dopo un ricaricamento a caldo ha `?t=…`; un URL diverso crea un secondo modulo senza mappa), poi `getMapInstance()`. Servono ~15 s dopo il caricamento.

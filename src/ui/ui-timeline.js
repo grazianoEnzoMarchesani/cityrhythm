@@ -10,7 +10,6 @@ import {
 import { refreshKmlChartsForTimeline } from './ui-sidebar.js';
 import { getCrowdedData } from '../data/data-loader.js';
 import { getLayerToggleState } from './ui-layer-controls.js';
-import { getMapInstance } from '../map/map-setup.js';
 import { DEBUG_MODE, PRESENCE_MOVE_MS } from '../data/config.js';
 import { time } from '../state/store.js';
 
@@ -84,7 +83,6 @@ function updateDirectionButton() {
 function updateAppStateForHour(hourIndex) {
     time.set({ index: hourIndex, date: window._timelineMap?.[hourIndex]?.date ?? null });
     return new Promise((resolve) => {
-        const map = getMapInstance();
         const crowdedData = getCrowdedData();
         const columnName = getTimelineCrowdednessColumn(hourIndex);
         const currentCrowdednessMap = new Map();
@@ -109,16 +107,8 @@ function updateAppStateForHour(hourIndex) {
             removeSyntheticCrowdedPointsLayer();
         }
         refreshKmlChartsForTimeline(hourIndex);
-        if (map) {
-            map.once('idle', () => {
-                resolve();
-            });
-            setTimeout(() => {
-                resolve();
-            }, 100);
-        } else {
-            resolve();
-        }
+        // Niente attesa di 'idle': col brulichio dei puntini non arriva mai e gli ascoltatori si accumulano
+        setTimeout(resolve, 100);
     });
 }
 
