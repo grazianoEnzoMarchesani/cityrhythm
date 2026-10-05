@@ -10,12 +10,17 @@ import {
     SYNTHETIC_CROWDED_SOURCE_ID, SYNTHETIC_CROWDED_LAYER_ID, // Assicurati sia definito in config.js
     LCZ_VITALITY_SOURCE_ID, LCZ_VITALITY_LAYER_ID,
     ATTRACTION_MIN_CROWDEDNESS,
-    MAP_DATA_BASE, NIGHT_HOME_SHARE, NIGHT_GO_HOME_HOURS, NIGHT_WAKE_UP_HOURS, PRESENCE_MOVE_MS, PRESENCE_EXIT_METERS,
+    MAP_DATA_BASE, HOME_SHARE_URL, PRESENCE_HOME_OPACITY, PRESENCE_MOVE_MS, PRESENCE_EXIT_METERS,
     PRESENCE_STAGGER, PRESENCE_BEND_MAX_M, PRESENCE_WIGGLE_PX, PRESENCE_WIGGLE_MIN_M, PRESENCE_WIGGLE_MAX_M,
     MAP_STYLES, LCZ_DATA_VIEWS, UTCI_BANDS, UTCI_RAMP, SOUND_STATE_COLORS,
     DEBUG_MODE // <-- aggiunto
 } from '../data/config.js';
-import { calculateAveragePresenceForFeature, generatePointsForFeature, perlin2d, hash01, getWeekIndex } from '../utils/utils.js';
+
+// Chi è in casa si disegna attenuato: homeT va da 0 (fuori) a 1 (dentro un edificio)
+const HOME_T = ['coalesce', ['get', 'homeT'], ['case', ['==', ['get', 'atHome'], true], 1, 0]];
+const HOME_DIM = ['-', 1, ['*', 1 - PRESENCE_HOME_OPACITY, HOME_T]];
+import { calculateAveragePresenceForFeature, generatePointsForFeature, perlin2d, hash01, getWeekIndex, getDateTimeFromIndex } from '../utils/utils.js';
+import { residentsSeenAtNight, homeShareFor } from './home-share.js';
 import { applyPresenceColors, getPreviousPersonColor } from './presence-colors.js';
 import { getFullKmlGeoJson, getPoiData, getCrowdedData, getSpotMapperData, getLczVitalityData } from '../data/data-loader.js';
 import { addMapInteraction } from './map-interaction.js';
@@ -397,10 +402,10 @@ export function addOrUpdatePresencePointsLayer(pointsGeoJson, initialVisibility 
                 paint: {
                     'circle-radius': MAP_STYLES.PRESENCE_POINTS_COLOR.CIRCLE_RADIUS,
                     'circle-color': MAP_STYLES.PRESENCE_POINTS_COLOR.CIRCLE_COLOR,
-                    'circle-opacity': ['*', MAP_STYLES.PRESENCE_POINTS_COLOR.CIRCLE_OPACITY, ['coalesce', ['get', 'fade'], 1]],
+                    'circle-opacity': ['*', MAP_STYLES.PRESENCE_POINTS_COLOR.CIRCLE_OPACITY, ['coalesce', ['get', 'fade'], 1], HOME_DIM],
                     'circle-stroke-width': MAP_STYLES.PRESENCE_POINTS_COLOR.CIRCLE_STROKE_WIDTH,
                     'circle-stroke-color': MAP_STYLES.PRESENCE_POINTS_COLOR.CIRCLE_STROKE_COLOR,
-                    'circle-stroke-opacity': ['*', MAP_STYLES.PRESENCE_POINTS_COLOR.CIRCLE_STROKE_OPACITY, ['coalesce', ['get', 'fade'], 1]],
+                    'circle-stroke-opacity': ['*', MAP_STYLES.PRESENCE_POINTS_COLOR.CIRCLE_STROKE_OPACITY, ['coalesce', ['get', 'fade'], 1], HOME_DIM],
                     'circle-pitch-alignment': 'viewport',
                     'circle-pitch-scale': 'map'
                 }
@@ -415,10 +420,10 @@ export function addOrUpdatePresencePointsLayer(pointsGeoJson, initialVisibility 
                 paint: {
                     'circle-radius': MAP_STYLES.PRESENCE_POINTS_ZOOM.CIRCLE_RADIUS,
                     'circle-color': MAP_STYLES.PRESENCE_POINTS_ZOOM.CIRCLE_COLOR,
-                    'circle-opacity': ['*', MAP_STYLES.PRESENCE_POINTS_ZOOM.CIRCLE_OPACITY, ['coalesce', ['get', 'fade'], 1]],
+                    'circle-opacity': ['*', MAP_STYLES.PRESENCE_POINTS_ZOOM.CIRCLE_OPACITY, ['coalesce', ['get', 'fade'], 1], HOME_DIM],
                     'circle-stroke-width': MAP_STYLES.PRESENCE_POINTS_ZOOM.CIRCLE_STROKE_WIDTH,
                     'circle-stroke-color': MAP_STYLES.PRESENCE_POINTS_ZOOM.CIRCLE_STROKE_COLOR,
-                    'circle-stroke-opacity': ['*', MAP_STYLES.PRESENCE_POINTS_ZOOM.CIRCLE_STROKE_OPACITY, ['coalesce', ['get', 'fade'], 1]],
+                    'circle-stroke-opacity': ['*', MAP_STYLES.PRESENCE_POINTS_ZOOM.CIRCLE_STROKE_OPACITY, ['coalesce', ['get', 'fade'], 1], HOME_DIM],
                     'circle-pitch-alignment': 'viewport',
                     'circle-pitch-scale': 'map'
                 }
@@ -581,36 +586,41 @@ export function updateCrowdedPointsLayerStyle(timelineHourIndex, currentCrowdedn
     }
 }
 
-// --- NOTTE: LE PERSONE TORNANO A CASA ---
-let homeBuildings = null;      // [{ c: [lon, lat], v: volume m³ }] degli edifici TUM, caricati alla prima notte
+// --- GENTE IN CASA ---
+let homeBuildings = null;      // [{ c: [lon, lat], v: residenti Meta }] degli edifici TUM
+let homeCurve = null;          // quota in casa [giorno 0 = domenica][ora], da HOME_SHARE_URL
 let homesLoading = null;
-const homesByFeature = new Map(); // id quartiere → { coords, cum } (volumi cumulati per la scelta pesata)
+const homesByFeature = new Map(); // id quartiere → { coords, cum } (residenti cumulati per la scelta pesata)
+const residentsByFeature = new Map(); // id quartiere → residenti visti dai dati di notte
 let lastPresenceArgs = null;
 
-// Quota di persone a casa a un'ora del giorno (0–23): rampa la sera, piena di notte, rampa al mattino.
-function getHomeShare(hour) {
-    const [goStart, goEnd] = NIGHT_GO_HOME_HOURS;
-    const [wakeStart, wakeEnd] = NIGHT_WAKE_UP_HOURS;
-    const h = hour < wakeEnd ? hour + 24 : hour; // la notte come un unico tratto continuo
-    if (h <= goStart || h >= wakeEnd + 24) return 0;
-    if (h < goEnd) return NIGHT_HOME_SHARE * (h - goStart) / (goEnd - goStart);
-    if (h <= wakeStart + 24) return NIGHT_HOME_SHARE;
-    return NIGHT_HOME_SHARE * (wakeEnd + 24 - h) / (wakeEnd - wakeStart);
+// Residenti del quartiere come li vedono i dati (presenze notturne di tutti i giorni, vedi home-share.js)
+function getResidentsSeen(kmlFeature) {
+    if (!homeCurve) return 0;
+    if (residentsByFeature.has(kmlFeature.id)) return residentsByFeature.get(kmlFeature.id);
+    const records = getPoiData()?.[kmlFeature.properties.poi_name?.trim().toLowerCase()] || [];
+    const n = residentsSeenAtNight(records, homeCurve, r => r.parsedDate instanceof Date ? r.parsedDate.getUTCDay() : -1);
+    residentsByFeature.set(kmlFeature.id, n);
+    return n;
 }
 
 function ensureHomesLoaded() {
     if (homesLoading) return;
-    homesLoading = fetch(MAP_DATA_BASE + 'gba_ascoli.geojson')
-        .then(r => r.json())
-        .then(gj => {
+    homesLoading = Promise.all([
+        fetch(HOME_SHARE_URL).then(r => r.json()).then(j => { homeCurve = j.quota_in_casa; }),
+        fetch(MAP_DATA_BASE + 'gba_ascoli.geojson').then(r => r.json())
+    ])
+        .then(([, gj]) => {
+            // Peso = residenti stimati da Meta (campo res, sound-lab/residenti_meta.py): capannoni, chiese
+            // e scuole valgono 0. Senza il campo si ripiega sul volume (area × altezza).
             homeBuildings = gj.features.map(f => ({
                 c: turf.centroid(f).geometry.coordinates,
-                v: turf.area(f) * (f.properties.height > 0 ? f.properties.height : 3)
+                v: f.properties.res ?? turf.area(f) * (f.properties.height > 0 ? f.properties.height : 3)
             }));
             // I punti dell'ora corrente sono stati disegnati senza case: ridisegnali
             if (lastPresenceArgs) updateAllPresencePoints(...lastPresenceArgs);
         })
-        .catch(e => console.error('Edifici per la notte non caricati:', e));
+        .catch(e => console.error('Case o quota in casa non caricate:', e));
 }
 
 function getHomesForFeature(kmlFeature) {
@@ -623,7 +633,7 @@ function getHomesForFeature(kmlFeature) {
     homeBuildings.forEach(b => {
         const [lon, lat] = b.c;
         if (lon < minLon || lon > maxLon || lat < minLat || lat > maxLat) return;
-        if (!turf.booleanPointInPolygon(b.c, kmlFeature.geometry)) return;
+        if (!(b.v > 0) || !turf.booleanPointInPolygon(b.c, kmlFeature.geometry)) return;
         total += b.v;
         coords.push(b.c);
         cum.push(total);
@@ -654,7 +664,7 @@ function getStreetCellsForFeature(kmlFeature) {
     return result;
 }
 
-// Casa della persona: edificio scelto in proporzione al volume, più qualche metro a caso per non sovrapporre i puntini.
+// Casa della persona: edificio scelto in proporzione ai residenti, più qualche metro a caso per non sovrapporre i puntini.
 function homePosition(homes, key) {
     const r = hash01(key + ':casa') * homes.total;
     let lo = 0, hi = homes.cum.length - 1;
@@ -744,6 +754,7 @@ function transferBetweenAreas(areas) {
 
 // --- SPOSTAMENTO ANIMATO DEI PUNTINI FRA UN'ORA E L'ALTRA ---
 let displayedPositions = new Map(); // personKey → posizione disegnata adesso
+let displayedHome = new Map();      // personKey → quanto è "in casa" adesso (0 fuori, 1 dentro)
 let presenceMoveFrame = null;
 let presenceMoveMs = PRESENCE_MOVE_MS;
 
@@ -818,7 +829,7 @@ function walkPosition(a, b, p, t) {
 
 // Il movimento continuo: un solo ciclo disegna sia gli spostamenti fra un'ora e l'altra
 // sia il brulichio "a formichine" di chi sta fermo. Chi è a casa resta immobile.
-let presenceAnim = null; // { target, starts, arrivals, leaving, visible, t0 }
+let presenceAnim = null; // { target, starts, arrivals, leaving, homeFrom, t0 }
 let presenceLastDraw = 0;
 
 function presenceLayerShown(map) {
@@ -847,18 +858,25 @@ function drawPresenceFrame(now) {
             const [wx, wy] = antWiggle(getAntParams(key), s, amp);
             return [base[0] + wx / kx, base[1] + wy / 111320];
         };
-        if (!moving) displayedPositions = new Map();
+        if (!moving) { displayedPositions = new Map(); displayedHome = new Map(); }
         const features = anim.target.features.map((f, i) => {
             const key = f.properties.personKey;
             const end = f.geometry.coordinates;
             let base = end;
             let properties = f.properties;
+            let homeT = f.properties.atHome ? 1 : 0;
             if (moving) {
                 const w = walkPosition(anim.starts[i] ?? end, end, getAntParams(key), t);
                 base = w.coords;
                 if (anim.arrivals.has(key)) properties = { ...properties, fade: Math.min(1, 2 * w.e) };
+                // Si attenua solo arrivando all'edificio (ultimo 20% del tragitto), si riaccende appena esce
+                const from = anim.homeFrom.get(key) ?? 0;
+                const k = homeT > from ? Math.max(0, (w.e - 0.8) / 0.2) : Math.min(1, w.e / 0.2);
+                homeT = from + (homeT - from) * k;
+                properties = { ...properties, homeT };
             }
             displayedPositions.set(key, base);
+            displayedHome.set(key, homeT);
             return { ...f, properties, geometry: { type: 'Point', coordinates: place(base, key, f.properties.atHome) } };
         });
         if (moving) {
@@ -867,7 +885,7 @@ function drawPresenceFrame(now) {
                 displayedPositions.set(l.key, w.coords);
                 features.push({
                     type: 'Feature',
-                    properties: { personKey: l.key, fade: Math.min(1, 2 * (1 - w.e)), ...(l.color && { color: l.color }) },
+                    properties: { personKey: l.key, fade: Math.min(1, 2 * (1 - w.e)), homeT: 0, ...(l.color && { color: l.color }) },
                     geometry: { type: 'Point', coordinates: place(w.coords, l.key, false) }
                 });
             });
@@ -895,8 +913,13 @@ function movePresencePointsTo(target, visible, arrivals = new Set(), leavers = [
         .map(key => ({ key, from: displayedPositions.get(key) }))
         .filter(l => l.from)
         .map(l => ({ ...l, to: outsideCity(l.from, l.key), color: getPreviousPersonColor(l.key) })) : [];
+    const homeFrom = displayedHome;
     displayedPositions = new Map();
-    target?.features.forEach(f => displayedPositions.set(f.properties.personKey, f.geometry.coordinates));
+    displayedHome = new Map();
+    target?.features.forEach(f => {
+        displayedPositions.set(f.properties.personKey, f.geometry.coordinates);
+        displayedHome.set(f.properties.personKey, f.properties.atHome ? 1 : 0);
+    });
     if (!animate || reduceMotion || !target?.features.length) {
         // Salto senza animazione (o primo disegno): crea il livello se serve
         addOrUpdatePresencePointsLayer(target, visible);
@@ -904,7 +927,7 @@ function movePresencePointsTo(target, visible, arrivals = new Set(), leavers = [
     } else {
         setLayerVisibility(PRESENCE_POINTS_LAYER_ID, visible);
     }
-    presenceAnim = { target, starts, arrivals, leaving, t0: animate ? performance.now() : -Infinity };
+    presenceAnim = { target, starts, arrivals, leaving, homeFrom, t0: animate ? performance.now() : -Infinity };
     presenceMoveFrame = requestAnimationFrame(drawPresenceFrame);
 }
 
@@ -926,7 +949,7 @@ export function updateAllPresencePoints(timelineHourIndex, currentCrowdednessMap
     let allFinalPointsFeatures = [];
     const areas = [];
     const JITTER_METERS = 10;
-    const homeShare = getHomeShare(timelineHourIndex % 24);
+    const { jsDayOfWeek, hour } = getDateTimeFromIndex(timelineHourIndex);
     lastPresenceArgs = [timelineHourIndex, currentCrowdednessMap, initialVisibility];
     ensureHomesLoaded();
     const presenceArrivals = new Set(); // chi arriva in città: entra dall'esterno e compare piano
@@ -942,7 +965,7 @@ export function updateAllPresencePoints(timelineHourIndex, currentCrowdednessMap
         // 2. se un quartiere nel complesso si svuota e un altro si riempie, chi avanza nel primo
         //    cammina verso l'attrattore più vicino che cresce nel secondo;
         // 3. solo il resto arriva da fuori città o se ne va fuori città (con dissolvenza).
-        // Di notte una quota va a casa (stessa casa ogni notte, nel quartiere dove si trova).
+        // Una quota va a casa secondo ora e giorno (home-share.js), sempre nella stessa casa del quartiere dove si trova.
         fullKml.features.forEach(kmlFeature => {
             if (!kmlFeature?.properties?.poi_data_available) return;
             const { averagePresence } = calculateAveragePresenceForFeature(kmlFeature, poiData, timelineHourIndex);
@@ -965,12 +988,13 @@ export function updateAllPresencePoints(timelineHourIndex, currentCrowdednessMap
             areas.push({
                 kmlFeature, state, movers, needs, averagePresence,
                 homes: getHomesForFeature(kmlFeature),
+                homeShare: homeShareFor(getResidentsSeen(kmlFeature), homeCurve, jsDayOfWeek, hour, averagePresence),
                 nRandom: synthInArea.length ? Math.round(averagePresence * 0.1) : 0
             });
         });
         transferBetweenAreas(areas);
 
-        areas.forEach(({ kmlFeature, state, movers, needs, homes, nRandom }) => {
+        areas.forEach(({ kmlFeature, state, movers, needs, homes, homeShare, nRandom }) => {
             const homeOf = (key) => homes ? homePosition(homes, key) : null;
             // Chi avanza ancora lascia la città, i posti ancora scoperti si riempiono con chi arriva da fuori
             movers.forEach(({ key }) => {

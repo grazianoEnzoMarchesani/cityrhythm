@@ -10,6 +10,7 @@ export const LCZ_GEOJSON_URL = DATA_BASE + 'lcz_ascoli.geojson';
 // Bussola emotiva: parametri (scritti anche da sound-lab/compass.py) e meteo orario Open-Meteo
 export const BUSSOLA_URL = DATA_BASE + 'bussola.json';
 export const METEO_URL = DATA_BASE + 'meteo_ascoli.json';
+export const HOME_SHARE_URL = DATA_BASE + 'quota_in_casa.json'; // quota in casa per giorno e ora (ISTAT via IPUMS MTUS)
 // Brani, suoni urbani e mix della mappa sonora (preparati in sound-lab/)
 export const AUDIO_BASE = import.meta.env.BASE_URL + 'audio/';
 
@@ -47,11 +48,11 @@ export const GRAVITATIONAL_DECAY = 2.5;
 // Percentuale di presence point statici (non attratti dagli attractor)
 export const PRESENCE_STATIC_POINTS_RATIO = 0.1;
 
-// Notte: quota di persone che tornano a casa, cioè su un edificio TUM del proprio quartiere
-// scelto in proporzione al volume (area × altezza: più piani, più famiglie). Gli altri restano ai locali.
-export const NIGHT_HOME_SHARE = 0.95;
-export const NIGHT_GO_HOME_HOURS = [22, 24]; // la quota sale da 0 a NIGHT_HOME_SHARE
-export const NIGHT_WAKE_UP_HOURS = [6, 8];   // e riscende a 0
+// Gente in casa: quanti dipende dall'ora e dal giorno (regola in src/map/home-share.js, curva ISTAT in
+// HOME_SHARE_URL); la casa è un edificio TUM del proprio quartiere scelto in proporzione ai residenti
+// stimati da Meta (campo res, sound-lab/residenti_meta.py).
+// Opacità relativa dei puntini di chi è in casa (1 = come gli altri): "dentro un edificio"
+export const PRESENCE_HOME_OPACITY = 0.5;
 // Durata dello spostamento dei puntini quando cambia l'ora (0 = salto senza animazione)
 export const PRESENCE_MOVE_MS = 1000;
 // Chi arriva in città o la lascia entra/esce da questo punto, oltre la sua posizione in direzione opposta al centro
@@ -365,11 +366,13 @@ export const MAP_STYLES = {
       16, 6,
       18, 8
     ],
+    // Da vicino chi è fuori diventa bianco, chi è in casa resta nero (homeT: 0 fuori → 1 in casa)
     CIRCLE_COLOR: [
       'interpolate', ['linear'], ['zoom'],
       14, 'rgb(0, 0, 0)',
-      15, 'rgb(255, 255, 255)',
-
+      15, ['interpolate', ['linear'], ['coalesce', ['get', 'homeT'], ['case', ['==', ['get', 'atHome'], true], 1, 0]],
+        0, 'rgb(255, 255, 255)',
+        1, 'rgb(0, 0, 0)']
     ],
     CIRCLE_OPACITY: 1,
     CIRCLE_STROKE_WIDTH: 1,

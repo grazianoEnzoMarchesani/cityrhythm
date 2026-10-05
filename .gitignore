@@ -14,3 +14,9 @@ dist/
 
 # progetto QGIS delle LCZ (2,7 GB): fonte per sound-lab/estrai_lcz.py, mai su GitHub
 Lcz_neurali 2/
+
+# microdati ISTAT (licenza ISTAT): solo in locale, mai su GitHub
+UsoTempo_*/
+# IPUMS MTUS (licenza: vietato ridistribuire i microdati): solo in locale, mai su GitHub
+IPUMS_MTUS/
+IPUMS/
