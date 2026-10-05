@@ -1,6 +1,6 @@
 # CityRhythm — Second Brain
 
-> Memoria condivisa del progetto. **Ogni agente la legge prima di iniziare.** Si aggiorna a fine sessione col comando `/second-brain` (vedi `.claude/skills/second-brain/SKILL.md`). Sintetico: decisioni e stato, non cronaca.
+> Memoria condivisa del progetto. **Ogni agente legge questo indice prima di iniziare**, poi i file di argomento che servono al lavoro (elenco nella sezione 4). Si aggiorna a fine sessione col comando `/second-brain` (vedi `.claude/skills/second-brain/SKILL.md`). Sintetico: decisioni e stato, non cronaca.
 
 Ultimo aggiornamento: 2026-10-05 (tredicesima sessione)
 
@@ -31,149 +31,26 @@ Timeline: con un intervallo **< 7 giorni** mostra i giorni reali (`window._timel
 ## 2. Obiettivo in corso — branch `Music`
 Aggiungere una **dimensione sonora** attivabile ("mappa sonora"). Scopo **divulgativo**: la musica deve trasmettere **emozioni** che le immagini da sole non danno. Densità e calore sono già visibili, quindi niente sonificazione "pitch che segue il dato".
 
-## 3. Decisioni valide
-| Tema | Decisione |
+## 3. Regole permanenti
+- **Solo il Comune di Ascoli Piceno** (confine OSM, relazione 42176, in `sound-lab/data/comune_ascoli.geojson`). Dati di Lucca, San Benedetto, Pagliare ecc. **cancellati**; non scaricare né aggiungere mai dati fuori dal Comune.
+- **Niente "numeri a caso"**: ogni parametro viene da dati o da letteratura con la fonte dichiarata; se una fonte non c'è, si dice e si sceglie con l'utente.
+- **Autosufficienza**: il sito fornisce tutto da sé (librerie, dati, tessere), nessun token né servizio esterno.
+- **Intercambiabilità**: UI e grafici sostituibili; bussola e audio parlano solo tramite lo store.
+- **Microdati con licenza mai su GitHub** (`IPUMS/`, `UsoTempo_*/`, `Lcz_neurali 2/` in `.gitignore`); nel sito solo aggregati, con le citazioni (dettagli in `persone.md`).
+- L'utente non ha competenze musicali: scelte sonore spiegate con analogie, **mix sempre calcolati**.
+
+## 4. Dove trovare cosa
+| File | Contenuto |
 |---|---|
-| Strategia | **S2 – musica adattiva pre-generata**: un brano principale alla volta, dissolvenza verso lo stato d'animo corrente, più un **livello di suoni urbani** sovrapposto. |
-| Ambito geografico | **Regola permanente: solo il Comune di Ascoli Piceno** (confine OSM, relazione 42176, in `sound-lab/data/comune_ascoli.geojson`). Dati di Lucca, San Benedetto, Pagliare ecc. **cancellati**; non scaricare né aggiungere mai dati fuori dal Comune. |
-| Ambito audio | **Solo Ascoli**, **tutti i 246 giorni** (2024-06-01 → 2025-02-01), dal caldo al freddo. Niente "settimana tipo" per il meteo. |
-| Modello emotivo | **Bussola** (circomplesso di Russell) **per cella**: conta la cella LCZ **al centro della mappa** (mirino + contorno nero). **Niente medie per quartiere** ("si omogeneizza tutto troppo"). Parametri in **`public/data/bussola.json`**, letto sia da `sound-lab/compass.py`+`clima.py` (riferimento) sia da `src/compass/`. |
-| Energia (X) | **Persone fuori casa entro 50 m dalla cella**, contate dai **puntini della mappa** (store `presence`; ogni puntino pesa persone vere del quartiere ÷ puntini del quartiere; chi è in casa non conta). Idea dell'utente: "le persone le abbiamo distribuite noi". Scala log tarata da `taratura_energia.mjs` (10°/90° percentile delle ore di luce, celle nei quartieri, stessa regola della gente in casa): 156 e 13.623 persone/km² (`energia_cella` in `bussola.json`: raggio 50 m, `log_lo` 2,19, `log_hi` 4,13; prima 1,79 e 4,16). Il riferimento Python resta per quartiere. |
-| Piacevolezza (Y) | `0.75 × comfort + 0.25 × verde − 0.3 se piove (> 0,5 mm)`, valori della cella. **Verde come "bellezza"** (superficie permeabile) tenuto per scelta espressiva dell'utente, **non fisica**. Comfort dall'**UTCI** della cella: +1 senza stress (9–26 °C), −1 dove inizia lo **stress forte** (**32 °C** caldo, **−13 °C** freddo), lineare in mezzo. |
-| Clima per cella (**UTCI**) | Richiesto dall'utente: niente "numeri a caso". Catena con basi pubblicate (`sound-lab/clima.py`, fonti anche in `bussola.json` → `fonti`): **1. aria** = Open-Meteo + isola di calore **solo di notte e solo celle costruite (LCZ 1–10)**: `15,27 − 13,88·SVF` (Oke 1981) con tetto `2,01·log10(46.000) − 4,06 ≈ 5,3 °C` (Oke 1973, città europee), × `min(1, U^−½)` (vento, Oke) × rapporto perdita infrarossa reale/sereno (nuvole). **2. Tmrt** di persona in piedi (RayMan/VDI 3787: ak 0,7, εp 0,97, Fi 0,06/0,22, fp di Jendritzky): sole diretto (DNI) × quota di strada al sole (canyon con H/W ricavato dallo SVF, mediato sulle orientazioni), diffuso × SVF, riflesso dal suolo con l'**albedo** della cella, infrarosso del cielo (Brutsaert; nuvole Crawford & Duchon), suolo e muri alla temperatura dell'aria. **3. vento** a 10 m riportato alla rugosità **z0** della cella (altezza di miscelamento 60 m, Wieringa/WMO). **4. UTCI** col polinomio ufficiale Bröde 2012 (211 termini estratti da pythermalcomfort). Nel pannello: "UTCI ≈ 35 °C · stress da caldo forte (stima)". |
-| Limiti dichiarati del clima | Meteo unico per tutta la città; isola di calore da formule di letteratura, non tarata su misure di Ascoli; ombra stimata dallo SVF, non edificio per edificio; suolo e muri alla temperatura dell'aria (la pietra rovente al sole non è contata → stress in pieno sole sottostimato); un bosco è trattato come una strada stretta (SVF ~0,41 → 39% di sole diretto sulla persona, in realtà molto meno). È una **stima per confrontare celle**, non un termometro. |
-| Soglie | ±1/3 su entrambi gli assi → 9 stati. |
-| 9 stati (Y↓, X→) | Sereno: **Rifugio · Passeggiata · Festa** / Neutro: **Attesa · Routine · Corrente** / Opprimente: **Afa · Fatica · Calca** |
-| Notte | Brano **Notte** + grilli solo se il sole è sotto −6° **e** c'è poca gente (X < −1/3). Le sere affollate restano Festa/Corrente/Calca. |
-| Esito della formula (UTCI) | *(Calcolato con l'energia per quartiere di `compass.py`.)* Estate: **a mezzogiorno** Fatica/Calca (Centro, UTCI mediana ~35 °C), mattina e sera Passeggiata/Festa. Settembre–ottobre sereni. **Inverno: di giorno sereno** (UTCI 9–26 = nessuno stress, l'UTCI tiene conto dei vestiti), notti Notte. Celle nei quartieri: notte 32%, Festa 25%, Passeggiata 13%, Calca 8%, Rifugio 6%, Corrente 6%, Fatica 5%, Routine 3%, Afa 1,5%, Attesa 0,7%. **Per ora non servono brani invernali.** |
-| Meteo | Open-Meteo archivio, Ascoli (42.854, 13.575), orario, fuso Europe/Rome, 5.904 ore, in **`public/data/meteo_ascoli.json`**: temperatura, percepita, umidità, radiazione globale **+ diretta, diffusa, DNI**, nuvole, vento (km/h), pioggia. Scaricato una volta, servito dal sito. |
-| Fonte LCZ | **Solo** `Lcz_neurali 2/FETCH+simoneAP/unified/lcz_grid_30m_lcz_params.gpkg` (progetto QGIS di Simone, EPSG:3004, tabelle verificate dall'utente). **Celle native da 30 m, mai raggruppate; sempre vettoriale, mai raster**; ritaglio **solo sul rettangolo dei quartieri** (non tutto il Comune). Il resto del progetto (raster, xlsx, CSV, griglia 100 m vuota) non serve. La cartella (2,7 GB) è in `.gitignore`. |
-| Campi LCZ | Bussola: `svf_mean` (0 = difetto → 0,4 di ripiego), `albedo`, `z0_value`, `pervious_frac`, `lcz_class`. Mappa: **tutti i campi di costruzione nel popup al clic** (scopo divulgativo, non per l'audio): classe in italiano, rischio (`lcz_vulnerability`, stessa tabella del vecchio "UHI risk"), parametri in accordo (su 10), correzione ESA, SVF, H/W, % edificata/impermeabile/permeabile, altezza, rugosità, z0, ammettenza, albedo, calore antropico e industriale. Il loader copia `lcz_class`→`LCZ` e `lcz_vulnerability`→`UHI risk` per i colori esistenti. |
-| Mappe dei parametri LCZ | Menu **Show** sotto LCZ Vitality (al posto delle radio LCZ/UHI): LCZ types, UHI risk e 13 parametri delle celle (accordo della classificazione, SVF, H/W, altezza, % edificata/impermeabile/permeabile, albedo, ammettenza, calore antropico e industriale, classe di rugosità, z0). Scale continue in `LCZ_DATA_VIEWS` (`config.js`) con tinte **assenti da LCZ e UHI** (blu notte, ciano, turchese, viola, lavanda, magenta, ardesia), soglie sui percentili 5–95, colori con `to-color` (senza, MapLibre rifiuta l'espressione). Legenda per ogni mappa (categorie o barra + frase). Trasparenti: SVF = 0 (difetto) e celle senza calore industriale. "UHI Dynamic Visibility" visibile solo con UHI. Esclusi `lcz_rmsep` e `lcz_esa_fix` (tecnici, restano nel popup). Approvato dall'utente ("molto bene"). |
-| Comportamento | **Isteresi 1 s** (`tenuta_s`) e **dissolvenza 1 s** a potenza costante (seno/coseno, ripresa dal volume attuale), legata a `PRESENCE_MOVE_MS`: musica, timeline e puntini si muovono insieme (col Play un'ora dura 1,3 s). Effetti urbani: rampa di 1 s. Centro della mappa fuori dalle celle LCZ: **silenzio**. |
-| Motore audio | `src/audio/audio-engine.js`, legge solo `audioEnabled` e `mood`. Interruttore **"Attiva mappa sonora"** nel riquadro in basso a sinistra (mirino, contorno e valori visibili solo ad audio acceso). Parte il brano dello stato attuale, gli altri si caricano in sottofondo; spegnendo, sfuma in 1 s. Asset in **`public/audio/`** (loops, sfx, `mix.json`); in `sound-lab/` restano **collegamenti simbolici** per la pagina di ascolto e gli script. |
-| Suoni urbani | Folla leggera/densa ↔ persone; traffico ↔ città; parco ↔ verde; cicale ↔ calore; grilli ↔ notte. |
-| Riproduzione effetti | Niente loop cucito: ogni suono **alterna a caso le varianti** (mai la stessa due volte di fila), dissolvenza incrociata equal-power fino a 1,2 s, velocità casuale ±4%. |
-| Mix effetti | **Calcolato** (`sound-lab/mix.json`): volume = musica (−18 LUFS) − `sotto_musica_db` + 20·log10(presenza). Tetti sotto la musica: folla densa 9 dB, grilli 11, folla leggera 12, parco 13, cicale 14, traffico 15. Somma degli effetti per scena 8–14 dB sotto la musica (Attesa ≈ 20). La presenza (0–1) per ora viene dalle scene per stato (anche nella piattaforma); in futuro dai dati. Se il mix non convince: cursori di volume nell'app. |
-| Generazione musica | **finetuning.ai**, piano Plus, a mano. Scheda **Instrumental**; nessuno stile preset; nessun tag; **Enhance prompt OFF**; Length 2 min; seed fisso. Prompt in **inglese**. |
-| Coerenza musicale | Tutti i brani in **re** (maggiore sereni, minore opprimenti), ambient-cinematografico. Ogni prompt termina con la "coda fissa" (vedi `prompts.md`). |
-| Post-produzione musica | Taglio sfumature, loop su battuta con dissolvenza incrociata di 2 s, **−18 LUFS**, picco ≤ −1 dBFS, MP3 160k. |
-| Post-produzione effetti | Taglio della sfumatura finale (tratto entro 3 dB dalla mediana), micro-fade 50 ms, **−20 LUFS**, limitatore sui picchi isolati, MP3 160k. |
-| Settimana tipo e clima | Con ≥ 7 giorni, per ogni cella si calcola l'UTCI in tutti i giorni veri dell'intervallo con quel giorno della settimana e si usano meteo e sole del giorno al **90° percentile** (`percentile_utci_settimana_tipo` = 0,9: "una giornata calda, superata 1 volta su 10"); persone = puntini dell'ora (media dell'intervallo). Su tutto il periodo cade sempre a luglio; ottobre o inverno restano sereni (il percentile guarda solo il caldo). Il pannello indica il giorno scelto. |
-| Mappe orarie | Menu **Show**, gruppo "Hour by hour (sound compass)": **UTCI heat stress (estimate)** con scala **continua** (`UTCI_RAMP`, `interpolate-lab`: blu −13, azzurro 0, verde 9–17,5, giallo 26, arancio 32, rosso 38, rosso scuro 46 °C) e **Sound map** a colori **netti** per stato (`SOUND_STATE_COLORS`: righe sereno verde-azzurro / neutro grigio-viola / opprimente arancio-rosso, colonne chiaro → scuro con la gente, Notte blu notte; legenda a mini-bussola 3×3). Stesso calcolo della bussola, senza isteresi, a ogni ora anche ad audio spento; colori dal **feature-state** delle celle; popup con UTCI, stato e persone dell'ora. Approvate dall'utente ("molto bello"). |
-| Autosufficienza | **Il sito fornisce tutto da sé**, mappa compresa: nessuna libreria, dato, tessera o token da siti esterni (verificato sulla build). |
-| Mappa | **MapLibre GL** + PMTiles locali. Base: estratto Protomaps (OSM) del riquadro 13.41–13.75 E, 42.77–42.94 N, z ≤ 15. Terreno: estratto Mapterhorn (terrarium, 512 px). Edifici: **GlobalBuildingAtlas del TUM** (scelti dall'utente dopo il confronto con OSM: "senza ombra di dubbio meglio"), GeoJSON con `height`. Crediti nella mappa: OSM, Protomaps, TUM (CC BY-NC 4.0, **solo uso non commerciale**), Mapterhorn. |
-| Edifici TUM | Si scaricano **una volta** dal rilascio HuggingFace (`zhu-xlab/GBA.ODbLPolygon` + `GBA.LoD1`, tassello `europe/e010_n45_e015_n40`, ~4,4 GB temporanei) e si ritagliano sul Comune con `sound-lab/estrai_edifici_gba.py`. **Mai** il WFS del TUM: gli autori lo vietano per scaricamenti automatici. Altezze stimate da satellite (centro: mediana ~6,7 m, forse sottostimate). |
-| Terreno 3D | Interruttore come prima: piatto dall'alto, rilievo inclinando la camera (`setTerrain` su `terrain-dem`). |
-| Aspetto mappa | **Stile Toner** (Stamen/MapTiler, `openmaptiles/maptiler-toner-gl-style`), scelto dall'utente ("mi piace tantissimo"). Lo stile originale è per tessere OpenMapTiles: **rifatto sullo schema Protomaps** con una tavolozza personalizzata (`TONER_FLAVOR` in `map-setup.js`): bianco, acqua/strade/confini neri, **nessuna etichetta né icona** (richiesta dell'utente: tolte prima le strade, poi tutte; restano solo i nomi degli Spot, legati al loro livello). Verde nero con le **trame originali** (boschi a puntini, cimiteri a crocette, resto a trattini), sprite locale `sprites/toner` (licenza BSD, crediti in mappa; nel `@2x` scaricato le coordinate erano sbagliate, corrette). Sprite `light` non più usato (file ancora in `sprites/`). **Edifici bianchi, niente tratteggio** (richiesta dell'utente), con contorno nero a terra per non sparire dall'alto. |
-| Framework | **Vite (vanilla)**, fatto. Svelte/React/Vue aggiungibili con un plugin in `vite.config.js` (`base: './'`). |
-| Intercambiabilità | Tutto deve poter essere sostituito (UI in Svelte/React/Vue, libreria dei grafici). **Fatto**: store centrale compatibile Svelte (React via `useSyncExternalStore(store.subscribe, store.get)`), ECharts isolato in `src/charts/charts.js`. Bussola e motore audio comunicano solo tramite lo store. Formato neutro per le opzioni dei grafici: solo se si cambia davvero libreria. |
-| Pubblicazione | **GitHub Pages** con `.github/workflows/deploy.yml` (build a ogni push su `main`). Serve Settings → Pages → Source: **GitHub Actions**. Nessun token da configurare. |
-| Puntini delle persone (Presence Density) | Ogni persona ha un'**identità stabile** ricordata da un'ora all'altra (`presenceStates` in `map-layers.js`); niente rimescolamento a caso (faceva ammassare tutti al centro durante gli spostamenti). A ogni cambio d'ora: 1) dentro il quartiere chi è in più a uno spot va allo spot vicino che cresce; 2) **fra quartieri**: chi avanza in un quartiere che si svuota va allo spot che cresce più vicino in un quartiere che si riempie; 3) solo il resto **entra da fuori città** (fade in) o **esce verso l'esterno** (fade out), 600 m oltre la posizione in direzione opposta al centro (`PRESENCE_EXIT_METERS`). Animazione 1 s (`PRESENCE_MOVE_MS`); Play a 1,3 s per ora (prima ~0,3 s). Rispetta "riduci movimento". |
-| Movimento "a formichine" | Richiesto dall'utente: i puntini sovrapposti non facevano percepire lo svuotarsi della città. Un solo ciclo (`drawPresenceFrame` in `map-layers.js`) disegna spostamenti e **brulichio continuo** attorno al proprio posto (due sinusoidi per asse, ritmo proprio per persona, ~3 px sullo schermo fra 1,5 e 15 m, ~30 immagini/s da fermi, niente se il livello è nascosto; chi è a casa resta fermo). Nei cambi d'ora **partenze sfalsate** (ritardo fino al 40% dell'animazione) e **percorsi curvi** (deviazione laterale ≤ 60 m e ≤ 20% della distanza). Parametri `PRESENCE_STAGGER`, `PRESENCE_BEND_MAX_M`, `PRESENCE_WIGGLE_*` in `config.js`. Store `presence` e bussola usano le posizioni ferme. Approvato dall'utente ("fantastico"). |
-| Gente "in giro" (10% per quartiere) | Solo su celle LCZ **costruite (1–10) o pavimentate (E)** del quartiere (`getStreetCellsForFeature` in `map-layers.js`), cella fissa per persona: **mai fiume, boschi, prati** (A–D, F, G), a nessuna ora. Richiesto dall'utente ("improbabile che ci sia gente al fiume"). Gli spot reali in celle verdi (110 su 1.186) restano, con i puntini entro 10 m. |
-| Gente in casa (regola "prudente", `src/map/home-share.js`) | Idea dell'utente: anche di giorno qualcuno a casa. **Residenti visti dai dati** = presenze notturne (ore 2–4, tutti i giorni) ÷ quota ISTAT in casa a quell'ora; a casa = min(presenti, residenti × quota ISTAT del giorno e dell'ora). Usata da mappa e `taratura_energia.mjs` (stesso modulo). Esito (tutta la città, martedì): 3:00 100%, 7:00 11%, 11:00 4%, 13:00 8%, 17:00 5%, 21:00 22%, 23:00 41%, **0:00 36%** (prima 95%: i dati vedono 3× più gente a mezzanotte che alle 3); sabato a mezzanotte 30%. Chi va a casa: le persone con `hash01(chiave:notte)` più basso, stabili da un'ora all'altra. **Casa** = edificio TUM del quartiere scelto **in proporzione ai residenti Meta** (`res`): 2.487 edifici su 11.341 senza residenti (33% del volume: capannoni, chiese, scuole), Stadio 41% del volume. |
-| Curva ISTAT in casa | `sound-lab/casa_mtus.py` da estratto IPUMS MTUS **Italy 2008, struttura "activity"** (1.027.724 attività, 40.939 diari; `ELOC` = 1 casa propria; ora da `CLOCKST` con 2 decimali impliciti: `000710` = 07:10). Diario dalle 4:00: le ore 0–3 di un giorno vengono dal diario del giorno prima. Feriali: 3:00 98%, 8:00 50%, 11:00 31%, 13:00 57%, 17:00 45%, 21:00 85%, 0:00 95%; domenica 0:00 87% (sabato sera). Minimo 2.761 diari per giorno (lo script si ferma sotto 30). |
-| Perché la regola prudente | Confronto Meta / presenze (2026-10-05): di notte i dati vedono solo il **6–15% dei residenti**, ma ne seguono la distribuzione (correlazione 0,96) → le presenze notturne sono gente in casa, i dati sono un **campione** che vede soprattutto chi è attivo. Di giorno Stadio, San Filippo, Pennile hanno 4–10× più presenze che residenti (gente da fuori). La curva ISTAT applicata a tutti i presenti (versione larga) spegnerebbe le serate estive che i dati mostrano piene. |
-| Puntini in casa | Opacità **50%** (`PRESENCE_HOME_OPACITY`), su riempimento e bordo; da vicino restano **neri** (chi è fuori diventa bianco col bordo nero), proprietà `homeT` 0–1 nell'espressione del colore. Si attenuano **solo nell'ultimo 20% del tragitto** verso casa e si riaccendono appena escono (`displayedHome` in `map-layers.js`). Da lontano: "effetto bellissimo" (utente). |
-| Synthetic Crowded Points | Ogni spot (1.186) ha **5 "maestri" fissi** fra gli 87 luoghi reali (etichette simili, vicini); un maestro chiuso conta 0. Maestri calcolati una volta e messi in cache. Alle 3 di notte di sabato gli spot attivi scendono da 784 a ~460; fra mattina e sera cambia posto il 25–28% delle persone (prima 15%). Raggio massimo di 500 m scartato: 1/4 degli spot senza maestri e 3 quartieri (Porta Cartara, Borgo Chiaro, Tofare) senza luoghi reali. Resta una stima: 87 luoghi per 1.186 spot, 27 etichette generiche. |
-| Colorazione dei puntini | Sezione **"Color dots by"** nel riquadro Map Layers (pulsanti **Off · Gender · Age · Nationality · Visits** + legenda), in `src/map/presence-colors.js`. Colora **tutti i quartieri**, ognuno con le **sue percentuali reali** (stessi giorni dei grafici: < 7 giorni = intervallo, altrimenti stesso giorno della settimana). Conteggi esatti (resti maggiori) e **stabili al cambio d'ora**: ogni persona ha un posto fisso in una "fila" per quartiere (`hash01(chiave)`), in prova 189/195 tengono il colore. Il clic sui grafici di genere/età/nazionalità/visite accende il pulsante corrispondente. Province, nazioni e interessi **esclusi** dal selettore (elenchi diversi per quartiere; gli interessi sono indici, non percentuali): il loro clic colora solo il quartiere selezionato, come prima. |
-| Alberi | **Nessun termine in più**: le chiome sono già nello SVF (il DSM di Simone le contiene, confermato dall'utente). Analisi del 2026-10-05 (`tcd_10m` Copernicus + `canopy_height_10m` ETH + `dtm_10m`, celle a 2 m): nelle celle della gente l'88% non ha chiome (media 1,3%); togliere il sole sotto le chiome abbasserebbe l'UTCI di 0 °C lì e di ~1 °C (max 4) nel verde, contando in parte due volte; nessun cambio di stato. Il 31% delle chiome ha la cima sotto le strade entro 150 m (fossi). Il clima si calcola comunque anche dove non c'è gente (fosso compreso): lì vale Rifugio/parco quando non fa troppo caldo. Decisione dell'utente: "lascia tutto così". |
-| Velocità UTCI | Polinomio con potenze precalcolate (`compass-core.js`): stesso risultato, ~30× più veloce. Tutte le celle: 0,15 s per un'ora vera, ~0,27 s in settimana tipo (giorni scelti in cache). |
-| Puntini e giorni veri | Con giorni veri i puntini usano il dato di **quel giorno** e gli Spot il giorno della settimana giusto; in settimana tipo la media dei soli giorni dell'intervallo (come grafici e bussola). |
-| Stem | Al momento non servono. Se servissero: StemDeck o UVR5 (locali), MVSEP (web). |
-| Licenze dei dati di gente in casa | Registrazione dell'utente accettata il 2026-10-05. Termini: **vietato ridistribuire i dati senza permesso** (si può pubblicare un sottoinsieme solo se lo chiede una rivista; altre ridistribuzioni, gratuite o commerciali, solo su richiesta); **citare IPUMS MTUS** come indicato in "citation and use" e aggiungere le pubblicazioni alla loro Bibliography; termini UCL (https://uma.pop.umn.edu/mtus_terms.pdf, letti): non identificare persone, **non dare i dati a terzi**, **nessun risultato da meno di 30 casi non pesati**, citazione *"This document uses the Multinational Time Use Study, Centre for Time Use Research, University College London 2019, http://www.timeuse.org/mtus/reference.html"*, mandare copia delle pubblicazioni. Dal codebook (DDI) dell'estratto: licenza **valida un anno**, rinnovabile; **nessun compenso** per i dati; citazione obbligatoria: *Kimberly Fisher, Jonathan Gershuny, Sarah M. Flood, Juana Lamote, Liana C. Sayer, Daniel Backman, Etienne Breton, and Stephanie Richards. Multinational Time Use Study Extract System: Version 1.5 [dataset]. Minneapolis, MN: IPUMS, 2025. https://doi.org/10.18128/D062.V1.5*; titolo e citazione di ogni pubblicazione, rapporto o materiale didattico vanno comunicati (http://bibliography.ipums.org/). Violazioni: revoca dell'accesso a tutti i dati IPUMS e responsabilità per i danni. Regole per il progetto: microdati **solo in locale** (`IPUMS/`, in `.gitignore`), mai in `public/` né su GitHub; nel sito solo la **curva aggregata** `quota_in_casa.json` (168 valori, ognuno da ≥ 2.761 diari), con le due citazioni nel file e nei crediti della mappa (`map-setup.js`, insieme a Meta CC BY 4.0). Licenza IPUMS da rinnovare entro il 2027-10-05. Stesso trattamento per i microdati ISTAT (`UsoTempo_*/`, in `.gitignore`). |
+| `bussola-clima.md` | modello emotivo per cella, energia (X), piacevolezza (Y), catena UTCI e limiti, 9 stati, notte, settimana tipo, mappe orarie UTCI e Sound map, alberi |
+| `audio.md` | strategia S2, motore audio, comportamento (isteresi/dissolvenza), effetti e mix, generazione su finetuning.ai, post-produzione, **stato degli asset audio** |
+| `mappa.md` | MapLibre + PMTiles, stile Toner, edifici TUM, terreno, celle LCZ e mappe dei parametri, autosufficienza, framework, pubblicazione su Pages |
+| `persone.md` | puntini (identità, formichine, gente in giro, colori), Synthetic Crowded Points, **gente in casa** (curva ISTAT, regola prudente, residenti Meta), **licenze IPUMS/UCL/ISTAT/Meta** |
+| `decisioni-superate.md` | tutte le decisioni non più valide, col perché |
+| `strumenti.md` | script di `sound-lab/` (analisi, taratura, estrazioni, curva in casa), pagina di ascolto, avvio |
+| `prompts.md` | prompt musicali per finetuning.ai |
 
-## 4. Decisioni superate
-- ~~Energia = persone/km² del quartiere (1.730–9.882), sfumata entro 300 m fuori dai quartieri~~ → la mappa sonora era fatta di blocchi uguali per quartiere: ora gente entro 50 m dai puntini (`energia_svanisce_m` non più usato in JS).
-- ~~Settimana tipo: piacevolezza fissa a Neutro~~ e poi ~~stato più frequente fra i giorni~~ → i giorni miti vincevano sempre ("quasi sempre Festa"): ora giorno al 90° percentile dell'UTCI.
-- ~~Ombra degli alberi da `tcd_10m` sopra lo SVF (proposta B)~~ → effetto piccolo e doppio conteggio (lo SVF contiene già le chiome): non fatta.
-- ~~Isteresi 2 s e dissolvenza 3 s lineare~~ → col Play (1,3 s per ora) la musica non cambiava mai: 1 s e 1 s a potenza costante.
-- ~~Mappa UTCI a fasce (scalini)~~ → richiesta dell'utente: sfumatura continua.
-- ~~Mapbox GL 2.15 con stile Mapbox Studio, token nel codice e in `.env.local`; tessere Mapbox come unica eccezione all'autosufficienza~~ → MapLibre + PMTiles locali, nessun token né eccezione. I token Mapbox vanno eliminati (quello di sviluppo è finito in chat).
-- ~~Dati di Lucca, costa, San Benedetto, Pagliare~~ → regola "solo Comune di Ascoli Piceno".
-- ~~Edifici scaricati al volo dal WFS del TUM~~ → vietato dagli autori e contrario all'autosufficienza; estrazione una tantum.
-- ~~Etichette e icone della mappa di base; flavor Protomaps "light" con edifici colorati per altezza; edifici 3D di OpenStreetMap~~ → mappa muta in stile Toner con edifici bianchi del TUM (OSM: altezze spesso mancanti).
-- ~~Pannello **Advanced** di finetuning.ai; seed 2024; tag Mood/Energy~~ → Advanced suona "a un solo strumento": si resta su **Instrumental**, seed 2025 (rifacimenti 2026/2027), solo testo aggiunto al prompt.
-- ~~Meteo della "settimana simulata 3–9 giugno 2024"~~ → i dati reali coprono 246 giorni: si usa tutto il periodo 2024-06-01 → 2025-02-01.
-- ~~Dissolvenze di 4–8 s~~ → scelta all'ascolto: **3 s**.
-- ~~Calore locale da IMPER_PC, albedo, ANTHROPOGE, H_W~~ → campi sporchi o incompleti; si usano UHI risk, PER_PC, SVF.
-- ~~Comfort 18–26 °C con freddo severo (−1 a 4 °C)~~ → l'inverno finiva tutto in Calca/Fatica (brani "di caldo"); ora 16–26 °C e −1 a −4 °C.
-- ~~Notte = sole tramontato~~ → a dicembre alle 17 il Centro è pieno: notte solo se buio **e** poca gente.
-- ~~Fondere le varianti degli effetti in un file~~ → alternanza casuale in tempo reale, meno ripetitiva.
-- ~~Librerie da CDN come globali, dati su GitHub Gist~~ → tutto locale con Vite e `public/data/`. GPU.js tolto (caricato ma mai usato).
-- ~~Store leggero senza Vite; Svelte solo per la UI, React sconsigliato~~ → Vite (autosufficienza e intercambiabilità); nessun framework escluso.
-- ~~`lcz_vitality.csv` (1.548 celle, solo centro); LCZ su tutto il Comune o a blocchi da 90 m (proposte dell'agente)~~ → `lcz_ascoli.geojson`: celle native da 30 m del progetto QGIS, tutti i campi, solo il rettangolo dei quartieri.
-- ~~Bussola sull'area inquadrata, quartieri pesati per la frazione visibile; `aree_ascoli.json` con medie per quartiere~~ → bussola per **cella** al centro della mappa, nessuna media; file cancellato.
-- ~~Temperatura locale = percepita + 4 °C sole × SVF − 2 °C verde + 1/2,5 °C × UHI risk; comfort 16–26 °C, −1 a 36 / −4 °C~~ → "numeri a caso" secondo l'utente: sostituiti dall'**UTCI** con fisica e fasce ufficiali.
-- ~~Inverno → Attesa/Routine/Corrente~~ → con l'UTCI le giornate invernali sono senza stress: serene.
-- ~~Fuori dalle aree coperte: brano neutro~~ → silenzio.
-- ~~Spot che copiano solo dai luoghi reali aperti in quell'ora (anche a ~1 km)~~ → maestri fissi, i chiusi contano 0: di notte restava "aperto" il 66% degli spot.
-- ~~Puntini rigenerati a caso a ogni ora, Play a 5 passi/s~~ → identità stabili e spostamenti animati; il Play interrompeva l'animazione e ammassava tutti al centro.
-- ~~Colori dei puntini solo dal clic sui grafici, solo per il quartiere selezionato, persi al cambio d'ora~~ → selettore "Color dots by" su tutti i quartieri, stabile (per genere, età, nazionalità, visite).
-- ~~Gente "in giro" in un punto a caso del quartiere~~ → finiva sul Tronto e nei prati; ora solo celle LCZ costruite o pavimentate.
-- ~~Selettore LCZ a due radio (LCZ Types / UHI Risk)~~ → menu con tutte le mappe dei parametri delle celle.
-- ~~Chi arriva esce di casa, chi se ne va rientra in casa~~ (passaggio intermedio) → si entra/esce dalla città con dissolvenza.
-- ~~Notte: 95% a casa (`NIGHT_HOME_SHARE`), rampe 22→24 e 6→8 scelte a mano, nessuno a casa di giorno; casa scelta per volume (area × altezza)~~ → curva ISTAT con regola prudente e case pesate coi residenti Meta (i capannoni attiravano famiglie). Costanti tolte da `config.js`.
-- ~~Puntini in casa che si attenuano appena partono~~ → solo all'arrivo all'edificio (richiesta dell'utente).
-- ~~Quota ISTAT in casa applicata a tutti i presenti ("versione larga", 85% a casa alle 21)~~ → scartata: i dati vedono soprattutto chi è attivo, le serate si sarebbero svuotate.
-- ~~Fonti per la gente in casa di giorno: file pubblico ISTAT Uso del tempo 2023, nota metodologica, Annuario statistico 2025, Eurostat HETUS~~ → controllate e inutili: il file 2023 ha solo il questionario individuale (modulo volontariato, 298 colonne, nessun diario); la nota ha solo tabelle degli errori; l'Annuario non ha dati orari; HETUS (`tus_00startime`, Italia 2008-09 ogni 10 min) dà attività, non luoghi (alle 11 fra l'8% e il 62% in casa; utile solo come conferma della notte, 98,5% dorme alle 3). Il diario 2023 esiste nel file per la ricerca (MFR), su richiesta motivata.
-- ~~Estratto IPUMS per persona (`mtus_00001`, minuti totali per attività)~~ → serve la struttura "activity" con `ELOC`, `CLOCKST`, `TIME`, `DAY`, `PROPWT` (`mtus_00003`).
-
-## 5. Stato degli asset audio
-Grezzi in `music/` e `music/sfx/` (**non versionati**). Pronti in **`public/audio/loops/`** e **`public/audio/sfx/`** (collegati da `sound-lab/loops`, `sound-lab/sfx`).
-
-| Stato | File scelto | Tonalità misurata | Note |
-|---|---|---|---|
-| Rifugio | rifugio 2025 | re magg. | |
-| Passeggiata | passeggiata 2025 | re magg. | |
-| Festa | festa 2025 | re magg., ~117 BPM | |
-| Attesa | **attesa 2026** | re min., 70 BPM | 2027 riserva |
-| Routine | Routine 2025 | re magg., 96 BPM | |
-| Corrente | corrente 2025 | re magg., ~117 BPM | loop più pulito |
-| Afa | afa 2025 | re (fra magg. e min.) | |
-| Fatica | **fatica 2026** | re min., 81 BPM | 2027 riserva |
-| Calca | Calca 2025 | re min. | 2024 riserva |
-| Notte | notte 2025 | re magg. | |
-
-| Effetto | Varianti (durata dopo il taglio) | Note |
-|---|---|---|
-| Folla leggera | **4** (2,5 / 4,2 / 5,8 / 6,0 s) | 1 e 2 si ripetevano troppo → generate 3 e 4. La 1 è timbricamente diversa (più cupa): toglierla se fa "scalino". 2 e 3 limitate sui picchi. |
-| Folla densa | 2 (6,5 / 4,2 s) | |
-| Traffico | 2 (4,3 / 6,5 s) | il grezzo Traffico1 saturava (+0,3 dBFS), corretto |
-| Parco | 1 (6,6 s) | |
-| Cicale | 1 (6,5 s) | vaga nota mi: verificare sopra i brani |
-| Grilli | 1 (5,8 s) | vaga nota fa: verificare sopra i brani |
-
-Giudizio dell'utente: i brani 2025 suonano "parenti"; la bussola di prova piace; gli effetti vanno bene. **Mix calcolato: "per ora suona bene"**. Bussola e LCZ in mappa provate ("funziona"); l'**ascolto sopra la mappa** non è ancora stato giudicato.
-
-## 6. Strumenti (`sound-lab/`)
-- `analyze.py <cartella>`: analisi dei brani (LUFS, BPM, tonalità, sfumature).
-- `process.py <music/> loops`: loop musicali + `loops/manifest.json` (mappa in `SELECTION`).
-- `analyze_sfx.py <cartella>`: analisi effetti (durata, LUFS, picco, stabilità, sfumature, nota dominante, distanza timbrica fra varianti).
-- `process_sfx.py <music/sfx> sfx`: effetti pronti + `sfx/manifest.json`; raggruppa da solo le varianti dal nome (`Traffico1`, `Traffico2` → `traffico`).
-- `mix.json` (→ `public/audio/mix.json`): regola del mix effetti e scene per stato.
-- `compass.py [cartella dati]`: **riferimento** della bussola per cella su tutte le ore (~1 min). Legge `../public/data/` (presenze, KML, `lcz_ascoli.geojson`, `meteo_ascoli.json`, `bussola.json`), riscrive in `bussola.json` le ancore dell'energia e i km² dei quartieri, stampa la distribuzione degli stati e scrive `data/bussola_campioni.json` (220 casi di prova).
-- `clima.py`: catena fisica UTCI per cella, con le fonti nel commento iniziale.
-- `genera_utci.py`: estrae il polinomio UTCI dal **sorgente** di pythermalcomfort e scrive `src/compass/utci-coeff.js` (prova: 24,6 °C come nella documentazione). Installare con **`.venv/bin/pip install --no-deps pythermalcomfort`**: senza `--no-deps` abbassa numpy sotto la versione di pandas e i calcoli si **corrompono** in silenzio (successo: 881 °C su array grandi; numpy ripristinato a 2.5.3).
-- `taratura_energia.mjs`: `node sound-lab/taratura_energia.mjs` dalla radice (~8 s); ricostruisce i puntini con le regole della mappa (3/4 agli Spot, 1/4 sulle strade, chi è a casa escluso con `home-share.js` e `quota_in_casa.json`) e riscrive `energia_cella` in `bussola.json`. Rilanciarlo se cambiano raggio, regole dei puntini, curva in casa o dati.
-- `residenti_meta.py "../Lcz_neurali 2" ../public/data/mappa/gba_ascoli.geojson` (~12 s): legge Meta HRSL 2020 dall'archivio italiano di Simone (`meta_hrsl/cache/ita_population.zip`, via `/vsizip/` di GDAL di QGIS, senza estrarre i 17 GB), solo pixel nel Comune; ogni quadratino divide i residenti fra gli edifici che tocca in proporzione al volume toccato, altrimenti all'edificio più vicino entro 60 m (6.025), altrimenti persi (420). Scrive `res` negli edifici. Il ritaglio `meta_hrsl_aoi.tif` di Simone non copre il sud del Comune (si ferma a 42,81° N): non usarlo.
-- `casa_mtus.py ../IPUMS/mtus_00003.dat.gz ../public/data/quota_in_casa.json` (~3 s): curva in casa dai diari IPUMS MTUS (posizioni delle colonne dal DDI in `IPUMS/DDI.md`). Microdati in `IPUMS/` e `UsoTempo_*/`, entrambi in `.gitignore`.
-- `verifica_bussola.mjs`: `node sound-lab/verifica_bussola.mjs` dalla radice; confronta JS e Python su clima, UTCI e piacevolezza con l'energia per quartiere (oggi 220/220 stati; l'energia per cella non è coperta, UTCI entro 0,17 °C: SunCalc e la formula solare di Python differiscono fino a 0,9°; tollerati i casi a cavallo di −6°).
-- `estrai_lcz.py "../Lcz_neurali 2" ../public/data/lcz_ascoli.geojson`: estrae le celle dal gpkg (usa `ogr2ogr` e `proj.db` di **QGIS 3.44** nell'app: il Python di QGIS non parte da solo), aggiunge quartiere e distanza.
-- `estrai_edifici_gba.py <uscita.geojson>`: ritaglia gli edifici TUM sul Comune (istruzioni di scaricamento in testa al file; serve `ijson`). `data/comune_ascoli.geojson`: confine del Comune, da usare per **ogni** ritaglio.
-- Mappa di base e terreno si rigenerano con la CLI `pmtiles` (brew): `pmtiles extract https://build.protomaps.com/AAAAMMGG.pmtiles ascoli_base.pmtiles --bbox=13.41,42.77,13.75,42.94 --maxzoom=15` e lo stesso da `https://download.mapterhorn.com/planet.pmtiles` con `--maxzoom=12`.
-- `index.html` (pagina di ascolto): bussola 3×3 cliccabile, bottone Notte, dissolvenza (default 3 s), sezione "Suoni urbani" con 6 cursori e casella **"Mix calcolato per stato"**.
-- Avvio:
-  ```bash
-  cd sound-lab && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-  .venv/bin/python process.py ../music loops && .venv/bin/python process_sfx.py ../music/sfx sfx
-  python3 -m http.server 8765
-  ```
-  Poi http://localhost:8765. I file vanno caricati uno alla volta (il server di Python si inceppa con molte richieste parallele).
-- **Piattaforma**: `npm install && npm run dev` dalla radice. Nessun token né `.env.local`.
-
-## 7. Prossimi passi
+## 5. Prossimi passi
 0. **A mano (utente)**: eliminare **entrambi** i token sul sito di Mapbox (file locali già cancellati; il token pubblico resta nella cronologia del repository, che è pubblico: va revocato).
 2. **Ascolto sopra la mappa** con la Sound map accesa come guida: estate a mezzogiorno (Calca nelle piazze, Afa nei vicoli), mattina e sera, dicembre (sereno), notte (Notte + grilli), fuori dalle celle (silenzio). Giudicare volumi, cambi di 1 s col Play (frenetici? allora dissolvenza 1,5–2 s), musica che cambia spostando il mirino di 50–100 m.
 3. **Suoni urbani dai dati**: presenza degli effetti da persone (X), verde, UTCI e notte invece che dalle scene fisse.
@@ -186,16 +63,17 @@ Giudizio dell'utente: i brani 2025 suonano "parenti"; la bussola di prova piace;
 9. Facoltativi sulla curva: estrarre anche `MONTH` da IPUMS per curve estate/inverno; correggere lo smart working con la domanda "lavora da casa" del file ISTAT 2023 (`UsoTempo_2023_IT`). Domanda aperta per l'utente: come sono misurate le presenze "blimp" (sensori, celle, app)?
 10. **Quando si pubblica** un lavoro con questi dati: aggiungerlo alla bibliografia IPUMS (http://bibliography.ipums.org/) e mandarne copia al CTUR (UCL).
 
-## 8. Diario delle sessioni
+## 6. Diario delle sessioni
 - **2026-10-04 (1–6)**: strategia S2, bussola a 9 stati, loop ed effetti, meteo 246 giorni; Vite locale, Pages, store, MapLibre + PMTiles (TUM), regola **solo Comune di Ascoli**. LCZ a 30 m, bussola per cella con **UTCI**, motore audio. Puntini con identità stabili, notte a casa, Synthetic Crowded Points con maestri fissi.
 - **2026-10-05 (7–9)**: "Color dots by" su tutti i quartieri; gente in giro solo su celle costruite/pavimentate; mappa in **stile Toner** su Protomaps, edifici bianchi, nessuna etichetta.
 - **2026-10-05 (10–12)**: menu **Show** con 15 mappe delle celle LCZ; settimana tipo col clima (90° percentile UTCI); dissolvenza e isteresi 1 s; mappe orarie **UTCI** e **Sound map**; **energia per cella** dai puntini entro 50 m; UTCI 30× più veloce; alberi già nello SVF; puntini "a formichine".
 - **2026-10-05 (13)**: puntini in casa al 50%, neri anche da vicino, attenuati all'arrivo; case pesate coi **residenti Meta**; **curva ISTAT in casa** (IPUMS MTUS 2008) con regola prudente al posto del 95% e delle rampe a mano; nuova taratura dell'energia; licenze IPUMS/UCL lette e citazioni nei crediti.
 
-## 9. Prompt per la prossima sessione
+## 7. Prompt per la prossima sessione
 ```
 Riprendiamo la mappa sonora di CityRhythm, branch Music.
-Leggi second-brain/SECOND_BRAIN.md e riassumimi in 3 righe dove siamo.
+Leggi second-brain/SECOND_BRAIN.md (più audio.md e bussola-clima.md per questo
+lavoro) e riassumimi in 3 righe dove siamo.
 Ricorda la regola: solo il Comune di Ascoli Piceno.
 
 Obiettivo 1 – Ascolto sopra la mappa (punto 2 dei "Prossimi passi").
