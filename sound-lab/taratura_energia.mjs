@@ -3,7 +3,7 @@
 // updateAllPresencePoints (src/map/map-layers.js), senza arrotondamenti né identità:
 //   3/4 delle persone del quartiere agli Spot attivi, in proporzione al loro affollamento sintetico;
 //   1/4 "in giro" uniformemente sulle celle costruite o pavimentate del quartiere;
-//   chi è a casa (rampa notturna) non conta: sta dentro e non si sente.
+//   chi è a casa (regola di src/map/home-share.js con la curva ISTAT) non conta: sta dentro e non si sente.
 // Poi prende il 10° e il 90° percentile delle ore di luce (sole sopra night_sun_deg), sulle celle
 // dentro i quartieri, e li scrive in bussola.json → energia_cella.
 // Uso, dalla radice del progetto:  node sound-lab/taratura_energia.mjs
@@ -24,18 +24,9 @@ globalThis.document = { addEventListener() {}, getElementById: () => null, query
 const server = await createServer({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'silent' });
 const { generateSyntheticCrowdedPointsGeoJson, getCrowdednessColumnName } = await server.ssrLoadModule('/src/map/map-layers.js');
 const { sunElevation, romeTime } = await server.ssrLoadModule('/src/compass/compass-core.js');
-const { NIGHT_HOME_SHARE, NIGHT_GO_HOME_HOURS, NIGHT_WAKE_UP_HOURS } = await server.ssrLoadModule('/src/data/config.js');
+const { residentsSeenAtNight, homeShareFor } = await server.ssrLoadModule('/src/map/home-share.js');
 await server.close();
-
-// Stessa rampa di getHomeShare in map-layers.js
-function homeShare(hour) {
-    const [goStart, goEnd] = NIGHT_GO_HOME_HOURS, [wakeStart, wakeEnd] = NIGHT_WAKE_UP_HOURS;
-    const h = hour < wakeEnd ? hour + 24 : hour;
-    if (h <= goStart || h >= wakeEnd + 24) return 0;
-    if (h < goEnd) return NIGHT_HOME_SHARE * (h - goStart) / (goEnd - goStart);
-    if (h <= wakeStart + 24) return NIGHT_HOME_SHARE;
-    return NIGHT_HOME_SHARE * (wakeEnd + 24 - h) / (wakeEnd - wakeStart);
-}
+const homeCurve = JSON.parse(read('../public/data/quota_in_casa.json')).quota_in_casa;
 
 const csv = (p, typing) => Papa.parse(read(p), { header: true, skipEmptyLines: true, dynamicTyping: typing }).data;
 const spots = csv('../public/data/cityrhythm_spotMapper.csv', true).filter(r => typeof r.Latitudine === 'number' && typeof r.Longitudine === 'number');
@@ -49,6 +40,9 @@ const areas = [...kml.matchAll(/<Placemark[^>]*>([\s\S]*?)<\/Placemark>/g)].map(
     const ring = pm.match(/<coordinates>([\s\S]*?)<\/coordinates>/)[1].trim().split(/\s+/).map(c => c.split(',').slice(0, 2).map(Number));
     return { name, key: name.toLowerCase(), poly: turf.polygon([ring]) };
 }).filter(a => poi.some(r => r.poi_name.trim().toLowerCase() === a.key));
+// Residenti visti dai dati di notte, per quartiere (come getResidentsSeen in map-layers.js)
+const dayOf = r => new Date(r.date + 'T00:00:00Z').getUTCDay();
+const residents = areas.map(a => residentsSeenAtNight(poi.filter(r => r.poi_name.trim().toLowerCase() === a.key), homeCurve, dayOf));
 
 // Celle LCZ: centro, dentro un quartiere?, strada?
 const STREET = new Set(['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'E']);
@@ -94,11 +88,11 @@ const sample = [];
 for (const key of met.time) {
     const d = new Date(key + ':00Z'), h = d.getUTCHours(), wh = ((d.getUTCDay() + 6) % 7) * 24 + h;
     if (sunElevation(romeTime(key)) <= cfg.parametri.night_sun_deg) continue;
-    const audible = 1 - homeShare(h);
     const dens = new Float32Array(inside.length);
     areas.forEach((a, q) => {
         const v = parseFloat(people.get(a.key + '|' + key.slice(0, 10))?.[`presenze_${h}`]);
         if (isNaN(v)) return;
+        const audible = 1 - homeShareFor(residents[q], homeCurve, d.getUTCDay(), h, v);
         const sh = shape[wh][q];
         for (let i = 0; i < sh.length; i++) dens[i] += v * sh[i] * audible;
     });

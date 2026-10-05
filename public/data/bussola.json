@@ -71,7 +71,7 @@
   },
   "energia_cella": {
     "raggio_m": 50,
-    "log_lo": 1.79246,
-    "log_hi": 4.15825
+    "log_lo": 2.19474,
+    "log_hi": 4.13431
   }
 }

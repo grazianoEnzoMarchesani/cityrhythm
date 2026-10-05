@@ -65,7 +65,9 @@ function buildMapStyle() {
             },
             buildings: {
                 type: 'geojson', data: mapDataUrl('gba_ascoli.geojson'),
-                attribution: 'Edifici: <a href="https://github.com/zhu-xlab/GlobalBuildingAtlas">GlobalBuildingAtlas, TUM</a> (CC BY-NC 4.0)'
+                attribution: 'Edifici: <a href="https://github.com/zhu-xlab/GlobalBuildingAtlas">GlobalBuildingAtlas, TUM</a> (CC BY-NC 4.0) · Residenti: <a href="https://dataforgood.facebook.com/dfg/tools/high-resolution-population-density-maps">Meta Data for Good</a> (CC BY 4.0)'
+                    + ' · Gente in casa: ISTAT Uso del tempo 2008-09 via <a href="https://doi.org/10.18128/D062.V1.5">IPUMS MTUS v1.5</a>;'
+                    + ' this document uses the <a href="http://www.timeuse.org/mtus/reference.html">Multinational Time Use Study</a>, Centre for Time Use Research, University College London 2019'
             },
             'terrain-dem': {
                 type: 'raster-dem', url: 'pmtiles://' + mapDataUrl('ascoli_terreno.pmtiles'),
