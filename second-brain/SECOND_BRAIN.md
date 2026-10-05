@@ -2,14 +2,14 @@
 
 > Memoria condivisa del progetto. **Ogni agente legge questo indice prima di iniziare**, poi i file di argomento che servono al lavoro (elenco nella sezione 4). Si aggiorna a fine sessione col comando `/second-brain` (vedi `.claude/skills/second-brain/SKILL.md`). Sintetico: decisioni e stato, non cronaca.
 
-Ultimo aggiornamento: 2026-10-05 (quattordicesima sessione)
+Ultimo aggiornamento: 2026-10-05 (quindicesima sessione)
 
 ## 1. Progetto in breve
 - **CityRhythm**: dashboard geospaziale (**MapLibre GL 6.12** + PMTiles, ECharts 5.5, Turf 7, D3 + d3-cloud, PapaParse, Litepicker) su affollamento, demografia, POI, LCZ/UHI. 3 dimensioni spaziali + 1 temporale (timeline).
 - Codice: JavaScript vanilla, ES modules, **Vite 8** (`npm run dev` / `npm run build` → `dist/`). Librerie da `node_modules` con versioni esatte in `package.json`; **nessun CDN**. Dati in `public/data/` (23 MB: mappa 14 MB, celle LCZ 7,3 MB, meteo, bussola) e audio in `public/audio/` (17 MB).
 - Stato: moduli con getter (`getCurrentHour()`, `getMapInstance()`, `getPoiData()`…). **Store centrale** `src/state/store.js` (contratto store Svelte: `subscribe`/`set`/`update`/`get`): `time` `{index, date}` (date = null nella settimana tipo), `viewport` `{bounds, zoom, center}`, `audioEnabled`, **`mood`** (stato della bussola: `stato` confermato, `proposto`, X, Y, UTCI, persone entro 50 m, cella), **`presence`** (puntini fuori casa dell'ora con il loro peso: lo scrive solo `map-layers.js`), **`cellMap`** (UTCI e stato di tutte le celle: lo scrive solo `src/compass/cell-map.js`, solo mentre una mappa oraria è visibile). Scrivono: `updateAppStateForHour` in `ui-timeline.js` (unico punto per l'ora; `setHour(i)` per il calendario) e `moveend`/`load` in `map-setup.js`. `mood` lo scrive solo `src/compass/compass.js`; `audioEnabled` solo l'interruttore in `src/ui/ui-compass.js`. Log `[store]` solo in `npm run dev`. Globali rimasti: `window.selectedDateRange`, `window._timelineMap` (null con ≥ 7 giorni), evento `dateRangeChanged`.
 - Grafici: ECharts si importa **solo** in `src/charts/charts.js` (`createChart`); le opzioni dei grafici restano nel formato ECharts.
-- Mappa (`src/map/map-setup.js`): stile costruito in codice (`buildMapStyle`): base Protomaps da `ascoli_base.pmtiles` in **stile Toner** (`TONER_FLAVOR`), edifici TUM `buildings-3d` (fill-extrusion bianca + contorno `buildings-outline`, in cima alla base); **nessuna etichetta** della base, sorgente `terrain-dem` per l'interruttore terreno. Nessun token.
+- Mappa (`src/map/map-setup.js`): stile costruito in codice (`buildMapStyle`): base Protomaps da `ascoli_base.pmtiles` in **stile Toner** (`TONER_FLAVOR`), edifici TUM `buildings-3d` (fill-extrusion bianca, **spenta all'avvio** come il terreno, + contorno `buildings-outline`, in cima alla base); **nessuna etichetta** della base, sorgente `terrain-dem` per l'interruttore terreno. Nessun token.
 - Trappole note col bundle: PapaParse **senza** `worker: true`; Litepicker come `{ Litepicker }`; KML con `@tmcw/togeojson`; MapLibre 6 si importa come `import * as maplibregl` e il worker come `maplibre-gl-worker.mjs?worker&url` con `worker: { format: 'es' }` in `vite.config.js`; URL di glyphs/sprite/sorgenti **assoluti** (le graffe `{fontstack}` fuori da `new URL`); i dati di una sorgente GeoJSON si leggono con `getGeoJsonSourceData()` (campo interno `_data.geojson`), mai `source._data.features` (era Mapbox); per sapere se si può agire sulla mappa **mai `map.isStyleLoaded()` né `map.once('idle')`**: col brulichio dei puntini sono falso / non arrivano mai (livelli e interruttori bloccati), si usa `isMapReady()` / `whenMapReady(fn)` di `map-setup.js`.
 - Autore: Graziano Enzo Marchesani (Unicam). Non ha competenze musicali: spiegare le scelte sonore con analogie semplici, le decisioni tecnico-musicali le prende l'agente. Non sa scegliere i volumi a orecchio in percentuale: i mix vanno **calcolati**.
 
@@ -51,6 +51,7 @@ Aggiungere una **dimensione sonora** attivabile ("mappa sonora"). Scopo **divulg
 | `prompts.md` | prompt musicali per finetuning.ai |
 
 ## 5. Prossimi passi
+0a. **Commit della correzione degli interruttori 3D** (`index.html`, `main.js`, `map-setup.js`, `ui-layer-controls.js` + second brain), rimandato perché un altro agente lavorava in parallelo: farlo quando ha finito.
 0. **A mano (utente)**: eliminare **entrambi** i token sul sito di Mapbox (file locali già cancellati; il token pubblico resta nella cronologia del repository, che è pubblico: va revocato).
 2. **Ascolto sopra la mappa** con la Sound map accesa come guida: estate a mezzogiorno (Calca nelle piazze, Afa nei vicoli), mattina e sera, dicembre (sereno), notte (Notte + grilli), fuori dalle celle (silenzio). Giudicare volumi, cambi di 1 s col Play (frenetici? allora dissolvenza 1,5–2 s), musica che cambia spostando il mirino di 50–100 m.
 3. **Suoni urbani dai dati**: presenza degli effetti da persone (X), verde, UTCI e notte invece che dalle scene fisse.
@@ -70,6 +71,7 @@ Aggiungere una **dimensione sonora** attivabile ("mappa sonora"). Scopo **divulg
 - **2026-10-05 (10–12)**: menu **Show** con 15 mappe delle celle LCZ; settimana tipo col clima (90° percentile UTCI); dissolvenza e isteresi 1 s; mappe orarie **UTCI** e **Sound map**; **energia per cella** dai puntini entro 50 m; UTCI 30× più veloce; alberi già nello SVF; puntini "a formichine".
 - **2026-10-05 (13)**: puntini in casa al 50%, neri anche da vicino, attenuati all'arrivo; case pesate coi **residenti Meta**; **curva ISTAT in casa** (IPUMS MTUS 2008) con regola prudente al posto del 95% e delle rampe a mano; nuova taratura dell'energia; licenze IPUMS/UCL lette e citazioni nei crediti.
 - **2026-10-05 (14)**: riparati menu Show LCZ/UHI, terreno ed edifici 3D: `isStyleLoaded()` era falso metà del tempo per il brulichio dei puntini → segnale `isMapReady`/`whenMapReady`. Torna anche l'inquadratura iniziale sui quartieri. Verificato in Chrome senza finestra.
+- **2026-10-05 (15)**: 3D Buildings e 3D Terrain **spenti all'avvio**, la mappa segue la casella anche al caricamento (il browser ricordava la casella vuota con gli edifici in 3D). Verificato in Chrome senza finestra; non ancora committato.
 
 ## 7. Prompt per la prossima sessione
 ```

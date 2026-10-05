@@ -120,10 +120,10 @@ async function startApp() {
     if (!sidebarElement) { return; }
 
     initializeSidebar(sidebarElement);
-    setupLayerControls();
 
     try {
         const map = initializeMap(mapContainerId);
+        setupLayerControls(); // dopo la mappa: gli interruttori 3D si applicano appena è pronta
 
         map.on('load', async () => {
             if(loadingIndicator) loadingIndicator.style.display = 'block';
