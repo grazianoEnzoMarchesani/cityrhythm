@@ -11,6 +11,7 @@ import {
     LCZ_VITALITY_SOURCE_ID, LCZ_VITALITY_LAYER_ID,
     ATTRACTION_MIN_CROWDEDNESS,
     MAP_DATA_BASE, NIGHT_HOME_SHARE, NIGHT_GO_HOME_HOURS, NIGHT_WAKE_UP_HOURS, PRESENCE_MOVE_MS, PRESENCE_EXIT_METERS,
+    PRESENCE_STAGGER, PRESENCE_BEND_MAX_M, PRESENCE_WIGGLE_PX, PRESENCE_WIGGLE_MIN_M, PRESENCE_WIGGLE_MAX_M,
     MAP_STYLES, LCZ_DATA_VIEWS, UTCI_BANDS, UTCI_RAMP, SOUND_STATE_COLORS,
     DEBUG_MODE // <-- aggiunto
 } from '../data/config.js';
@@ -773,69 +774,138 @@ function outsideCity(coords, key) {
     return [coords[0] + dx * PRESENCE_EXIT_METERS / kx, coords[1] + dy * PRESENCE_EXIT_METERS / 111320];
 }
 
+// Ogni persona ha un suo modo di muoversi, calcolato una volta dalla chiave
+const antParams = new Map();
+function getAntParams(key) {
+    let p = antParams.get(key);
+    if (!p) {
+        const h = (s) => hash01(key + s);
+        p = {
+            f1: 0.4 + 0.6 * h(':f1'), f2: 1.5 + 1.5 * h(':f2'),     // passi lenti e scatti rapidi (rad/s)
+            f3: 0.4 + 0.6 * h(':f3'), f4: 1.5 + 1.5 * h(':f4'),
+            p1: 6.283 * h(':p1'), p2: 6.283 * h(':p2'), p3: 6.283 * h(':p3'), p4: 6.283 * h(':p4'),
+            delay: PRESENCE_STAGGER * h(':parte'),                  // chi parte prima e chi dopo
+            bend: 2 * h(':curva') - 1                               // da che parte curva il percorso
+        };
+        antParams.set(key, p);
+    }
+    return p;
+}
+
+// Spostamento del brulichio in metri al tempo s (secondi)
+function antWiggle(p, s, amp) {
+    return [
+        amp * (0.65 * Math.sin(p.f1 * s + p.p1) + 0.35 * Math.sin(p.f2 * s + p.p2)),
+        amp * (0.65 * Math.sin(p.f3 * s + p.p3) + 0.35 * Math.sin(p.f4 * s + p.p4))
+    ];
+}
+
+const easeInOut = (t) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; // parte e arriva piano
+
+// Posizione lungo il percorso a e → b per la persona p, avanzamento totale t (0–1):
+// ognuno parte con un suo ritardo e devia un po' di lato, così chi parte dallo stesso spot si separa.
+function walkPosition(a, b, p, t) {
+    const e = easeInOut(Math.min(1, Math.max(0, (t - p.delay) / (1 - PRESENCE_STAGGER))));
+    const kx = 111320 * Math.cos(a[1] * Math.PI / 180);
+    const dx = (b[0] - a[0]) * kx, dy = (b[1] - a[1]) * 111320;
+    const len = Math.hypot(dx, dy);
+    const side = len > 0 ? p.bend * Math.min(0.2 * len, PRESENCE_BEND_MAX_M) * Math.sin(Math.PI * e) / len : 0;
+    return {
+        e,
+        coords: [a[0] + (dx * e - dy * side) / kx, a[1] + (dy * e + dx * side) / 111320]
+    };
+}
+
+// Il movimento continuo: un solo ciclo disegna sia gli spostamenti fra un'ora e l'altra
+// sia il brulichio "a formichine" di chi sta fermo. Chi è a casa resta immobile.
+let presenceAnim = null; // { target, starts, arrivals, leaving, visible, t0 }
+let presenceLastDraw = 0;
+
+function presenceLayerShown(map) {
+    return map.getLayer(PRESENCE_POINTS_LAYER_ID + '-zoom')
+        && map.getLayoutProperty(PRESENCE_POINTS_LAYER_ID + '-zoom', 'visibility') !== 'none';
+}
+
+function drawPresenceFrame(now) {
+    const map = getMapInstance();
+    const src = map?.getSource(PRESENCE_POINTS_SOURCE_ID);
+    const anim = presenceAnim;
+    if (!anim) { presenceMoveFrame = null; return; }
+    if (!src) { presenceMoveFrame = requestAnimationFrame(drawPresenceFrame); return; } // livello non ancora creato
+    const t = presenceMoveMs ? Math.min(1, (now - anim.t0) / presenceMoveMs) : 1;
+    const moving = t < 1;
+    // Da fermi basta ~30 immagini al secondo; se il livello è nascosto non si disegna nulla
+    if ((moving || now - presenceLastDraw >= 33) && presenceLayerShown(map)) {
+        presenceLastDraw = now;
+        const s = now / 1000;
+        const center = map.getCenter();
+        const metersPerPixel = 40075016.686 * Math.cos(center.lat * Math.PI / 180) / (512 * Math.pow(2, map.getZoom()));
+        const amp = Math.min(PRESENCE_WIGGLE_MAX_M, Math.max(PRESENCE_WIGGLE_MIN_M, PRESENCE_WIGGLE_PX * metersPerPixel));
+        const kx = 111320 * Math.cos(center.lat * Math.PI / 180);
+        const place = (base, key, atHome) => {
+            if (atHome) return base;
+            const [wx, wy] = antWiggle(getAntParams(key), s, amp);
+            return [base[0] + wx / kx, base[1] + wy / 111320];
+        };
+        if (!moving) displayedPositions = new Map();
+        const features = anim.target.features.map((f, i) => {
+            const key = f.properties.personKey;
+            const end = f.geometry.coordinates;
+            let base = end;
+            let properties = f.properties;
+            if (moving) {
+                const w = walkPosition(anim.starts[i] ?? end, end, getAntParams(key), t);
+                base = w.coords;
+                if (anim.arrivals.has(key)) properties = { ...properties, fade: Math.min(1, 2 * w.e) };
+            }
+            displayedPositions.set(key, base);
+            return { ...f, properties, geometry: { type: 'Point', coordinates: place(base, key, f.properties.atHome) } };
+        });
+        if (moving) {
+            anim.leaving.forEach(l => {
+                const w = walkPosition(l.from, l.to, getAntParams(l.key), t);
+                displayedPositions.set(l.key, w.coords);
+                features.push({
+                    type: 'Feature',
+                    properties: { personKey: l.key, fade: Math.min(1, 2 * (1 - w.e)), ...(l.color && { color: l.color }) },
+                    geometry: { type: 'Point', coordinates: place(w.coords, l.key, false) }
+                });
+            });
+        }
+        src.setData({ type: 'FeatureCollection', features });
+    }
+    presenceMoveFrame = requestAnimationFrame(drawPresenceFrame);
+}
+
 // Chi c'era anche prima scivola dalla vecchia alla nuova posizione; chi arriva in città entra dall'esterno
 // comparendo piano (fade in), chi la lascia esce verso l'esterno svanendo (fade out).
 function movePresencePointsTo(target, visible, arrivals = new Set(), leavers = []) {
     if (presenceMoveFrame) cancelAnimationFrame(presenceMoveFrame);
     presenceMoveFrame = null;
+    presenceAnim = null;
     const map = getMapInstance();
     const hadPoints = displayedPositions.size > 0;
-    const starts = target?.features.map(f => {
+    const source = map?.getSource(PRESENCE_POINTS_SOURCE_ID);
+    const animate = visible && presenceMoveMs && source && hadPoints;
+    const starts = animate ? target?.features.map(f => {
         const key = f.properties.personKey;
         return displayedPositions.get(key) ?? (arrivals.has(key) ? outsideCity(f.geometry.coordinates, key) : null);
-    }) ?? [];
-    const leaving = leavers
+    }) ?? [] : [];
+    const leaving = animate ? leavers
         .map(key => ({ key, from: displayedPositions.get(key) }))
         .filter(l => l.from)
-        .map(l => ({ ...l, to: outsideCity(l.from, l.key), color: getPreviousPersonColor(l.key) }));
-    const lerp = (a, b, e) => [a[0] + (b[0] - a[0]) * e, a[1] + (b[1] - a[1]) * e];
-    const frame = (e) => {
-        displayedPositions = new Map();
-        const features = (target?.features ?? []).map((f, i) => {
-            const key = f.properties.personKey;
-            const end = f.geometry.coordinates;
-            const coords = lerp(starts[i] ?? end, end, e);
-            displayedPositions.set(key, coords);
-            const properties = arrivals.has(key) ? { ...f.properties, fade: Math.min(1, 2 * e) } : f.properties;
-            return { ...f, properties, geometry: { type: 'Point', coordinates: coords } };
-        });
-        leaving.forEach(l => {
-            const coords = lerp(l.from, l.to, e);
-            displayedPositions.set(l.key, coords);
-            features.push({
-                type: 'Feature',
-                properties: { personKey: l.key, fade: Math.min(1, 2 * (1 - e)), ...(l.color && { color: l.color }) },
-                geometry: { type: 'Point', coordinates: coords }
-            });
-        });
-        return { type: 'FeatureCollection', features };
-    };
-    const source = map?.getSource(PRESENCE_POINTS_SOURCE_ID);
-    if (!visible || reduceMotion || !presenceMoveMs || !source || !hadPoints) {
-        displayedPositions = new Map();
-        target?.features.forEach(f => displayedPositions.set(f.properties.personKey, f.geometry.coordinates));
+        .map(l => ({ ...l, to: outsideCity(l.from, l.key), color: getPreviousPersonColor(l.key) })) : [];
+    displayedPositions = new Map();
+    target?.features.forEach(f => displayedPositions.set(f.properties.personKey, f.geometry.coordinates));
+    if (!animate || reduceMotion || !target?.features.length) {
+        // Salto senza animazione (o primo disegno): crea il livello se serve
         addOrUpdatePresencePointsLayer(target, visible);
-        return;
+        if (reduceMotion || !target?.features.length) return;
+    } else {
+        setLayerVisibility(PRESENCE_POINTS_LAYER_ID, visible);
     }
-    const t0 = performance.now();
-    const step = (now) => {
-        const t = Math.min(1, (now - t0) / presenceMoveMs);
-        const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; // parte e arriva piano
-        const src = map.getSource(PRESENCE_POINTS_SOURCE_ID);
-        if (!src) { presenceMoveFrame = null; return; }
-        if (t < 1) {
-            src.setData(frame(e));
-            presenceMoveFrame = requestAnimationFrame(step);
-        } else {
-            // Arrivati: chi lasciava la città sparisce
-            displayedPositions = new Map();
-            target?.features.forEach(f => displayedPositions.set(f.properties.personKey, f.geometry.coordinates));
-            addOrUpdatePresencePointsLayer(target, visible);
-            presenceMoveFrame = null;
-        }
-    };
-    setLayerVisibility(PRESENCE_POINTS_LAYER_ID, visible);
-    presenceMoveFrame = requestAnimationFrame(step);
+    presenceAnim = { target, starts, arrivals, leaving, t0: animate ? performance.now() : -Infinity };
+    presenceMoveFrame = requestAnimationFrame(drawPresenceFrame);
 }
 
 // Ridisegna i puntini dell'ora corrente (es. dopo aver cambiato la colorazione)
