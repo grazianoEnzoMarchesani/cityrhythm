@@ -20,6 +20,12 @@ export const audioEnabled = writable(false);
 // Bussola emotiva della cella al centro della mappa (src/compass/compass.js):
 // stato = confermato dopo l'isteresi (null fuori dalle celle), proposto = in attesa di conferma.
 export const mood = writable(null);
+// UTCI e stato della bussola di tutte le celle LCZ nell'ora della timeline (src/compass/cell-map.js),
+// calcolati solo mentre una mappa li mostra: { ids, utci: Float32Array, stato: string[] } o null.
+export const cellMap = writable(null);
+// Persone dei puntini nell'ora della timeline (src/map/map-layers.js): solo chi è fuori casa,
+// ognuno col peso di quante persone vere rappresenta. { index, lon, lat, w: Float64Array } o null.
+export const presence = writable(null);
 
 if (import.meta.env.DEV) {
     time.subscribe(t => console.log('[store] ora', t.index, t.date ? t.date.toISOString().slice(0, 16) : 'settimana tipo'));

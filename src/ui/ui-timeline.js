@@ -2,7 +2,7 @@ import { hourToLabel } from '../utils/utils.js';
 import {
     updateAllPresencePoints,
     updateCrowdedPointsLayerStyle,
-    getCrowdednessColumnName,
+    getTimelineCrowdednessColumn,
     addSyntheticCrowdedPointsLayer,
     removeSyntheticCrowdedPointsLayer,
     setPresenceMoveDuration
@@ -86,7 +86,7 @@ function updateAppStateForHour(hourIndex) {
     return new Promise((resolve) => {
         const map = getMapInstance();
         const crowdedData = getCrowdedData();
-        const columnName = getCrowdednessColumnName(hourIndex);
+        const columnName = getTimelineCrowdednessColumn(hourIndex);
         const currentCrowdednessMap = new Map();
         if (columnName && crowdedData?.length > 0) {
             crowdedData.forEach(record => {

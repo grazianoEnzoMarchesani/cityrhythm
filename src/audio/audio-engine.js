@@ -1,13 +1,16 @@
 // Motore audio della mappa sonora: legge solo lo store (audioEnabled, mood).
-// Musica: un brano per stato, in loop, dissolvenza incrociata di 3 s verso lo stato nuovo.
+// Musica: un brano per stato, in loop, dissolvenza incrociata equal-power verso lo stato nuovo,
+// lunga quanto le animazioni della mappa (PRESENCE_MOVE_MS, oggi 1 s).
 // Suoni urbani: ogni gruppo alterna a caso le sue varianti (mix calcolato in public/audio/mix.json).
 // Fuori dalle celle LCZ (stato null): silenzio.
 import { audioEnabled, mood } from '../state/store.js';
-import { AUDIO_BASE } from '../data/config.js';
+import { AUDIO_BASE, PRESENCE_MOVE_MS } from '../data/config.js';
 
-const FADE_S = 3;
+const FADE_S = PRESENCE_MOVE_MS / 1000;
 const MASTER_FADE_S = 1;
 const STATES = ['routine', 'rifugio', 'passeggiata', 'festa', 'attesa', 'corrente', 'afa', 'fatica', 'calca', 'notte'];
+
+const N = 64; // punti delle curve di dissolvenza
 
 let ctx = null, master = null, mix = null, sfxManifest = null;
 const music = {};      // stato -> { gain, loading: Promise }
@@ -46,6 +49,28 @@ function ramp(param, value, seconds) {
     param.cancelScheduledValues(t);
     param.setValueAtTime(param.value, t);
     param.linearRampToValueAtTime(value, t + seconds);
+}
+
+/**
+ * Dissolvenza equal-power (seno/coseno) verso 0 o 1, ripresa dal volume attuale se un'altra è a metà:
+ * la somma delle potenze dei due brani resta costante, senza il "buco" a metà di quella lineare.
+ */
+function powerRamp(param, value, seconds) {
+    const t = ctx.currentTime;
+    const g0 = Math.max(0, Math.min(1, param.value));
+    const a0 = value ? Math.asin(g0) : Math.acos(g0); // punto di partenza sulla curva
+    const len = (Math.PI / 2 - a0) / (Math.PI / 2) * seconds;
+    const curve = Float32Array.from({ length: N }, (_, k) => {
+        const a = a0 + (Math.PI / 2 - a0) * k / (N - 1);
+        return value ? Math.sin(a) : Math.cos(a);
+    });
+    param.cancelScheduledValues(0);
+    if (Math.abs(g0 - value) < 1e-3) return param.setValueAtTime(value, t); // già arrivato
+    try {
+        param.setValueCurveAtTime(curve, t, Math.max(len, 0.01));
+    } catch {
+        ramp(param, value, seconds);
+    }
 }
 
 async function decode(url) {
@@ -88,7 +113,7 @@ async function play(state) {
         try { await loadMusic(state); } catch (err) { console.error('Audio:', err); return; }
         if (current !== state) return; // nel frattempo lo stato è cambiato
     }
-    for (const [s, v] of Object.entries(music)) ramp(v.gain.gain, s === state ? 1 : 0, FADE_S);
+    for (const [s, v] of Object.entries(music)) powerRamp(v.gain.gain, s === state ? 1 : 0, FADE_S);
     applyScene(state);
 }
 
@@ -122,7 +147,6 @@ async function loadSfx() {
 
 // Mette in coda la clip successiva: variante diversa dalla precedente, velocità ±4%,
 // dissolvenza incrociata equal-power fino a 1,2 s con quella in corso.
-const N = 64;
 const UP = Float32Array.from({ length: N }, (_, k) => Math.sin(k / (N - 1) * Math.PI / 2));
 const DOWN = Float32Array.from({ length: N }, (_, k) => Math.cos(k / (N - 1) * Math.PI / 2));
 

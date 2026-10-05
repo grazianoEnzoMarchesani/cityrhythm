@@ -277,6 +277,33 @@ function renderLczLegend(type) {
             list.appendChild(item);
         });
         legend.appendChild(list);
+        appendLegendNote(legend, info.note);
+        return;
+    }
+    if (info.kind === 'compass') {
+        // Mini bussola: righe = piacevolezza (sereno in alto), colonne = energia (poca → tanta gente)
+        const rows = [['Serene', ['rifugio', 'passeggiata', 'festa']], ['Neutral', ['attesa', 'routine', 'corrente']],
+            ['Oppressive', ['afa', 'fatica', 'calca']]];
+        const grid = document.createElement('div');
+        grid.className = 'lcz-legend-compass';
+        rows.forEach(([label, states]) => {
+            const head = document.createElement('span');
+            head.className = 'lcz-legend-compass-row';
+            head.textContent = label;
+            grid.appendChild(head);
+            states.forEach(st => grid.appendChild(compassCell(st, info.colors[st])));
+        });
+        grid.appendChild(document.createElement('span'));
+        const axis = document.createElement('span');
+        axis.className = 'lcz-legend-compass-axis';
+        axis.textContent = 'few people → crowded';
+        grid.appendChild(axis);
+        const night = document.createElement('div');
+        night.className = 'lcz-legend-compass-night';
+        night.appendChild(compassCell('notte', info.colors.notte));
+        night.append(' dark and few people');
+        legend.append(grid, night);
+        appendLegendNote(legend, info.note);
         return;
     }
     // Soglie a passo regolare: la scala è lineare a tratti fra una soglia e l'altra
@@ -288,6 +315,7 @@ function renderLczLegend(type) {
     const ticks = document.createElement('div');
     ticks.className = 'lcz-legend-ticks';
     info.stops.forEach(([v], i) => {
+        if (v === null) return; // soglia senza etichetta
         const tick = document.createElement('span');
         tick.textContent = i === info.stops.length - 1 && info.unit && !info.unit.includes('–') ? `${v} ${info.unit}` : v;
         tick.style.left = `${pos(i)}%`;
@@ -297,6 +325,25 @@ function renderLczLegend(type) {
     note.className = 'lcz-legend-note';
     note.textContent = info.unit.includes('–') ? `${info.note} (${info.unit})` : info.note;
     legend.append(bar, ticks, note);
+}
+
+function compassCell(state, color) {
+    const cell = document.createElement('span');
+    cell.className = 'lcz-legend-compass-cell';
+    cell.textContent = state[0].toUpperCase() + state.slice(1);
+    cell.style.background = color;
+    // testo chiaro sui colori scuri
+    const [r, g, b] = [1, 3, 5].map(i => parseInt(color.slice(i, i + 2), 16));
+    cell.style.color = 0.299 * r + 0.587 * g + 0.114 * b < 140 ? '#fff' : '#222';
+    return cell;
+}
+
+function appendLegendNote(legend, text) {
+    if (!text) return;
+    const note = document.createElement('div');
+    note.className = 'lcz-legend-note';
+    note.textContent = text;
+    legend.appendChild(note);
 }
 
 function handleToggleChange(event, layerId) {
