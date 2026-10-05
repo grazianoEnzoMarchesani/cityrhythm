@@ -56,6 +56,14 @@ export const NIGHT_WAKE_UP_HOURS = [6, 8];   // e riscende a 0
 export const PRESENCE_MOVE_MS = 1000;
 // Chi arriva in città o la lascia entra/esce da questo punto, oltre la sua posizione in direzione opposta al centro
 export const PRESENCE_EXIT_METERS = 600;
+// Partenze sfalsate: ognuno parte con un ritardo fino a questa quota dello spostamento (0 = tutti insieme)
+export const PRESENCE_STAGGER = 0.4;
+// Deviazione laterale massima del percorso (metri; al più il 20% della distanza)
+export const PRESENCE_BEND_MAX_M = 60;
+// Brulichio "a formichine" attorno al proprio posto: ~3 pixel sullo schermo, fra 1,5 e 15 metri
+export const PRESENCE_WIGGLE_PX = 3;
+export const PRESENCE_WIGGLE_MIN_M = 1.5;
+export const PRESENCE_WIGGLE_MAX_M = 15;
 
 export const CHART_COLORS = {
     GENDER_CHART: {
