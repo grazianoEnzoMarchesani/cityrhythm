@@ -20,3 +20,6 @@ UsoTempo_*/
 # IPUMS MTUS (licenza: vietato ridistribuire i microdati): solo in locale, mai su GitHub
 IPUMS_MTUS/
 IPUMS/
+
+# Presentazione (deck, video, materiale): non serve su GitHub
+presentazione/
