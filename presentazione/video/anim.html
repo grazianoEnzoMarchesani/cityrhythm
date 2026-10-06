@@ -1,0 +1,272 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;600&display=block" rel="stylesheet">
+<style>html,body{margin:0;background:#fff}canvas{width:1664px;height:640px;display:block}</style>
+</head><body><canvas id="c"></canvas><script>
+// Due animazioni per il deck: ?v=energia | ?v=piacevolezza. render(t) disegna l'istante t (secondi).
+const W = 1664, H = 640, S = 2;
+const cv = document.getElementById('c'); cv.width = W * S; cv.height = H * S;
+const ctx = cv.getContext('2d');
+const INK = '#111111', GRAY = '#6e6e6e', LIGHT = '#c4c4c4', FAINT = '#ececec';
+const SG = "'Space Grotesk', Arial, sans-serif", PX = "'IBM Plex Sans', Arial, sans-serif";
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a), 0, 1);
+const ease = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const thousands = v => String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+const num = (v, d = 2) => (v < 0 ? '−' : '+') + Math.abs(v).toFixed(d).replace('.', ',');
+const UTCI_STOPS = [[-13, '#2364b4'], [0, '#8cc8ec'], [9, '#b9e0a5'], [17.5, '#66bd63'], [26, '#fee08b'], [32, '#f46d43'], [38, '#d7191c'], [46, '#6e0000']];
+
+function T(s, x, y, o = {}) {
+  const { size = 24, weight = 400, font = PX, color = INK, align = 'left', alpha = 1 } = o;
+  if (alpha <= 0) return;
+  ctx.save(); ctx.globalAlpha *= alpha; ctx.fillStyle = color;
+  ctx.font = `${weight} ${size}px ${font}`; ctx.textAlign = align; ctx.textBaseline = 'alphabetic';
+  ctx.fillText(s, x, y); ctx.restore();
+}
+function width(s, size, weight = 400, font = PX) { ctx.save(); ctx.font = `${weight} ${size}px ${font}`; const w = ctx.measureText(s).width; ctx.restore(); return w; }
+function wrap(s, maxW, size) {
+  const out = []; let cur = '';
+  for (const w of s.split(' ')) { const t = cur ? cur + ' ' + w : w; if (width(t, size) > maxW && cur) { out.push(cur); cur = w; } else cur = t; }
+  if (cur) out.push(cur); return out;
+}
+function line(x1, y1, x2, y2, color = INK, w = 2, alpha = 1, dash = null) {
+  if (alpha <= 0) return;
+  ctx.save(); ctx.globalAlpha *= alpha; ctx.strokeStyle = color; ctx.lineWidth = w; ctx.lineCap = 'round';
+  if (dash) ctx.setLineDash(dash); ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); ctx.restore();
+}
+function dot(x, y, r, color = INK, alpha = 1) { if (alpha <= 0) return; ctx.save(); ctx.globalAlpha *= alpha; ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.fill(); ctx.restore(); }
+function ring(x, y, r, color = INK, w = 2, alpha = 1) { if (alpha <= 0 || r <= 0) return; ctx.save(); ctx.globalAlpha *= alpha; ctx.strokeStyle = color; ctx.lineWidth = w; ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.stroke(); ctx.restore(); }
+function box(x, y, w, h, color, alpha = 1) { if (alpha <= 0) return; ctx.save(); ctx.globalAlpha *= alpha; ctx.fillStyle = color; ctx.fillRect(x, y, w, h); ctx.restore(); }
+function frame(x, y, w, h, color = INK, lw = 2, alpha = 1) { if (alpha <= 0) return; ctx.save(); ctx.globalAlpha *= alpha; ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.strokeRect(x, y, w, h); ctx.restore(); }
+function mixHex(a, b, k) {
+  const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  const A = p(a), B = p(b); return 'rgb(' + A.map((v, i) => Math.round(v + (B[i] - v) * k)).join(',') + ')';
+}
+function utciGradient(x, w) {
+  const g = ctx.createLinearGradient(x, 0, x + w, 0);
+  for (const [v, c] of UTCI_STOPS) g.addColorStop((v + 13) / 59, c);
+  return g;
+}
+
+// Colonna dei passi a destra: passo attivo nero con barretta, fatti neri col risultato, futuri grigio chiaro.
+function steps(t, list) {
+  const x0 = 1104;
+  list.forEach((s, i) => {
+    const y = 72 + i * 116, active = t >= s.a && t < s.b, done = t >= s.b;
+    const col = active || done ? INK : LIGHT;
+    if (active) box(x0 - 24, y - 30, 4, 40, INK);
+    T(String(i + 1), x0, y, { size: 32, weight: 600, font: SG, color: col });
+    T(s.title, x0 + 44, y, { size: 32, weight: 600, font: SG, color: col });
+    const ra = seg(t, s.b - 0.5, s.b);
+    wrap(s.res, 516, 24).forEach((l, j) => T(l, x0 + 44, y + 38 + j * 30, { color: GRAY, alpha: ra }));
+  });
+}
+
+// ---------------- Energia ----------------
+function rng(seed) { let s = seed >>> 0; return () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; }
+const VX = [-230, -95, 30, 165], HY = [-205, -60, 85, 225], SW = 24, HALF = 280, R50 = 200; // 4 px = 1 m
+const blocks = (() => {
+  const xs = [-HALF, ...VX, HALF], ys = [-HALF, ...HY, HALF], out = [];
+  for (let i = 0; i < xs.length - 1; i++) for (let j = 0; j < ys.length - 1; j++) {
+    const b = [xs[i] + (i > 0 ? SW / 2 : 0), ys[j] + (j > 0 ? SW / 2 : 0), xs[i + 1] - (i < xs.length - 2 ? SW / 2 : 0), ys[j + 1] - (j < ys.length - 2 ? SW / 2 : 0)];
+    if (b[0] < 0 && b[2] > 0 && b[1] < 0 && b[3] > 0) continue; // la piazza al centro
+    out.push(b);
+  }
+  return out;
+})();
+const inBlock = (x, y, m = 0) => blocks.some(b => x > b[0] + m && x < b[2] - m && y > b[1] + m && y < b[3] - m);
+const people = (() => {
+  const r = rng(11), out = [], need = { oi: 18, oo: 26, hi: 9, ho: 16 }, have = { oi: 0, oo: 0, hi: 0, ho: 0 };
+  let guard = 0;
+  while (Object.keys(need).some(k => have[k] < need[k]) && guard++ < 200000) {
+    const x = (r() * 2 - 1) * 268, y = (r() * 2 - 1) * 268, d = Math.hypot(x, y);
+    const home = inBlock(x, y, 8), street = !inBlock(x, y, -4);
+    if (!home && !street) continue;
+    if (d > 186 && d < 214) continue;
+    const k = (home ? 'h' : 'o') + (d < R50 ? 'i' : 'o');
+    if (have[k] >= need[k]) continue;
+    if (out.some(p => Math.hypot(p.x - x, p.y - y) < 17)) continue;
+    have[k]++; out.push({ x, y, home, inside: d < R50, ph: r() * 6.28, i: out.length });
+  }
+  const inn = out.filter(p => !p.home && p.inside).sort((a, b) => Math.atan2(a.y, a.x) - Math.atan2(b.y, b.x));
+  inn.forEach((p, k) => p.order = k);
+  return out;
+})();
+const N_IN = 18, AREA = Math.PI * 0.05 ** 2, DENS = N_IN / AREA;
+const X_EN = clamp(2 * (Math.log10(DENS + 1) - 2.19474) / (4.13431 - 2.19474) - 1, -1, 1);
+
+function mapView(t, cx, cy, sc, alpha) {
+  ctx.save(); ctx.globalAlpha *= alpha; ctx.translate(cx, cy); ctx.scale(sc, sc);
+  ctx.beginPath(); ctx.rect(-HALF, -HALF, 2 * HALF, 2 * HALF); ctx.clip();
+  for (const b of blocks) box(b[0], b[1], b[2] - b[0], b[3] - b[1], FAINT);
+  const r = R50 * ease(seg(t, 3.6, 5.2)), dim = seg(t, 5.2, 5.8);
+  for (const p of people) {
+    const a = seg(t, 0.8 + p.i * 0.025, 1.2 + p.i * 0.025);
+    if (p.home) { dot(p.x, p.y, 5, INK, a * 0.3 * (p.inside ? 1 : 1 - 0.6 * dim)); continue; }
+    const x = p.x + 2.2 * Math.sin(t * 2.3 + p.ph), y = p.y + 2.2 * Math.cos(t * 1.9 + p.ph * 1.3);
+    dot(x, y, 6, INK, a * (p.inside ? 1 : 1 - 0.75 * dim));
+    if (p.inside) { const h = seg(t, 6.6 + p.order * 0.16, 6.85 + p.order * 0.16); ring(x, y, 9 + 4 * (1 - h), INK, 2, h); }
+  }
+  ring(0, 0, r, INK, 2.5, r > 1 ? 1 : 0);
+  const la = seg(t, 5.0, 5.5) * (1 - seg(t, 10, 10.4));
+  line(0, 0, R50, 0, INK, 2, la, [6, 7]);
+  T('50 m', R50 / 2, -14, { size: 28, weight: 600, font: SG, align: 'center', alpha: la });
+  line(-22, 0, -8, 0, INK, 2); line(8, 0, 22, 0, INK, 2); line(0, -22, 0, -8, INK, 2); line(0, 8, 0, 22, INK, 2);
+  frame(-60, -60, 120, 120, INK, 1.5, 0.6);
+  ctx.restore();
+}
+
+function energia(t) {
+  T('Esempio illustrativo', 0, 28, { color: GRAY });
+  const k = ease(seg(t, 10, 11));
+  mapView(t, 520 + (175 - 520) * k, 330 + (205 - 330) * k, 1 - 0.45 * k, 1);
+  // legenda e contatore
+  const lg = seg(t, 1.6, 2.2) * (1 - seg(t, 10, 10.4));
+  dot(10, 292, 6, INK, lg); T('in giro', 28, 300, { alpha: lg });
+  dot(10, 340, 5, INK, lg * 0.3); T('in casa', 28, 348, { alpha: lg });
+  const n = people.filter(p => !p.home && p.inside && t >= 6.75 + p.order * 0.16).length;
+  const ca = seg(t, 6.4, 6.8) * (1 - seg(t, 10, 10.4));
+  T(String(n), 840, 320, { size: 72, weight: 700, font: SG, alpha: ca });
+  T('persone in giro', 840, 360, { color: GRAY, alpha: ca });
+  T('entro 50 m', 840, 390, { color: GRAY, alpha: ca });
+  // densità
+  T('persone in giro ÷ area del cerchio', 400, 112, { color: GRAY, alpha: seg(t, 10.7, 11.1) });
+  T('18 ÷ 0,00785 km²', 400, 182, { size: 44, weight: 600, font: SG, alpha: seg(t, 11.0, 11.4) });
+  T('area = π × (0,05 km)²', 400, 222, { color: GRAY, alpha: seg(t, 11.3, 11.7) });
+  T('= ' + thousands(DENS) + ' persone/km²', 400, 300, { size: 44, weight: 600, font: SG, alpha: seg(t, 11.9, 12.4) });
+  // scala tarata
+  const sa = seg(t, 13.1, 13.6), BX = 20, BW = 1000;
+  if (sa > 0) {
+    T('156 persone/km²', BX, 425, { color: GRAY, alpha: sa });
+    T('13.623 persone/km²', BX + BW, 425, { color: GRAY, align: 'right', alpha: sa });
+    const act = seg(t, 15.6, 16.0), labels = ['poca gente', 'gente media', 'tanta gente'];
+    for (let i = 0; i < 3; i++) {
+      const on = i === 1 ? act : 0;
+      box(BX + i * BW / 3 + (i ? 4 : 0), 445, BW / 3 - 8 + (i === 0 || i === 2 ? 4 : 0), 18, mixHex(FAINT, INK, on), sa);
+      T(labels[i], BX + (i + 0.5) * BW / 3, 500, { align: 'center', color: on > .5 ? INK : GRAY, weight: on > .5 ? 600 : 400, alpha: sa });
+    }
+    T('−1', BX, 500, { color: GRAY, alpha: sa }); T('+1', BX + BW, 500, { color: GRAY, align: 'right', alpha: sa });
+    const f = (X_EN + 1) / 2, p = ease(seg(t, 13.8, 15.6)), xv = BX + BW * f * p, ma = seg(t, 13.7, 14.0);
+    line(xv, 436, xv, 472, INK, 4, ma); dot(xv, 434, 7, INK, ma);
+    T('energia ' + num(2 * f * p - 1), xv, 578, { size: 32, weight: 600, font: SG, align: 'center', alpha: ma });
+  }
+  steps(t, [
+    { title: 'I puntini della mappa', res: 'neri in giro, grigi in casa', a: 0.6, b: 3.4 },
+    { title: 'Un cerchio di 50 m', res: 'attorno al mirino, al centro della mappa', a: 3.4, b: 6.2 },
+    { title: 'Si contano le persone', res: '18 in giro; chi è in casa non conta', a: 6.2, b: 10 },
+    { title: 'Diventa una densità', res: thousands(DENS) + ' persone/km²', a: 10, b: 13 },
+    { title: 'La scala tarata sui dati', res: 'energia ' + num(X_EN) + ': gente media', a: 13, b: 16.6 }
+  ]);
+}
+
+// ---------------- Piacevolezza ----------------
+// Valori veri (sound-lab: compass-core.js sulla cella 314284, 21/7/2024 ore 13).
+const EX = { ta: 33, rh: 40, wind: 8.8, sun: 67, svf: 27, tmrt: 43.8, v10: 1.8, utci: 35.3, comfort: -1, green: -0.99, Y: -1.00 };
+function piacevolezza(t) {
+  T('Esempio vero: una cella del Centro Storico, 21 luglio 2024, ore 13', 0, 28, { color: GRAY });
+  // 1. meteo
+  const a1 = seg(t, 0.8, 1.2) * (1 - seg(t, 4.1, 4.5));
+  if (a1 > 0) {
+    let x = 0;
+    [['33 °C', 'aria'], ['40%', 'umidità'], ['8,8 km/h', 'vento a 10 m'], ['67°', 'altezza del sole']].forEach(([v, l], i) => {
+      const a = a1 * seg(t, 1.0 + i * 0.5, 1.4 + i * 0.5);
+      T(v, x, 240, { size: 72, weight: 700, font: SG, alpha: a }); T(l, x, 284, { color: GRAY, alpha: a });
+      x += Math.max(width(v, 72, 700, SG), width(l, 24)) + 72;
+    });
+    T('Meteo orario Open-Meteo, uguale per tutta la città', 0, 380, { color: GRAY, alpha: a1 * seg(t, 3.0, 3.4) });
+  }
+  // 2. la strada
+  const a2 = seg(t, 4.3, 4.7) * (1 - seg(t, 8.3, 8.7));
+  if (a2 > 0) {
+    const g = 590, hB = 285;
+    line(0, g, 480, g, INK, 2, a2);
+    box(0, g - hB, 160, hB, '#ffffff', a2); frame(0, g - hB, 160, hB, INK, 3, a2);
+    box(320, g - hB, 160, hB, '#ffffff', a2); frame(320, g - hB, 160, hB, INK, 3, a2);
+    line(240, g - 40, 160, g - hB, GRAY, 2, a2, [6, 7]); line(240, g - 40, 320, g - hB, GRAY, 2, a2, [6, 7]);
+    dot(240, g - 40, 8, INK, a2); line(240, g - 32, 240, g - 12, INK, 3, a2); line(240, g - 12, 232, g, INK, 3, a2); line(240, g - 12, 248, g, INK, 3, a2);
+    const sx = 400, sy = 120; ring(sx, sy, 22, INK, 3, a2);
+    for (let i = 0; i < 8; i++) { const an = i * Math.PI / 4; line(sx + 32 * Math.cos(an), sy + 32 * Math.sin(an), sx + 44 * Math.cos(an), sy + 44 * Math.sin(an), INK, 3, a2); }
+    [['27%', 'cielo visibile dalla strada'], ['43,8 °C', 'temperatura radiante'], ['1,8 m/s', 'vento nella cella']].forEach(([v, l], i) => {
+      const a = a2 * seg(t, 5.0 + i * 0.9, 5.4 + i * 0.9), y = 190 + i * 140;
+      T(v, 600, y, { size: 72, weight: 700, font: SG, alpha: a }); T(l, 600, y + 40, { color: GRAY, alpha: a });
+    });
+  }
+  // 3. UTCI
+  const a3 = seg(t, 8.5, 8.9) * (1 - seg(t, 11.7, 12.1));
+  if (a3 > 0) {
+    const p = ease(seg(t, 9.2, 10.8)), v = -13 + (EX.utci + 13) * p, xv = 1000 * (v + 13) / 59;
+    T(v.toFixed(1).replace('.', ',').replace('-', '−') + ' °C', 0, 200, { size: 72, weight: 700, font: SG, alpha: a3 });
+    ctx.save(); ctx.globalAlpha = a3; ctx.fillStyle = utciGradient(0, 1000); ctx.fillRect(0, 280, 1000, 56); ctx.restore();
+    for (const [tv, lab] of [[-13, '−13'], [0, '0'], [9, '9'], [26, '26'], [32, '32'], [38, '38'], [46, '46 °C']])
+      T(lab, 1000 * (tv + 13) / 59, 374, { color: GRAY, align: tv === -13 ? 'left' : tv === 46 ? 'right' : 'center', alpha: a3 });
+    const ma = a3 * seg(t, 9.0, 9.3); line(xv, 262, xv, 352, INK, 4, ma); dot(xv, 260, 8, INK, ma);
+    const ba = a3 * seg(t, 10.8, 11.2);
+    T('stress da caldo forte', 0, 456, { size: 32, weight: 500, font: SG, alpha: ba });
+    T('fascia ufficiale dell\'UTCI: da 32 a 38 °C', 0, 494, { color: GRAY, alpha: ba });
+  }
+  // 4. comfort
+  const a4 = seg(t, 11.9, 12.3) * (1 - seg(t, 15.3, 15.7));
+  if (a4 > 0) {
+    const X = v => 120 + (v + 13) / 59 * 880, Y = c => 350 - c * 150;
+    T('+1 fra 9 e 26 °C, −1 da 30 °C in su o da −13 °C in giù', 120, 132, { color: GRAY, alpha: a4 });
+    line(120, 350, 1000, 350, LIGHT, 1.5, a4);
+    T('+1', 100, 208, { color: GRAY, align: 'right', alpha: a4 }); T('0', 100, 358, { color: GRAY, align: 'right', alpha: a4 }); T('−1', 100, 508, { color: GRAY, align: 'right', alpha: a4 });
+    ctx.save(); ctx.globalAlpha = a4; ctx.fillStyle = utciGradient(120, 880); ctx.fillRect(120, 530, 880, 10); ctx.restore();
+    for (const [tv, lab] of [[-13, '−13'], [9, '9'], [26, '26'], [30, '30'], [46, '46 °C']])
+      T(lab, X(tv), 575, { color: GRAY, align: tv === -13 ? 'left' : tv === 46 ? 'right' : 'center', alpha: a4 });
+    const pts = [[-13, -1], [9, 1], [26, 1], [30, -1], [46, -1]].map(([v, c]) => [X(v), Y(c)]);
+    const segs = pts.slice(1).map((q, i) => Math.hypot(q[0] - pts[i][0], q[1] - pts[i][1])), total = segs.reduce((a, b) => a + b);
+    let left = total * ease(seg(t, 12.3, 13.6));
+    ctx.save(); ctx.globalAlpha = a4; ctx.strokeStyle = INK; ctx.lineWidth = 4; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(...pts[0]);
+    for (let i = 0; i < segs.length && left > 0; i++) { const f = Math.min(1, left / segs[i]); ctx.lineTo(pts[i][0] + (pts[i + 1][0] - pts[i][0]) * f, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * f); left -= segs[i]; }
+    ctx.stroke(); ctx.restore();
+    const pa = a4 * seg(t, 13.8, 14.4), px = X(EX.utci);
+    line(px, 528, px, Y(-1), INK, 2, pa, [5, 6]); dot(px, Y(-1), 10 * seg(t, 13.8, 14.2), INK, pa);
+    T('35,3 °C', px, 612, { weight: 600, align: 'center', alpha: pa });
+    T('comfort −1', px + 18, Y(-1) - 26, { size: 32, weight: 600, font: SG, align: 'left', alpha: a4 * seg(t, 14.2, 14.6) });
+  }
+  // 5. piacevolezza
+  const a5 = seg(t, 15.5, 15.9);
+  if (a5 > 0) {
+    const row = (y, lab, val, w, res, at, bold = false) => {
+      const a = a5 * seg(t, at, at + 0.4), o = { size: 32, weight: bold ? 700 : 500, font: SG, alpha: a };
+      T(lab, 0, y, o); T(val, 330, y, o); T(w, 500, y, { ...o, color: GRAY }); T(res, 800, y, { ...o, align: 'right', size: bold ? 44 : 32 });
+    };
+    row(170, 'comfort', '−1', '× 0,75', '−0,75', 15.7);
+    row(260, 'verde', '−0,99', '× 0,25', '−0,25', 16.3);
+    T('0,4% di suolo permeabile (scala da −1 a +1)', 0, 296, { color: GRAY, alpha: a5 * seg(t, 16.4, 16.8) });
+    row(370, 'pioggia', '0 mm', '', '0', 16.9);
+    T('toglie 0,3 se piove più di 0,5 mm', 0, 406, { color: GRAY, alpha: a5 * seg(t, 17.0, 17.4) });
+    line(0, 440, 800, 440, INK, 2, a5 * seg(t, 17.4, 17.7));
+    row(505, 'piacevolezza', '', '', '−1,00', 17.6, true);
+    const sa = a5 * seg(t, 17.8, 18.2), act = seg(t, 19.2, 19.6), names = ['Sereno', 'Neutro', 'Opprimente'];
+    for (let i = 0; i < 3; i++) {
+      const on = i === 2 ? act : 0;
+      box(900, 150 + i * 125, 24, 120, mixHex(FAINT, INK, on), sa);
+      T(names[i], 940, 150 + i * 125 + 68, { color: on > .5 ? INK : GRAY, weight: on > .5 ? 600 : 400, alpha: sa });
+    }
+    const yv = 335 + 185 * 0.998 * ease(seg(t, 18.2, 19.2)), ma = a5 * seg(t, 18.1, 18.3);
+    line(872, yv, 932, yv, INK, 4, ma); dot(868, yv, 7, INK, ma);
+  }
+  steps(t, [
+    { title: "Il meteo dell'ora", res: '33 °C, umidità 40%, vento 8,8 km/h', a: 0.6, b: 4.2 },
+    { title: 'La forma della strada', res: '27% di cielo: 43,8 °C radianti, vento 1,8 m/s', a: 4.2, b: 8.4 },
+    { title: 'UTCI', res: '35,3 °C: caldo forte', a: 8.4, b: 11.8 },
+    { title: 'Comfort', res: '−1: oltre 30 °C', a: 11.8, b: 15.4 },
+    { title: 'Piacevolezza', res: '−1,00: opprimente', a: 15.4, b: 19.6 }
+  ]);
+}
+
+const VIEW = new URLSearchParams(location.search).get('v') || 'energia';
+window.DURATION = VIEW === 'energia' ? 20 : 23;
+window.POSTER = VIEW === 'energia' ? 18.5 : 21.5;
+window.render = t => {
+  ctx.setTransform(S, 0, 0, S, 0, 0);
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+  (VIEW === 'energia' ? energia : piacevolezza)(t);
+  const fade = Math.min(seg(t, 0, 0.6), 1 - seg(t, window.DURATION - 0.6, window.DURATION));
+  if (fade < 1) box(0, 0, W, H, '#ffffff', 1 - fade);
+};
+Promise.all(["700 72px 'Space Grotesk'", "600 32px 'Space Grotesk'", "500 32px 'Space Grotesk'", "400 24px 'IBM Plex Sans'", "600 24px 'IBM Plex Sans'"].map(f => document.fonts.load(f)))
+  .then(() => { window.render(window.POSTER); window.READY = true; });
+</script></body></html>

@@ -3,7 +3,7 @@
 > Raccolta ordinata di **tutto** ciò che è stato fatto nel branch `Music`, ricavata dal second brain (`second-brain/*.md`) e dai 21 commit (`git log main..Music`). Non è ancora la presentazione: è la base da cui scriverla.
 > Ogni funzione ha una scheda con: **in una frase** (pronta per una slide), **il problema**, **come funziona** (parole semplici), **numeri e fonti**, **cosa mostrare**, **stato**.
 > Preparato il 2026-10-05 per la presentazione del 2026-10-06.
-> **Il deck esiste**: https://claude.ai/artifact/8wMEfrXxCtVTpSJe34nZ55 (19 slide). Decisioni, scaletta reale e come raccontare ogni slide: `second-brain/presentazione.md`. Le sezioni 15 e 17 qui sotto sono la bozza di partenza, superata dal deck.
+> **Il deck esiste**: https://claude.ai/artifact/8wMEfrXxCtVTpSJe34nZ55 (18 slide dal 2026-10-06). Decisioni, scaletta reale e come raccontare ogni slide: `second-brain/presentazione.md`. Le sezioni 15 e 17 qui sotto sono la bozza di partenza, superata dal deck.
 
 ---
 
@@ -261,7 +261,7 @@ Persone sulla mappa (puntini)      Clima di ogni cella (UTCI)
 
 ### E3. Piacevolezza: clima, verde, pioggia
 - **Formula:** `0,75 × comfort + 0,25 × verde − 0,3 se piove (> 0,5 mm)`.
-- **Comfort dall'UTCI:** +1 senza stress (9–26 °C), −1 dove inizia lo stress forte (32 °C caldo, −13 °C freddo), lineare in mezzo.
+- **Comfort dall'UTCI:** +1 senza stress (9–26 °C), −1 da 30 °C al caldo (scelta espressiva dopo l'ascolto: la fascia ufficiale dello stress forte parte da 32) e da −13 °C al freddo, lineare in mezzo.
 - **Verde come "bellezza":** superficie permeabile della cella; **scelta espressiva dell'utente, non fisica** (va detto).
 
 ### E4. Settimana tipo: una giornata calda
