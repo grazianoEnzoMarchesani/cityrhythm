@@ -15,6 +15,7 @@ Decisioni che non valgono più, barrate, con il perché e cosa le sostituisce. N
 - ~~Agire sulla mappa solo se `map.isStyleLoaded()`, altrimenti rimandare a `map.once('idle')`~~ → col brulichio dei puntini la mappa non è mai "ferma": LCZ, UHI e interruttori 3D smettevano di funzionare. Ora `isMapReady()` / `whenMapReady()` (dopo `load`).
 - ~~Edifici 3D accesi all'avvio (casella spuntata) e interruttori 3D applicati solo al clic~~ → il browser ricordava la casella vuota mentre gli edifici restavano in 3D: ora spenti all'avvio e la mappa segue la casella anche al caricamento.
 - ~~Etichette e icone della mappa di base; flavor Protomaps "light" con edifici colorati per altezza; edifici 3D di OpenStreetMap~~ → mappa muta in stile Toner con edifici bianchi del TUM (OSM: altezze spesso mancanti).
+- ~~Contorni degli edifici TUM così come scaricati (copia di OSM di qualche anno fa)~~ → aggiornati a OSM della mappa di base con le altezze TUM (`aggiorna_edifici_osm.py`, 2026-10-06): le strade di OSM 2026 attraversavano gli edifici vecchi (Rue).
 - ~~Pannello **Advanced** di finetuning.ai; seed 2024; tag Mood/Energy~~ → Advanced suona "a un solo strumento": si resta su **Instrumental**, seed 2025 (rifacimenti 2026/2027), solo testo aggiunto al prompt.
 - ~~Meteo della "settimana simulata 3–9 giugno 2024"~~ → i dati reali coprono 246 giorni: si usa tutto il periodo 2024-06-01 → 2025-02-01.
 - ~~Dissolvenze di 4–8 s~~ → scelta all'ascolto: **3 s**.

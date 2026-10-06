@@ -2,7 +2,7 @@
 
 > Memoria condivisa del progetto. **Ogni agente legge questo indice prima di iniziare**, poi i file di argomento che servono al lavoro (elenco nella sezione 4). Si aggiorna a fine sessione col comando `/second-brain` (vedi `.claude/skills/second-brain/SKILL.md`). Sintetico: decisioni e stato, non cronaca.
 
-Ultimo aggiornamento: 2026-10-05 (sedicesima sessione)
+Ultimo aggiornamento: 2026-10-06 (diciassettesima sessione)
 
 ## 1. Progetto in breve
 - **CityRhythm**: dashboard geospaziale (**MapLibre GL 6.12** + PMTiles, ECharts 5.5, Turf 7, D3 + d3-cloud, PapaParse, Litepicker) su affollamento, demografia, POI, LCZ/UHI. 3 dimensioni spaziali + 1 temporale (timeline).
@@ -21,7 +21,7 @@ Ultimo aggiornamento: 2026-10-05 (sedicesima sessione)
 | Spot (1.186 punti) | statici | Comune di Ascoli |
 | **LCZ** (`lcz_ascoli.geojson`, **12.496 celle vettoriali da 30 m**) | statici | rettangolo dei quartieri e dei punti (+150 m) ∩ Comune: **tutti gli 11 quartieri al 100%**. Ogni cella ha `quartiere` e `quartiere_dist_m` (65% delle celle è fuori dai quartieri) |
 | Meteo (`meteo_ascoli.json`) | 5.904 ore, 2024-06-01 → 2025-02-01 | Open-Meteo, punto 42.847 N 13.6 E |
-| Mappa (`public/data/mappa/`) | — | base Protomaps/OSM 5,2 MB, terreno Mapterhorn 4,7 MB (z ≤ 12), **11.341 edifici TUM** 3,7 MB (con `res` = residenti Meta), font Noto Sans e icone |
+| Mappa (`public/data/mappa/`) | — | base Protomaps/OSM 5,2 MB, terreno Mapterhorn 4,7 MB (z ≤ 12), **11.356 edifici TUM** 3,7 MB (con `res` = residenti Meta; contorni di fonte OSM aggiornati a OSM 2026), font Noto Sans e icone |
 | **Residenti Meta** (HRSL 2020, quadratini ~30 m, CC BY 4.0) | 2020 | Comune intero: **47.076 residenti** (ISTAT ~46–47 mila); assegnati agli edifici in `gba_ascoli.geojson` → `res` |
 | **Quota in casa** (`quota_in_casa.json`, 7 giorni × 24 ore) | diari ISTAT Uso del tempo 2008-09 (40.939) | Italia, via IPUMS MTUS; solo la curva aggregata, i microdati restano in `IPUMS/` |
 | Simulazione locale (`cityrhythm_simulation_week.*`) | solo 3–9 giugno 2024 | Ascoli |
@@ -71,6 +71,7 @@ Aggiungere una **dimensione sonora** attivabile ("mappa sonora"). Scopo **divulg
 - **2026-10-05 (13)**: puntini in casa al 50%, neri anche da vicino, attenuati all'arrivo; case pesate coi **residenti Meta**; **curva ISTAT in casa** (IPUMS MTUS 2008) con regola prudente al posto del 95% e delle rampe a mano; nuova taratura dell'energia; licenze IPUMS/UCL lette e citazioni nei crediti.
 - **2026-10-05 (14–15)**: riparati menu Show LCZ/UHI, terreno ed edifici 3D (`isStyleLoaded()` falso per il brulichio → `isMapReady`/`whenMapReady`); torna l'inquadratura sui quartieri. 3D Buildings e 3D Terrain **spenti all'avvio**, la mappa segue la casella anche al caricamento.
 - **2026-10-05 (16)**: puntini molto più leggeri: a MapLibre **gruppi MultiPoint a 32 strati** con le sole proprietà dello stile, ridisegno da fermi a passi di 1 pixel fisico (~10/s a zoom 13), spostamenti ≤ 30/s. Da fermi worker −90%, pagina −71%, GPU −68%; Play worker −57%. Conteggi, colori e ordine di disegno verificati uguali.
+- **2026-10-06 (17, in parallelo)**: strade dentro le case nel centro (Rue): il TUM aveva copiato edifici OSM vecchi. Contorni aggiornati a OSM della mappa di base **con le altezze TUM** (`aggiorna_edifici_osm.py`: 153 corretti, 100 tolti, 115 nuovi), residenti ricalcolati; scartato spegnere le strade.
 
 ## 7. Prompt per la prossima sessione
 ```
