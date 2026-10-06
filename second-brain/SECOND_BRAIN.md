@@ -2,7 +2,7 @@
 
 > Memoria condivisa del progetto. **Ogni agente legge questo indice prima di iniziare**, poi i file di argomento che servono al lavoro (elenco nella sezione 4). Si aggiorna a fine sessione col comando `/second-brain` (vedi `.claude/skills/second-brain/SKILL.md`). Sintetico: decisioni e stato, non cronaca.
 
-Ultimo aggiornamento: 2026-10-06 (diciottesima sessione)
+Ultimo aggiornamento: 2026-10-06 (diciannovesima sessione)
 
 ## 1. Progetto in breve
 - **CityRhythm**: dashboard geospaziale (**MapLibre GL 6.12** + PMTiles, ECharts 5.5, Turf 7, D3 + d3-cloud, PapaParse, Litepicker) su affollamento, demografia, POI, LCZ/UHI. 3 dimensioni spaziali + 1 temporale (timeline).
@@ -53,7 +53,7 @@ Aggiungere una **dimensione sonora** attivabile ("mappa sonora"). Scopo **divulg
 
 ## 5. Prossimi passi
 0. **A mano (utente)**: eliminare **entrambi** i token sul sito di Mapbox (file locali già cancellati; il token pubblico resta nella cronologia del repository, che è pubblico: va revocato).
-1. **Presentazione alla collega**: modifiche al deck slide per slide (prossima sessione) e prova della demo **con l'audio** prima di presentarla. Tutto in `presentazione.md`.
+1. **Presentazione alla collega**: continuare il deck slide per slide da "Chi sta a casa" (16), poi `persone` (video dalla piattaforma?), `mappa` (stile Nolli) e `fonti`; rinumerare i piè di pagina; scegliere fra slide statica e video per energia e piacevolezza; chiarire se la demo dal vivo resta e provarla **con l'audio**. Tutto in `presentazione.md`.
 2. **Ascolto sopra la mappa** con la Sound map accesa come guida: estate a mezzogiorno (Calca nelle piazze, Afa nei vicoli), mattina e sera, dicembre (sereno), notte (Notte + grilli), fuori dalle celle (silenzio). Giudicare volumi, cambi di 1 s col Play (frenetici? allora dissolvenza 1,5–2 s), musica che cambia spostando il mirino di 50–100 m.
 3. **Suoni urbani dai dati**: presenza degli effetti da persone (X), verde, UTCI e notte invece che dalle scene fisse.
 3c. Da giudicare in mappa: raggio di 50 m (macchie più nette o più ampie), leggibilità di UTCI e Sound map al 70%. Il riferimento Python non ha l'energia per cella: portarla solo se serve.
@@ -70,31 +70,30 @@ Aggiungere una **dimensione sonora** attivabile ("mappa sonora"). Scopo **divulg
 - **2026-10-05 (7–9)**: "Color dots by" su tutti i quartieri; gente in giro solo su celle costruite/pavimentate; mappa in **stile Toner** su Protomaps, edifici bianchi, nessuna etichetta.
 - **2026-10-05 (10–12)**: menu **Show** con 15 mappe delle celle LCZ; settimana tipo col clima (90° percentile UTCI); dissolvenza e isteresi 1 s; mappe orarie **UTCI** e **Sound map**; **energia per cella** dai puntini entro 50 m; UTCI 30× più veloce; alberi già nello SVF; puntini "a formichine".
 - **2026-10-05 (13–16)**: **curva ISTAT in casa** (IPUMS MTUS 2008, regola prudente) e case pesate coi **residenti Meta**; licenze IPUMS/UCL e citazioni. Riparati menu Show e interruttori 3D (`isMapReady`/`whenMapReady`), 3D spento all'avvio. Puntini leggeri: **gruppi MultiPoint a 32 strati**, ridisegno a passi di 1 pixel (da fermi worker −90%).
-- **2026-10-06 (17)**: presentazione del branch alla collega. Materiale completo (`presentazione/materiale-music.md`: 30 schede, storie prima → dopo, copione della demo) e **deck Slides** di 19 slide con note del relatore e colori della Sound map; l'utente ha ritoccato copertina e slide 2. Nuovo file `presentazione.md`.
-- **2026-10-06 (17, in parallelo)**: strade dentro le case nel centro (Rue): il TUM aveva copiato edifici OSM vecchi. Contorni aggiornati a OSM della mappa di base **con le altezze TUM** (`aggiorna_edifici_osm.py`: 153 corretti, 100 tolti, 115 nuovi), residenti ricalcolati; scartato spegnere le strade.
+- **2026-10-06 (17)**: presentazione del branch: materiale completo (`presentazione/materiale-music.md`: schede, storie prima → dopo, copione della demo) e primo deck Slides di 19 slide; nuovo file `presentazione.md`.
+- **2026-10-06 (17, in parallelo)**: contorni degli edifici TUM aggiornati a OSM della mappa di base con le altezze TUM (`aggiorna_edifici_osm.py`), residenti ricalcolati; scartato spegnere le strade.
 - **2026-10-06 (18)**: stile **Nolli** accanto al Toner (selettore Map style): edifici pieni grigio scuro, spazio pubblico bianco, strade e fiumi neri da lontano (spente / grigi fra z 13 e 15), verde a trame nere, **70 interni pubblici** bianchi da OSM (`pub`), UTCI e Sound map sotto gli edifici. Puntini Nolli: fuori neri, in casa anellino bianco a metà raggio. Gente in giro fuori dagli edifici (37,5% → 1%), nessuno a casa nelle chiese.
+- **2026-10-06 (19)**: deck ripulito in **bianco e nero**, un argomento per slide (skill `no-ai-slop` / `no-ai-design-slop`); slide **Russell** (schema), **video mp4** di energia e piacevolezza (esempio vero: cella del Centro, 21/7/2024 ore 13), grafico ISTAT in "Chi sta a casa". L'utente ha tolto demo, storie, metodo e limiti (18 slide). Scoperto che la soglia del caldo nel codice è 30 °C, non 32: documenti corretti.
 
 ## 7. Prompt per la prossima sessione
 ```
-Riprendiamo CityRhythm, branch Music: oggi lavoriamo sulla presentazione.
-Leggi second-brain/SECOND_BRAIN.md e second-brain/presentazione.md (scaletta,
-come raccontare ogni slide, aspetto, regole del deck); fatti e numeri li prendi
-da presentazione/materiale-music.md. Riassumimi in 3 righe dove siamo.
+Riprendiamo CityRhythm, branch Music: continuiamo la presentazione.
+Leggi second-brain/SECOND_BRAIN.md e second-brain/presentazione.md (aspetto
+in bianco e nero, scaletta di 18 slide, video, trappole dell'editor); fatti e
+numeri da presentazione/materiale-music.md. Riassumimi in 3 righe dove siamo.
 
-Base d'appoggio: il deck Slides già pubblicato
-https://claude.ai/artifact/8wMEfrXxCtVTpSJe34nZ55
-Lavoriamo su quello, non crearne un altro. Lo ritocco anche a mano:
-prima di modificare una slide rileggila dall'artifact.
+Deck: https://claude.ai/artifact/8wMEfrXxCtVTpSJe34nZ55 (non crearne un altro).
+Lo ritocco anche a mano: prima di modificare una slide rileggila dall'artifact;
+io ricarico la pagina del deck prima di ritoccare.
 
-Obiettivo: modifiche slide per slide, una alla volta, dalla 1 alla 19.
-Per ogni slide: ti dico cosa cambiare (o ti chiedo una proposta), tu mi dici
-in 2-3 righe cosa cambi, pubblichi solo quella slide e aspetti il mio ok
-prima di passare alla successiva.
+Ripartiamo dalla slide 16 "Chi sta a casa", poi 15 "Puntini" (forse un video
+dalla piattaforma), 17 "Una mappa nuova" (le logiche dello stile Nolli) e 18
+"Fonti". Una slide alla volta: 2-3 righe su cosa cambi, pubblichi solo quella,
+aspetti il mio ok. Alla fine rinumera i piè di pagina.
 
-Regole: pubblico = la mia collega, 10-15 minuti (max 20), demo dal vivo in
-remoto; accento sulla mappa sonora; titoli corti; Simone non va citato;
-niente numeri senza fonte (solo dal materiale o dal second brain).
-Non ho competenze musicali: le parti sul suono spiegale con analogie.
+Regole: la mia collega in videochiamata, 10-15 minuti (max 20); bianco e nero,
+un argomento per slide, colore solo per matrice e scale; testi con /no-ai-slop;
+titoli corti; Simone non va citato; niente numeri senza fonte.
 A fine sessione aggiorna il second brain e fai commit e push su Music.
 ```
 Dopo la presentazione: ascolto sopra la mappa e suoni urbani dai dati (prossimi passi 2–3).
