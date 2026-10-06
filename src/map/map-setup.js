@@ -4,7 +4,7 @@ import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { Protocol } from 'pmtiles';
 import { layers, namedFlavor } from '@protomaps/basemaps';
 import { viewport } from '../state/store.js';
-import { INITIAL_CENTER, INITIAL_ZOOM, MAP_DATA_BASE, KML_SOURCE_ID } from '../data/config.js';
+import { INITIAL_CENTER, INITIAL_ZOOM, MAP_DATA_BASE, KML_SOURCE_ID, NOLLI_COLORS } from '../data/config.js';
 
 // Vite impacchetta il worker di MapLibre in un file unico; pmtiles:// legge i file .pmtiles locali.
 maplibregl.setWorkerUrl(workerUrl);
@@ -36,13 +36,18 @@ const GREEN_PATTERN = ['match', ['get', 'kind'],
     'cemetery', 'toner:cross-t',
     'toner:dash-t'];
 
-// Stile: mappa di base Protomaps (OSM) in versione Toner senza etichette né icone + edifici TUM in 3D + terreno per setTerrain.
-function buildMapStyle() {
+// Livelli in stile Toner: mappa di base Protomaps (OSM) senza etichette né icone + edifici TUM (2D e 3D).
+function tonerLayers() {
     const base = layers('protomaps', TONER_FLAVOR, { lang: 'it' }).filter(l => l.type !== 'symbol');
     const park = base.findIndex(l => l.id === 'landuse_park');
     base[park].paint = { 'fill-color': BLACK, 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 10, 0.3, 16, 1] };
     base.splice(park + 1, 0, { ...base[park], id: 'landuse_park_pattern', paint: { 'fill-pattern': GREEN_PATTERN } });
     base.push({
+        // Pieni dello stile Nolli (spenti nel Toner)
+        id: 'buildings-fill', type: 'fill', source: 'buildings',
+        layout: { visibility: 'none' },
+        paint: { 'fill-color': NOLLI_COLORS.PIENI }
+    }, {
         // Contorno a terra: bianco su bianco, dall'alto gli edifici altrimenti sparirebbero.
         id: 'buildings-outline', type: 'line', source: 'buildings',
         paint: { 'line-color': BLACK, 'line-width': ['interpolate', ['linear'], ['zoom'], 13, 0.3, 17, 1.5] }
@@ -56,6 +61,64 @@ function buildMapStyle() {
             'fill-extrusion-opacity': 1
         }
     });
+    return base;
+}
+
+// Stile "Nolli" (Pianta di Roma di G. B. Nolli, 1748): gli edifici sono i pieni scuri, strade e piazze il vuoto
+// bianco fra i pieni, senza linee. Gli interni pubblici (chiese, musei, teatri, biblioteche: campo pub,
+// sound-lab/interni_pubblici.py) restano bianchi col contorno, come in Nolli; i ponti sono vuoto bianco sul fiume.
+// Da lontano strade principali, ferrovia e fiumi neri come nel Toner, per orientarsi fuori dal costruito; fra z 13
+// e 15 (una strada di 6–8 m passa da 1 a 4 pixel e si legge già come vuoto fra gli isolati) le strade svaniscono
+// e i fiumi diventano grigi. Stessi livelli del Toner: cambiano solo colori e visibilità (setBaseStyle).
+const MAIN_ROADS = /^roads_(highway|major|rail|tunnels_highway|tunnels_major)$/;
+const MAIN_BRIDGES = /^roads_bridges_(highway|major)$/;
+function nolliLayers() {
+    const nearZoom = (far, near) => ['interpolate', ['linear'], ['zoom'], 13, far, 15, near];
+    return tonerLayers().map(l => {
+        const n = { ...l, layout: { ...l.layout }, paint: { ...l.paint } };
+        if (l.id === 'water') n.paint['fill-color'] = nearZoom(BLACK, NOLLI_COLORS.ACQUA);
+        else if (l.id.startsWith('water_')) n.paint['line-color'] = nearZoom(BLACK, NOLLI_COLORS.ACQUA);
+        // Le trame del Toner sono bianche coi buchi: sotto, nero pieno a ogni zoom (puntini e trattini sempre neri)
+        else if (l.id === 'landuse_park') n.paint['fill-opacity'] = 1;
+        else if (l.id === 'landuse_urban_green') n.paint['fill-opacity'] = 0;
+        else if (MAIN_ROADS.test(l.id)) Object.assign(n.paint, { 'line-color': BLACK, 'line-opacity': nearZoom(1, 0) });
+        else if (MAIN_BRIDGES.test(l.id)) n.paint['line-color'] = nearZoom(BLACK, WHITE);
+        else if (l.id.startsWith('roads_bridges_')) n.paint['line-color'] = WHITE;
+        else if (l.id.startsWith('roads_') || l.id.startsWith('boundaries')) n.layout.visibility = 'none';
+        else if (l.id === 'buildings-fill') {
+            n.layout.visibility = 'visible';
+            n.paint['fill-color'] = ['case', ['has', 'pub'], WHITE, NOLLI_COLORS.PIENI];
+        }
+        else if (l.id === 'buildings-outline') n.paint['line-color'] = NOLLI_COLORS.PIENI;
+        else if (l.id === 'buildings-3d') n.paint['fill-extrusion-color'] = ['case', ['has', 'pub'], '#e6e6e6', '#5a5a5a'];
+        return n;
+    });
+}
+
+const BASE_STYLES = { toner: tonerLayers(), nolli: nolliLayers() };
+let baseStyle = 'toner';
+
+export function getBaseStyle() {
+    return baseStyle;
+}
+
+/** Passa la mappa di base a un altro stile ('toner' o 'nolli') cambiando solo le proprietà diverse. */
+export function setBaseStyle(name) {
+    if (!BASE_STYLES[name] || name === baseStyle) return;
+    const from = new Map(BASE_STYLES[baseStyle].map(l => [l.id, l]));
+    BASE_STYLES[name].forEach(l => {
+        const old = from.get(l.id);
+        const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+        new Set([...Object.keys(old.paint ?? {}), ...Object.keys(l.paint ?? {})]).forEach(key => {
+            if (!same(old.paint?.[key], l.paint?.[key])) mapInstance.setPaintProperty(l.id, key, l.paint?.[key]);
+        });
+        const visibility = l.layout?.visibility ?? 'visible';
+        if (visibility !== (old.layout?.visibility ?? 'visible')) mapInstance.setLayoutProperty(l.id, 'visibility', visibility);
+    });
+    baseStyle = name;
+}
+
+function buildMapStyle() {
     return {
         version: 8,
         glyphs: mapDataUrl('fonts/') + '{fontstack}/{range}.pbf', // URL() codificherebbe le graffe
@@ -77,7 +140,7 @@ function buildMapStyle() {
                 attribution: '<a href="https://mapterhorn.com/attribution">© Mapterhorn</a>'
             }
         },
-        layers: base
+        layers: BASE_STYLES[baseStyle]
     };
 }
 

@@ -96,6 +96,10 @@ body, html {
     max-width: 230px;
 }
 
+.map-style-selector {
+    margin-left: 0;
+}
+
 .presence-color-title {
     font-size: 0.85em;
     color: #555;
