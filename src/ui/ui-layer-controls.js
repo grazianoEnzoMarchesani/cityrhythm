@@ -1,7 +1,7 @@
 // ui-layer-controls.js
-import { refreshPresencePoints, setLayerVisibility, addSyntheticCrowdedPointsLayer, removeSyntheticCrowdedPointsLayer, updateAllPresencePoints, addLczVitalityLayer, removeLczVitalityLayer, updateLczVitalityVisualization, setLczLayerOpacity, setUhiDynamicVisibility, getLczLegend } from '../map/map-layers.js';
+import { refreshPresencePoints, setLayerVisibility, addSyntheticCrowdedPointsLayer, removeSyntheticCrowdedPointsLayer, updateAllPresencePoints, addLczVitalityLayer, removeLczVitalityLayer, updateLczVitalityVisualization, setLczLayerOpacity, setUhiDynamicVisibility, getLczLegend, applyBaseStyleToOverlays } from '../map/map-layers.js';
 import { KML_LAYER_ID, CROWDED_LAYER_ID, PRESENCE_POINTS_LAYER_ID, SPOTS_LAYER_ID, LCZ_VITALITY_LAYER_ID, DEBUG_MODE } from '../data/config.js';
-import { getMapInstance, whenMapReady } from '../map/map-setup.js';
+import { getMapInstance, whenMapReady, setBaseStyle } from '../map/map-setup.js';
 import { getSpotMapperData } from '../data/data-loader.js';
 import { PRESENCE_COLOR_VARIABLES, setPresenceColorBy } from '../map/presence-colors.js';
 
@@ -179,6 +179,34 @@ export function setupLayerControls() {
         buildingsToggle.addEventListener('change', applyBuildings);
         applyBuildings();
     }
+    setupMapStyleSelector();
+}
+
+// --- STILE DELLA MAPPA DI BASE: Toner o Nolli (la scelta resta nel browser di chi guarda) ---
+const MAP_STYLE_KEY = 'cityrhythm.mapStyle';
+function setupMapStyleSelector() {
+    const group = document.getElementById('map-style');
+    if (!group) return;
+    const select = (name) => {
+        group.querySelectorAll('button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.style === name)));
+        try { localStorage.setItem(MAP_STYLE_KEY, name); } catch (e) { /* archivio del browser non disponibile */ }
+        whenMapReady(() => {
+            setBaseStyle(name);
+            applyBaseStyleToOverlays();
+        });
+    };
+    [['toner', 'Toner'], ['nolli', 'Nolli']].forEach(([name, label]) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.role = 'radio';
+        button.dataset.style = name;
+        button.textContent = label;
+        button.addEventListener('click', () => select(name));
+        group.appendChild(button);
+    });
+    let saved = null;
+    try { saved = localStorage.getItem(MAP_STYLE_KEY); } catch (e) { /* idem */ }
+    select(saved === 'nolli' ? 'nolli' : 'toner');
 }
 
 export function initializeSpotTypeFilter() {

@@ -1,7 +1,7 @@
 import * as turf from '@turf/turf';
 import { Popup } from 'maplibre-gl';
 // src/map/map-layers.js
-import { getMapInstance, isMapReady, whenMapReady } from './map-setup.js';
+import { getMapInstance, isMapReady, whenMapReady, getBaseStyle } from './map-setup.js';
 import {
     KML_SOURCE_ID, KML_LAYER_ID,
     PRESENCE_POINTS_SOURCE_ID, PRESENCE_POINTS_LAYER_ID,
@@ -10,7 +10,7 @@ import {
     SYNTHETIC_CROWDED_SOURCE_ID, SYNTHETIC_CROWDED_LAYER_ID, // Assicurati sia definito in config.js
     LCZ_VITALITY_SOURCE_ID, LCZ_VITALITY_LAYER_ID,
     ATTRACTION_MIN_CROWDEDNESS,
-    MAP_DATA_BASE, HOME_SHARE_URL, PRESENCE_HOME_OPACITY, PRESENCE_MOVE_MS, PRESENCE_EXIT_METERS,
+    MAP_DATA_BASE, HOME_SHARE_URL, PRESENCE_HOME_OPACITY, PRESENCE_HOME_RADIUS, PRESENCE_MOVE_MS, PRESENCE_EXIT_METERS,
     PRESENCE_STAGGER, PRESENCE_BEND_MAX_M, PRESENCE_WIGGLE_PX, PRESENCE_WIGGLE_MIN_M, PRESENCE_WIGGLE_MAX_M,
     PRESENCE_WIGGLE_STEP_PX, MAP_STYLES, LCZ_DATA_VIEWS, UTCI_BANDS, UTCI_RAMP, SOUND_STATE_COLORS,
     DEBUG_MODE // <-- aggiunto
@@ -19,6 +19,37 @@ import {
 // Chi è in casa si disegna attenuato: homeT va da 0 (fuori) a 1 (dentro un edificio)
 const HOME_T = ['coalesce', ['get', 'homeT'], ['case', ['==', ['get', 'atHome'], true], 1, 0]];
 const HOME_DIM = ['-', 1, ['*', 1 - PRESENCE_HOME_OPACITY, HOME_T]];
+const FADE = ['coalesce', ['get', 'fade'], 1];
+
+// Aspetto dei puntini (con o senza colore) nello stile di base attuale.
+// Toner: da lontano neri, da vicino chi è fuori diventa bianco col bordo; chi è in casa attenuato.
+// Nolli: una regola sola a ogni zoom. Chi è fuori è nero col bordo nero; chi è in casa è vuoto dentro, solo un
+// bordo bianco che si vede sugli edifici scuri, grande la metà (PRESENCE_HOME_RADIUS). Col colore: fuori colore col
+// bordo nero, in casa bordo del suo colore.
+function presencePaint(colored) {
+    const s = colored ? MAP_STYLES.PRESENCE_POINTS_COLOR : MAP_STYLES.PRESENCE_POINTS_ZOOM;
+    if (getBaseStyle() === 'nolli') {
+        const color = colored ? ['to-color', ['get', 'color']] : '#000000';
+        // Lo zoom può stare solo in cima all'espressione: si scala il raggio di ogni tappa
+        const homeScale = ['-', 1, ['*', 1 - PRESENCE_HOME_RADIUS, HOME_T]];
+        return {
+            'circle-radius': s.CIRCLE_RADIUS.map((v, i) => (i >= 4 && i % 2 === 0 ? ['*', v, homeScale] : v)),
+            'circle-color': color,
+            'circle-opacity': ['*', FADE, ['-', 1, HOME_T]],
+            'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 12, 0.5, 15, 1],
+            'circle-stroke-color': ['interpolate', ['linear'], HOME_T, 0, '#000000', 1, colored ? color : '#ffffff'],
+            'circle-stroke-opacity': FADE
+        };
+    }
+    return {
+        'circle-radius': s.CIRCLE_RADIUS,
+        'circle-color': s.CIRCLE_COLOR,
+        'circle-opacity': ['*', s.CIRCLE_OPACITY, FADE, HOME_DIM],
+        'circle-stroke-width': s.CIRCLE_STROKE_WIDTH,
+        'circle-stroke-color': s.CIRCLE_STROKE_COLOR,
+        'circle-stroke-opacity': ['*', s.CIRCLE_STROKE_OPACITY, FADE, HOME_DIM]
+    };
+}
 import { calculateAveragePresenceForFeature, generatePointsForFeature, perlin2d, hash01, getWeekIndex, getDateTimeFromIndex } from '../utils/utils.js';
 import { residentsSeenAtNight, homeShareFor } from './home-share.js';
 import { applyPresenceColors, getPreviousPersonColor } from './presence-colors.js';
@@ -403,12 +434,7 @@ export function addOrUpdatePresencePointsLayer(pointsGeoJson, initialVisibility 
                 filter: ['has', 'color'],
                 layout: { 'visibility': initialVisibility ? 'visible' : 'none' },
                 paint: {
-                    'circle-radius': MAP_STYLES.PRESENCE_POINTS_COLOR.CIRCLE_RADIUS,
-                    'circle-color': MAP_STYLES.PRESENCE_POINTS_COLOR.CIRCLE_COLOR,
-                    'circle-opacity': ['*', MAP_STYLES.PRESENCE_POINTS_COLOR.CIRCLE_OPACITY, ['coalesce', ['get', 'fade'], 1], HOME_DIM],
-                    'circle-stroke-width': MAP_STYLES.PRESENCE_POINTS_COLOR.CIRCLE_STROKE_WIDTH,
-                    'circle-stroke-color': MAP_STYLES.PRESENCE_POINTS_COLOR.CIRCLE_STROKE_COLOR,
-                    'circle-stroke-opacity': ['*', MAP_STYLES.PRESENCE_POINTS_COLOR.CIRCLE_STROKE_OPACITY, ['coalesce', ['get', 'fade'], 1], HOME_DIM],
+                    ...presencePaint(true),
                     'circle-pitch-alignment': 'viewport',
                     'circle-pitch-scale': 'map'
                 }
@@ -421,12 +447,7 @@ export function addOrUpdatePresencePointsLayer(pointsGeoJson, initialVisibility 
                 filter: ['!', ['has', 'color']],
                 layout: { 'visibility': initialVisibility ? 'visible' : 'none' },
                 paint: {
-                    'circle-radius': MAP_STYLES.PRESENCE_POINTS_ZOOM.CIRCLE_RADIUS,
-                    'circle-color': MAP_STYLES.PRESENCE_POINTS_ZOOM.CIRCLE_COLOR,
-                    'circle-opacity': ['*', MAP_STYLES.PRESENCE_POINTS_ZOOM.CIRCLE_OPACITY, ['coalesce', ['get', 'fade'], 1], HOME_DIM],
-                    'circle-stroke-width': MAP_STYLES.PRESENCE_POINTS_ZOOM.CIRCLE_STROKE_WIDTH,
-                    'circle-stroke-color': MAP_STYLES.PRESENCE_POINTS_ZOOM.CIRCLE_STROKE_COLOR,
-                    'circle-stroke-opacity': ['*', MAP_STYLES.PRESENCE_POINTS_ZOOM.CIRCLE_STROKE_OPACITY, ['coalesce', ['get', 'fade'], 1], HOME_DIM],
+                    ...presencePaint(false),
                     'circle-pitch-alignment': 'viewport',
                     'circle-pitch-scale': 'map'
                 }
@@ -615,11 +636,14 @@ function ensureHomesLoaded() {
     ])
         .then(([, gj]) => {
             // Peso = residenti stimati da Meta (campo res, sound-lab/residenti_meta.py): capannoni, chiese
-            // e scuole valgono 0. Senza il campo si ripiega sul volume (area × altezza).
+            // e scuole valgono 0. Senza il campo si ripiega sul volume (area × altezza). Negli interni pubblici
+            // (campo pub, sound-lab/interni_pubblici.py) nessuno abita: Meta divide i suoi quadratini da 30 m
+            // fra gli edifici che toccano, così anche chiese e musei ricevono residenti dei vicini.
             homeBuildings = gj.features.map(f => ({
                 c: turf.centroid(f).geometry.coordinates,
-                v: f.properties.res ?? turf.area(f) * (f.properties.height > 0 ? f.properties.height : 3)
+                v: f.properties.pub ? 0 : f.properties.res ?? turf.area(f) * (f.properties.height > 0 ? f.properties.height : 3)
             }));
+            buildingGrid = makeBuildingGrid(gj.features);
             // I punti dell'ora corrente sono stati disegnati senza case: ridisegnali
             if (lastPresenceArgs) updateAllPresencePoints(...lastPresenceArgs);
         })
@@ -644,6 +668,45 @@ function getHomesForFeature(kmlFeature) {
     const homes = coords.length ? { coords, cum, total } : null;
     homesByFeature.set(kmlFeature.id, homes);
     return homes;
+}
+
+// Edifici TUM in una griglia di ~50 m, per sapere in fretta se un punto cade dentro un edificio
+const GRID_DEG = 0.0005;
+let buildingGrid = null;
+function makeBuildingGrid(features) {
+    const grid = new Map();
+    features.forEach(f => {
+        const [w, s, e, n] = turf.bbox(f);
+        for (let x = Math.floor(w / GRID_DEG); x <= Math.floor(e / GRID_DEG); x++) {
+            for (let y = Math.floor(s / GRID_DEG); y <= Math.floor(n / GRID_DEG); y++) {
+                const k = x + ':' + y;
+                if (!grid.has(k)) grid.set(k, []);
+                grid.get(k).push(f);
+            }
+        }
+    });
+    return grid;
+}
+function insideBuilding(lon, lat) {
+    const near = buildingGrid?.get(Math.floor(lon / GRID_DEG) + ':' + Math.floor(lat / GRID_DEG));
+    return !!near?.some(f => turf.booleanPointInPolygon([lon, lat], f));
+}
+
+// Posto fisso di chi è "in giro": un punto della sua cella fuori dagli edifici (sta in strada o in piazza).
+// Nelle celle costruite il 37,5% dei punti a caso cadeva dentro un edificio. Primo tentativo come prima, poi
+// altri punti della stessa cella; se la cella è quasi tutta edificata resta il primo (1% delle persone).
+// Il numero del tentativo va prima di ':x': in coda, con hash01, i tentativi erano allineati (6,7% dentro).
+const STREET_TRIES = 24;
+function streetPosition(key, [w, s, e, n]) {
+    const at = (t) => {
+        const k = t ? key + ':strada' + t : key;
+        return [w + hash01(k + ':x') * (e - w), s + hash01(k + ':y') * (n - s)];
+    };
+    for (let t = 0; t < STREET_TRIES; t++) {
+        const p = at(t);
+        if (!insideBuilding(p[0], p[1])) return p;
+    }
+    return at(0);
 }
 
 // Celle LCZ del quartiere dove si cammina: costruite (1–10) o pavimentate (E). Riquadri [w, s, e, n].
@@ -1140,8 +1203,8 @@ export function updateAllPresencePoints(timelineHourIndex, currentCrowdednessMap
             if (streetCells) {
                 for (let i = 0; i < nRandom; i++) {
                     const key = `${kmlFeature.id}:giro:${i}`;
-                    const [w, s, e, n] = streetCells[Math.floor(hash01(key + ':cella') * streetCells.length)];
-                    placePerson(key, w + hash01(key + ':x') * (e - w), s + hash01(key + ':y') * (n - s), {
+                    const [lon, lat] = streetPosition(key, streetCells[Math.floor(hash01(key + ':cella') * streetCells.length)]);
+                    placePerson(key, lon, lat, {
                         kmlFeatureId: kmlFeature.id,
                         isStatic: false,
                         noiseSeedX: Math.random() * 10000,
@@ -1611,6 +1674,11 @@ export function addSpotsLayer(initialVisibility = true) {
 /**
  * Rimuove il layer LCZ Vitality dalla mappa.
  */
+// Livello sotto cui vanno le celle: il primo livello di punti presente (in cima se non ce ne sono)
+function overlayBeforeId(map) {
+    return [PRESENCE_POINTS_LAYER_ID, CROWDED_LAYER_ID, SPOTS_LAYER_ID, SYNTHETIC_CROWDED_LAYER_ID].find(id => map.getLayer(id));
+}
+
 export function removeLczVitalityLayer() {
     const map = getMapInstance();
     if (!map) return;
@@ -1671,14 +1739,7 @@ export function addLczVitalityLayer(initialVisibility = true, visualizationType 
 
     try {
         // Determina dove inserire il layer (sotto gli altri layer di punti)
-        let beforeLayerId;
-        const pointLayers = [PRESENCE_POINTS_LAYER_ID, CROWDED_LAYER_ID, SPOTS_LAYER_ID, SYNTHETIC_CROWDED_LAYER_ID];
-        for (const pointLayer of pointLayers) {
-            if (map.getLayer(pointLayer)) {
-                beforeLayerId = pointLayer;
-                break;
-            }
-        }
+        const beforeLayerId = overlayBeforeId(map);
 
         // Aggiungi la sorgente
         map.addSource(LCZ_VITALITY_SOURCE_ID, {
@@ -1724,6 +1785,7 @@ export function addLczVitalityLayer(initialVisibility = true, visualizationType 
 
         // Salva il tipo di visualizzazione corrente
         currentLczVisualizationType = visualizationType;
+        placeCellLayers();
         syncCellMap(visualizationType);
         applyCellMap(lastCellMap); // il feature-state si perde quando la sorgente viene ricreata
 
@@ -1884,6 +1946,27 @@ function bindLczPopup(map) {
 const CELL_MAP_TYPES = new Set(['utci', 'stato']);
 let lastCellMap = null, cellMapIndex = null; // ultimo risultato e id cella -> posizione
 
+// Nello stile Nolli UTCI e Sound map stanno sotto gli edifici e colorano solo il vuoto dove si cammina: il caldo
+// si sente in strada, la musica si ascolta in strada. Le mappe LCZ descrivono anche gli edifici: restano sopra.
+function placeCellLayers() {
+    const map = getMapInstance();
+    if (!map.getLayer(LCZ_VITALITY_LAYER_ID)) return;
+    const before = getBaseStyle() === 'nolli' && CELL_MAP_TYPES.has(currentLczVisualizationType)
+        ? 'buildings-fill' : overlayBeforeId(map);
+    map.moveLayer(LCZ_VITALITY_LAYER_ID, before);
+    map.moveLayer(LCZ_VITALITY_LAYER_ID + '-stroke', before);
+}
+
+/** Dopo un cambio di stile della mappa di base (setBaseStyle): puntini e mappe delle celle al loro posto. */
+export function applyBaseStyleToOverlays() {
+    const map = getMapInstance();
+    [[true, '-color'], [false, '-zoom']].forEach(([colored, suffix]) => {
+        const id = PRESENCE_POINTS_LAYER_ID + suffix;
+        if (map.getLayer(id)) Object.entries(presencePaint(colored)).forEach(([k, v]) => map.setPaintProperty(id, k, v));
+    });
+    placeCellLayers();
+}
+
 /** Accende il calcolo per cella solo se il livello LCZ è visibile con una mappa oraria. */
 function syncCellMap(type) {
     const on = CELL_MAP_TYPES.has(type) && !!getMapInstance().getLayer(LCZ_VITALITY_LAYER_ID);
@@ -1919,6 +2002,7 @@ export function updateLczVitalityVisualization(visualizationType) {
 
         map.setPaintProperty(LCZ_VITALITY_LAYER_ID, 'fill-color', fillColor);
         currentLczVisualizationType = visualizationType;
+        placeCellLayers();
         syncCellMap(visualizationType);
 
         // Se stiamo passando a UHI e la visualizzazione dinamica è attiva, aggiorna

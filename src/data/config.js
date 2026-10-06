@@ -53,6 +53,8 @@ export const PRESENCE_STATIC_POINTS_RATIO = 0.1;
 // stimati da Meta (campo res, sound-lab/residenti_meta.py).
 // Opacità relativa dei puntini di chi è in casa (1 = come gli altri): "dentro un edificio"
 export const PRESENCE_HOME_OPACITY = 0.5;
+// Stile Nolli: raggio dei puntini di chi è in casa rispetto agli altri (richiesta dell'utente: metà)
+export const PRESENCE_HOME_RADIUS = 0.5;
 // Durata dello spostamento dei puntini quando cambia l'ora (0 = salto senza animazione)
 export const PRESENCE_MOVE_MS = 1000;
 // Chi arriva in città o la lascia entra/esce da questo punto, oltre la sua posizione in direzione opposta al centro
@@ -68,6 +70,13 @@ export const PRESENCE_WIGGLE_MAX_M = 15;
 // Da fermi i puntini si ridisegnano quando il più veloce ha fatto un passo di questi pixel fisici dello schermo:
 // passi più piccoli lo schermo non li mostra, e ogni ridisegno fa rielaborare a MapLibre tutti i puntini
 export const PRESENCE_WIGGLE_STEP_PX = 1;
+
+// Stile "Nolli" (Pianta di Roma, 1748): pieni scuri, spazio pubblico bianco. Grigi misurati sull'immagine di
+// riferimento dell'utente (media di ogni tono).
+export const NOLLI_COLORS = {
+  PIENI: '#414141',     // edifici
+  ACQUA: '#c1c1c1'      // Tronto e Castellano da vicino (da lontano neri)
+};
 
 export const CHART_COLORS = {
     GENDER_CHART: {
