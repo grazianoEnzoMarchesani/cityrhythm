@@ -29,7 +29,7 @@ Ultimo aggiornamento: 2026-10-06 (diciassettesima sessione)
 Timeline: con un intervallo **< 7 giorni** mostra i giorni reali (`window._timelineMap` ha le date); con **≥ 7 giorni** (anche all'avvio) mostra la settimana tipo 168 h filtrata per giorno della settimana, **senza date**. La posizione della timeline si legge **sempre** con `getDateTimeFromIndex` / `getWeekIndex` / `getTimelineDate` (`utils.js`) e la colonna dei luoghi affollati con `getTimelineCrowdednessColumn`: leggerla come settimana tipo con giorni veri era un errore (il 15 agosto diventava "lunedì").
 
 ## 2. Obiettivo in corso — branch `Music`
-Aggiungere una **dimensione sonora** attivabile ("mappa sonora"). Scopo **divulgativo**: la musica deve trasmettere **emozioni** che le immagini da sole non danno. Densità e calore sono già visibili, quindi niente sonificazione "pitch che segue il dato".
+Aggiungere una **dimensione sonora** attivabile ("mappa sonora"). Scopo **divulgativo**: la musica deve trasmettere **emozioni** che le immagini da sole non danno. Densità e calore sono già visibili, quindi niente sonificazione "pitch che segue il dato". Il lavoro del branch si presenta alla collega con un deck Slides (`presentazione.md`).
 
 ## 3. Regole permanenti
 - **Solo il Comune di Ascoli Piceno** (confine OSM, relazione 42176, in `sound-lab/data/comune_ascoli.geojson`). Dati di Lucca, San Benedetto, Pagliare ecc. **cancellati**; non scaricare né aggiungere mai dati fuori dal Comune.
@@ -49,20 +49,21 @@ Aggiungere una **dimensione sonora** attivabile ("mappa sonora"). Scopo **divulg
 | `decisioni-superate.md` | tutte le decisioni non più valide, col perché |
 | `strumenti.md` | script di `sound-lab/` (analisi, taratura, estrazioni, curva in casa), pagina di ascolto, avvio |
 | `prompts.md` | prompt musicali per finetuning.ai |
+| `presentazione.md` | presentazione del branch alla collega: deck (link), scaletta, come raccontare ogni slide, aspetto, demo in remoto, come modificare il deck; materiale completo in `presentazione/materiale-music.md` |
 
 ## 5. Prossimi passi
 0. **A mano (utente)**: eliminare **entrambi** i token sul sito di Mapbox (file locali già cancellati; il token pubblico resta nella cronologia del repository, che è pubblico: va revocato).
+1. **Presentazione alla collega**: modifiche al deck slide per slide (prossima sessione) e prova della demo **con l'audio** prima di presentarla. Tutto in `presentazione.md`.
 2. **Ascolto sopra la mappa** con la Sound map accesa come guida: estate a mezzogiorno (Calca nelle piazze, Afa nei vicoli), mattina e sera, dicembre (sereno), notte (Notte + grilli), fuori dalle celle (silenzio). Giudicare volumi, cambi di 1 s col Play (frenetici? allora dissolvenza 1,5–2 s), musica che cambia spostando il mirino di 50–100 m.
 3. **Suoni urbani dai dati**: presenza degli effetti da persone (X), verde, UTCI e notte invece che dalle scene fisse.
 3c. Da giudicare in mappa: raggio di 50 m (macchie più nette o più ampie), leggibilità di UTCI e Sound map al 70%. Il riferimento Python non ha l'energia per cella: portarla solo se serve.
 4. Clima più preciso (facoltativo): **SOLWEIG** (plugin UMEP di QGIS) con `dsm_10m`, terreno e chiome del progetto, su giorni tipo, per ombre vere e suolo caldo. È anche la via giusta per gli **alberi** (oppure: SVF dei soli edifici + chiome trattate come chiome, trasmissività ~3%): cambierebbe soprattutto le celle verdi; oppure **tarare** l'isola di calore con stazioni in città (verificare la rete regionale delle Marche).
-5. **Stile Toner da verificare a occhio** (l'agente ora fa screenshot con Chrome senza finestra, vedi `strumenti.md`, ma il giudizio è dell'utente): resa del verde nero a vari zoom (se troppo scuro → grigio con trame), edifici bianchi dall'alto e inclinati, leggibilità di puntini, celle LCZ e quartieri sul bianco e nero; orientamento senza etichette; leggibilità delle scale chiare dei parametri LCZ sul bianco (se spariscono: più opacità o inizio scala più scuro). Facoltativo: cancellare `sprites/light.*`.
-6. **Puntini delle persone**: l'utente verifica i flussi fra quartieri, l'entrata/uscita dalla città (600 m adatti?) e la velocità del Play; giudicare a occhio il brulichio ridisegnato a passi di 1 pixel (se sembra a scatti: `PRESENCE_WIGGLE_STEP_PX` a 0.5) e i colori mescolati negli assembramenti (Gender in una piazza); lo slider per ridurre i puntini solo se il computer resta affaticato. Possibili ritocchi: anche la gente "in giro" (10%) fra quartieri; chi cambia quartiere dorme nel quartiere dove si trova. Verificare in mappa che fiume e prati restino vuoti (Tronto, Tue 20:00 e ore 11); se disturbano anche i gruppetti agli spot in celle verdi: ridurli o toglierli di sera. Il vecchio `animatePresencePoints`/campo di forze in `map-layers.js` non è mai avviato (codice morto, da togliere).
+5. **Stile Toner da verificare a occhio** (elenco in `mappa.md` → "Da verificare"). Facoltativo: cancellare `sprites/light.*`.
+6. **Puntini e gente in casa da verificare a schermo** (elenco in `persone.md` → "Da verificare"). Il vecchio `animatePresencePoints`/campo di forze in `map-layers.js` non è mai avviato (codice morto, da togliere).
 6b. **Crediti della mappa** troppo lunghi (OSM, TUM, Meta, ISTAT/IPUMS, UCL): all'apertura passano sotto timeline e bussola. Proposta: tenerli chiusi dietro la "i" (`attributionControl` compatto). Da decidere con l'utente.
 7. Più avanti: ECharts 5.5 ha un avviso di sicurezza moderato (`npm audit`); valutare ECharts 6.
-8. **Gente in casa da verificare a schermo** (non vista dall'agente): puntini scuri attenuati di giorno nei quartieri residenziali, rientro graduale dalle 19, più gente in giro a mezzanotte (Sound map in "Notte" verso l'1–2: va bene?), sabato notte, case non più su capannoni (Stadio). Se mezzanotte sembra troppo viva: valutare una via di mezzo fra regola prudente e larga.
-9. Facoltativi sulla curva: estrarre anche `MONTH` da IPUMS per curve estate/inverno; correggere lo smart working con la domanda "lavora da casa" del file ISTAT 2023 (`UsoTempo_2023_IT`). Domanda aperta per l'utente: come sono misurate le presenze "blimp" (sensori, celle, app)?
-10. **Quando si pubblica** un lavoro con questi dati: aggiungerlo alla bibliografia IPUMS (http://bibliography.ipums.org/) e mandarne copia al CTUR (UCL).
+8. Facoltativi sulla curva: estrarre anche `MONTH` da IPUMS per curve estate/inverno; correggere lo smart working con la domanda "lavora da casa" del file ISTAT 2023 (`UsoTempo_2023_IT`). Domanda aperta per l'utente: come sono misurate le presenze "blimp" (sensori, celle, app)?
+9. **Quando si pubblica** un lavoro con questi dati: aggiungerlo alla bibliografia IPUMS (http://bibliography.ipums.org/) e mandarne copia al CTUR (UCL).
 
 ## 6. Diario delle sessioni
 - **2026-10-04 (1–6)**: strategia S2, bussola a 9 stati, loop ed effetti, meteo 246 giorni; Vite locale, Pages, store, MapLibre + PMTiles (TUM), regola **solo Comune di Ascoli**. LCZ a 30 m, bussola per cella con **UTCI**, motore audio. Puntini con identità stabili, notte a casa, Synthetic Crowded Points con maestri fissi.
@@ -71,28 +72,30 @@ Aggiungere una **dimensione sonora** attivabile ("mappa sonora"). Scopo **divulg
 - **2026-10-05 (13)**: puntini in casa al 50%, neri anche da vicino, attenuati all'arrivo; case pesate coi **residenti Meta**; **curva ISTAT in casa** (IPUMS MTUS 2008) con regola prudente al posto del 95% e delle rampe a mano; nuova taratura dell'energia; licenze IPUMS/UCL lette e citazioni nei crediti.
 - **2026-10-05 (14–15)**: riparati menu Show LCZ/UHI, terreno ed edifici 3D (`isStyleLoaded()` falso per il brulichio → `isMapReady`/`whenMapReady`); torna l'inquadratura sui quartieri. 3D Buildings e 3D Terrain **spenti all'avvio**, la mappa segue la casella anche al caricamento.
 - **2026-10-05 (16)**: puntini molto più leggeri: a MapLibre **gruppi MultiPoint a 32 strati** con le sole proprietà dello stile, ridisegno da fermi a passi di 1 pixel fisico (~10/s a zoom 13), spostamenti ≤ 30/s. Da fermi worker −90%, pagina −71%, GPU −68%; Play worker −57%. Conteggi, colori e ordine di disegno verificati uguali.
+- **2026-10-06 (17)**: presentazione del branch alla collega. Materiale completo (`presentazione/materiale-music.md`: 30 schede, storie prima → dopo, copione della demo) e **deck Slides** di 19 slide con note del relatore e colori della Sound map; l'utente ha ritoccato copertina e slide 2. Nuovo file `presentazione.md`.
 - **2026-10-06 (17, in parallelo)**: strade dentro le case nel centro (Rue): il TUM aveva copiato edifici OSM vecchi. Contorni aggiornati a OSM della mappa di base **con le altezze TUM** (`aggiorna_edifici_osm.py`: 153 corretti, 100 tolti, 115 nuovi), residenti ricalcolati; scartato spegnere le strade.
 
 ## 7. Prompt per la prossima sessione
 ```
-Riprendiamo la mappa sonora di CityRhythm, branch Music.
-Leggi second-brain/SECOND_BRAIN.md (più audio.md e bussola-clima.md per questo
-lavoro) e riassumimi in 3 righe dove siamo.
-Ricorda la regola: solo il Comune di Ascoli Piceno.
+Riprendiamo CityRhythm, branch Music: oggi lavoriamo sulla presentazione.
+Leggi second-brain/SECOND_BRAIN.md e second-brain/presentazione.md (scaletta,
+come raccontare ogni slide, aspetto, regole del deck); fatti e numeri li prendi
+da presentazione/materiale-music.md. Riassumimi in 3 righe dove siamo.
 
-Obiettivo 1 – Ascolto sopra la mappa (punto 2 dei "Prossimi passi").
-Guidami prova per prova (luglio alle 13 nel Centro, luglio alle 9 e alle 21,
-dicembre a mezzogiorno, mezzanotte, mirino fuori dalle celle): per ognuna dimmi
-cosa dovrei vedere nel pannello e sentire, poi aspetta il mio giudizio.
-Io non ho competenze musicali: fammi domande semplici (es. "la musica copre
-le voci della folla?", "il cambio è troppo lento?") e traduci tu le mie
-risposte in numeri (volumi in dB, isteresi, dissolvenza).
+Base d'appoggio: il deck Slides già pubblicato
+https://claude.ai/artifact/8wMEfrXxCtVTpSJe34nZ55
+Lavoriamo su quello, non crearne un altro. Lo ritocco anche a mano:
+prima di modificare una slide rileggila dall'artifact.
 
-Obiettivo 2 – Suoni urbani guidati dai dati (punto 3): proponimi come legare
-folla, traffico, parco, cicale e grilli a persone, verde, UTCI e notte della
-cella, con il mix sempre calcolato. Niente codice prima del mio ok.
+Obiettivo: modifiche slide per slide, una alla volta, dalla 1 alla 19.
+Per ogni slide: ti dico cosa cambiare (o ti chiedo una proposta), tu mi dici
+in 2-3 righe cosa cambi, pubblichi solo quella slide e aspetti il mio ok
+prima di passare alla successiva.
 
-Prima di toccare ogni file della piattaforma dimmi cosa cambi. Un passo alla volta:
-dopo ognuno mi dici cosa provare con npm run dev e aspetti il mio ok.
+Regole: pubblico = la mia collega, 10-15 minuti (max 20), demo dal vivo in
+remoto; accento sulla mappa sonora; titoli corti; Simone non va citato;
+niente numeri senza fonte (solo dal materiale o dal second brain).
+Non ho competenze musicali: le parti sul suono spiegale con analogie.
 A fine sessione aggiorna il second brain e fai commit e push su Music.
 ```
+Dopo la presentazione: ascolto sopra la mappa e suoni urbani dai dati (prossimi passi 2–3).
