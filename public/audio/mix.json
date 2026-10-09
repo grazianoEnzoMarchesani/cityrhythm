@@ -1,7 +1,8 @@
 {
-  "_regola": "Volume di un suono = musica (-18 LUFS) - sotto_musica_db + 20*log10(presenza). I file degli effetti sono a -20 LUFS, quindi il guadagno da applicare e' (volume - (-20)) dB. presenza va da 0 a 1: nella piattaforma la daranno i dati, qui la danno le scene.",
+  "_regola": "Volume di un suono = musica (-18 LUFS) - sotto_musica_db + 20*log10(presenza). I file degli effetti sono a -20 LUFS, quindi il guadagno da applicare e' (volume - (-20)) dB. presenza va da 0 a 1: nella piattaforma la daranno i dati, qui la danno le scene. In modalita' Metronomi i suoni urbani si abbassano di metronomi_db: i metronomi misurano circa -29 LUFS (sound-lab/metronomi.mjs), contro i -18 della musica.",
   "music_lufs": -18,
   "sfx_file_lufs": -20,
+  "metronomi_db": -11,
   "sotto_musica_db": {
     "folla-leggera": 10,
     "folla-densa": 7,

@@ -23,3 +23,11 @@ IPUMS/
 
 # Presentazione (deck, video, materiale): non serve su GitHub
 presentazione/
+
+# Paper di riferimento (PDF con copyright degli editori): solo in locale
+paper/
+
+# Clip e tracce generate dagli script di sound-lab (si rigenerano: genera.py, costruisci_clip.py, metronomi.mjs)
+sound-lab/sottotraccia/clip/
+sound-lab/disagio/clip/
+sound-lab/metronomi/

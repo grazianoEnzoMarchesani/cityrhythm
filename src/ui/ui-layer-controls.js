@@ -4,6 +4,7 @@ import { KML_LAYER_ID, CROWDED_LAYER_ID, PRESENCE_POINTS_LAYER_ID, SPOTS_LAYER_I
 import { getMapInstance, whenMapReady, setBaseStyle } from '../map/map-setup.js';
 import { getSpotMapperData } from '../data/data-loader.js';
 import { PRESENCE_COLOR_VARIABLES, setPresenceColorBy } from '../map/presence-colors.js';
+import { coloreSuono, POSIZIONE_STATI } from '../compass/sound-color.js';
 
 let kmlToggle = null;
 let crowdedToggle = null;
@@ -301,28 +302,9 @@ function renderLczLegend(type) {
         return;
     }
     if (info.kind === 'compass') {
-        // Mini bussola: righe = piacevolezza (sereno in alto), colonne = energia (poca → tanta gente)
-        const rows = [['Serene', ['rifugio', 'passeggiata', 'festa']], ['Neutral', ['attesa', 'routine', 'corrente']],
-            ['Oppressive', ['afa', 'fatica', 'calca']]];
-        const grid = document.createElement('div');
-        grid.className = 'lcz-legend-compass';
-        rows.forEach(([label, states]) => {
-            const head = document.createElement('span');
-            head.className = 'lcz-legend-compass-row';
-            head.textContent = label;
-            grid.appendChild(head);
-            states.forEach(st => grid.appendChild(compassCell(st, info.colors[st])));
-        });
-        grid.appendChild(document.createElement('span'));
-        const axis = document.createElement('span');
-        axis.className = 'lcz-legend-compass-axis';
-        axis.textContent = 'few people → crowded';
-        grid.appendChild(axis);
-        const night = document.createElement('div');
-        night.className = 'lcz-legend-compass-night';
-        night.appendChild(compassCell('notte', info.colors.notte));
-        night.append(' dark and few people');
-        legend.append(grid, night);
+        // Sfumatura continua (src/compass/sound-color.js): i nomi degli stati stanno sulle loro posizioni,
+        // il colore fra un nome e l'altro si mescola come sulla mappa.
+        legend.append(soundGradientLegend(), notteLegendRow(info.colors.notte));
         appendLegendNote(legend, info.note);
         return;
     }
@@ -345,6 +327,49 @@ function renderLczLegend(type) {
     note.className = 'lcz-legend-note';
     note.textContent = info.unit.includes('–') ? `${info.note} (${info.unit})` : info.note;
     legend.append(bar, ticks, note);
+}
+
+// Legenda della Sound map: un quadrato con la sfumatura, nomi degli stati agli angoli e al centro.
+// Asse verticale = piacevolezza (sereno in alto), orizzontale = energia (poca gente → tanta gente).
+function soundGradientLegend() {
+    const wrap = document.createElement('div');
+    wrap.className = 'lcz-legend-compass-wrap';
+    // Quadrato di 150 px dentro il pannello, con margine per i nomi agli angoli (che escono dal quadrato)
+    wrap.style.cssText = 'position:relative;width:150px;height:150px;margin:26px 0 34px 46px';
+    const canvas = document.createElement('canvas');
+    const N = 60;
+    canvas.width = N; canvas.height = N;
+    canvas.style.cssText = 'width:100%;height:100%;display:block;border-radius:3px';
+    const ctx = canvas.getContext('2d');
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+        const X = -1 + 2 * (i + 0.5) / N, Y = 1 - 2 * (j + 0.5) / N;
+        ctx.fillStyle = coloreSuono(X, Y, 'routine');
+        ctx.fillRect(i, j, 1, 1);
+    }
+    wrap.appendChild(canvas);
+    for (const [stato, [X, Y]] of Object.entries(POSIZIONE_STATI)) {
+        const nome = document.createElement('span');
+        nome.textContent = stato[0].toUpperCase() + stato.slice(1);
+        const left = (X + 1) / 2 * 100, top = (1 - Y) / 2 * 100;
+        // Testo scuro con alone bianco: si legge sia sul colore della sfumatura sia sul fondo del pannello
+        nome.style.cssText = `position:absolute;left:${left}%;top:${top}%;transform:translate(-50%,-50%);`
+            + 'font:600 11px sans-serif;color:#111;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 2px #fff;'
+            + 'pointer-events:none;white-space:nowrap';
+        wrap.appendChild(nome);
+    }
+    const asse = document.createElement('span');
+    asse.textContent = 'few people → crowded';
+    asse.style.cssText = 'position:absolute;left:0;top:100%;margin-top:16px;font:11px sans-serif;color:#555;white-space:nowrap';
+    wrap.appendChild(asse);
+    return wrap;
+}
+
+function notteLegendRow(color) {
+    const night = document.createElement('div');
+    night.className = 'lcz-legend-compass-night';
+    night.appendChild(compassCell('notte', color));
+    night.append(' dark and few people');
+    return night;
 }
 
 function compassCell(state, color) {

@@ -138,6 +138,17 @@ export function cellClimate(w, sun, t, F) {
     return { utci, tmrt, tAir: tCell };
 }
 
+/**
+ * Calore con segno dall'UTCI: 0 senza stress, +1 dallo stress forte del caldo, -1 da quello del freddo.
+ * Usa le stesse soglie di comfort(): vale C = 1 - 2|H|. Lo legge il suono (Sottotraccia), come il comfort lo legge Y.
+ */
+export function calore(utci, F) {
+    const [c0, c1] = F.utci_nessuno_stress;
+    const caldo = clamp((utci - c1) / (F.utci_stress_forte_caldo - c1), 0, 1);
+    const freddo = clamp((c0 - utci) / (c0 - F.utci_stress_forte_freddo), 0, 1);
+    return caldo - freddo;
+}
+
 /** +1 senza stress termico, -1 da stress forte (fasce ufficiali UTCI). */
 export function comfort(utci, F) {
     const [c0, c1] = F.utci_nessuno_stress;
@@ -152,12 +163,14 @@ export function comfort(utci, F) {
  */
 export function evaluate({ X, sun, weather, traits }, cfg) {
     const P = cfg.parametri;
-    let Y = 0, T = null, tmrt = null;
+    let Y = 0, T = null, C = null, H = null, tmrt = null;
     if (weather) {
         const c = cellClimate(weather, sun, traits, cfg.fisica);
         T = c.utci;
         tmrt = c.tmrt;
-        Y = P.w_comfort * comfort(T, cfg.fisica) + P.w_green * (2 * traits.green - 1)
+        C = comfort(T, cfg.fisica);
+        H = calore(T, cfg.fisica);
+        Y = P.w_comfort * C + P.w_green * (2 * traits.green - 1)
             - P.rain * (weather.precipitation > P.rain_mm ? 1 : 0);
         Y = clamp(Y, -1, 1);
     }
@@ -170,5 +183,5 @@ export function evaluate({ X, sun, weather, traits }, cfg) {
         const row = Y < -cut ? 0 : Y > cut ? 2 : 1;
         stato = cfg.griglia[row][col];
     }
-    return { X, Y, T, tmrt, stato };
+    return { X, Y, T, C, H, tmrt, stato };
 }

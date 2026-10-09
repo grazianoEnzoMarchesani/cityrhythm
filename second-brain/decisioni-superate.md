@@ -51,3 +51,17 @@ Decisioni che non valgono più, barrate, con il perché e cosa le sostituisce. N
 - ~~Deck con carta crema, occhielli arancioni, carte con bordo, fasce grigie e piè di pagina "CityRhythm · branch Music · la mappa sonora"~~ → per l'utente "sembra fatta da un'AI": bianco e nero, un argomento per slide, colore solo per matrice, Sound map e scala UTCI (`presentazione.md`).
 - ~~Pannello della bussola con valori d'esempio (+0.52, −0.61, ≈ 240 persone) nella slide del motore audio~~ → tolto con la ripulitura; l'unico esempio inventato è quello dichiarato nel video dell'energia.
 - ~~"Chi sta a casa" con cinque numeri grandi (quote del martedì)~~ → poco chiara per l'utente: grafico della curva ISTAT ora per ora, numeri nelle note.
+- ~~Tre modi di musica (IA, classica, metronomi)~~ → **quattro**: si aggiunge **Sottotraccia**, musica a regole (2026-10-09, `sottotraccia.md`).
+- ~~Ritmo a scatti in Sottotraccia: cassa e hi-hat accesi a X = 1/3, coppia a Y = 0, densità delle note che raddoppia a X = 0~~ → rampe **continue** (`clamp(X/CUT)`, coppia da Y = 0 in su) e **una nota per battito**: la densità è il tempo stesso.
+- ~~Coppia stonata a 40 Hz sulle note basse (146–260 Hz)~~ → coppia a **1 kHz**: a 250 Hz la banda critica è 100 Hz e il suo quarto è 25 Hz, non 40 [F Fastl cap. 6; Plomp & Levelt].
+- ~~Ruvidezza come modulazione d'ampiezza al 100% a 70 Hz su tutto il suono (clip 13)~~ → ruvidezza **solo nella coppia stonata**: la modulazione su tutto il suono cancellava l'altezza ("rumore, non musica").
+- ~~Clip di Sottotraccia normalizzate una per una a −18 LUFS~~ → **tabella di livelli** per (X, Y, H) misurata offline, uguale nell'app e nelle clip, così il volume non diventa un'altra variabile.
+- ~~Livello di Sottotraccia su un bus che segue gli ingressi~~ → **livello per evento**: il bus, quando l'energia scendeva, saliva di 11 dB in 0,3 s e i suoni già programmati superavano 0 dBFS.
+- ~~C nel generatore = calore (+1 caldo)~~ → **C resta il comfort** della bussola; il calore con segno è **H**, calcolato in `compass-core.js` (C = 1 − 2|H|).
+- ~~Soglie UTCI copiate nel suono (26/30, 9/−13)~~ → le soglie stanno solo in `compass-core.js` e vengono da `bussola.json`.
+- ~~"Più sincopato = più groove" (affermazione del consulente Opus)~~ → non supportata: Janata 2012 confronta generi, non misura la sincope.
+- ~~Calca sulla diagonale a 135° per la parola "teso"~~ → resta a **135° per i suoni** (Axelsson: "caotico"). Nel paper di Russell la parola "tense" sta a 93°: riguarda le parole, non i suoni.
+- ~~Sound map a nove colori a gradino (`SOUND_STATE_COLORS` come colori netti)~~ → **colore continuo**: i nove colori restano come ancore agli angoli, fra le ancore si mescola in Lab (2026-10-09).
+- ~~Python con le sue regole (`genera.py` replicava la logica di Sottotraccia)~~ → **fonte unica** in JS (`sottotraccia-eventi.js`); Python fa solo la sintesi, con i dati di `eventi.mjs`. Il vecchio test di parità sulle formule è stato tolto.
+- ~~Afa con un tono puro acuto fermo~~ → **rumore a banda stretta**: un tono puro è tonale e quindi piacevole [F Fastl cap. 9].
+- ~~Pianificatore con anticipo di 0,15 s e controllo ogni 25 ms~~ → **0,5 s e 100 ms**, e 1,5 s con la scheda nascosta (i timer del browser rallentano).

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prova Sottotraccia per stati</title>
+</head>
+<body>
+<p>Prova di Sottotraccia: pilota la bussola a mano (senza mappa) e conta i suoni. Vedi sound-lab/sottotraccia/prova_stati.mjs.</p>
+<script type="module">
+// Contatore degli oscillatori avviati, prima di caricare il motore audio.
+window.__osc = 0;
+window.__frequenze = [];
+const avviaOsc = OscillatorNode.prototype.start;
+OscillatorNode.prototype.start = function (...a) { window.__osc++; window.__frequenze.push(Math.round(this.frequency.value)); return avviaOsc.apply(this, a); };
+
+import { audioEnabled, mood, musicMode } from '/src/state/store.js';
+import { initAudioEngine, statoSottotraccia } from '/src/audio/audio-engine.js';
+import { calore } from '/src/compass/compass-core.js';
+const F = (await (await fetch('/data/bussola.json')).json()).fisica; // stesse soglie della bussola
+
+initAudioEngine();
+window.prova = {
+    accendi: () => audioEnabled.set(true),
+    spegni: () => audioEnabled.set(false),
+    modo: m => musicMode.set(m),
+    // Bussola finta: X, Y, T (UTCI in °C); stato: nome dello stato (serve solo a far partire il modo)
+    bussola: (X, Y, T, stato) => mood.set({ X, Y, T, H: calore(T, F), C: null, stato, proposto: null, fuori: false, people: 0, raggio: 50 }),
+    fuori: () => mood.set({ stato: null, fuori: true }),
+    oscillatori: () => window.__osc,
+    stato: () => statoSottotraccia(),
+    frequenze: () => { const f = window.__frequenze.splice(0); const c = {}; for (const x of f) c[x] = (c[x] || 0) + 1; return c; },
+};
+window.preparato = true;
+</script>
+</body>
+</html>
