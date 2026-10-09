@@ -33,12 +33,12 @@ Aggiungere una **dimensione sonora** attivabile ("mappa sonora") con quattro mod
 
 ## 3. Regole permanenti
 - **Solo il Comune di Ascoli Piceno** (confine OSM, relazione 42176, in `sound-lab/data/comune_ascoli.geojson`). Dati di altri comuni **cancellati**; non aggiungerne mai.
-- **Niente "numeri a caso"**: ogni parametro è marcato **[F]** fonte (dalla letteratura in `paper/`, locale), **[S]** scelta nostra o **[H]** ipotesi senza fonte, e la marcatura va anche nel codice e nel file di argomento. Il calore nel suono è [H].
+- **Niente "numeri a caso"**: ogni parametro è marcato **[F]** fonte (dalla letteratura, PDF fuori dal progetto), **[S]** scelta nostra o **[H]** ipotesi senza fonte, e la marcatura va anche nel codice e nel file di argomento. Il calore nel suono è [H].
 - **I pareri del consulente Opus** (`/advisor`) si verificano nei paper prima di usarli: la "sincope che dà groove" era un'affermazione non supportata.
 - **Autosufficienza**: il sito fornisce tutto da sé, nessun token né servizio esterno.
 - **Intercambiabilità**: UI e grafici sostituibili; bussola e audio parlano solo tramite lo store.
 - **Microdati con licenza mai su GitHub** (`IPUMS/`, `UsoTempo_*/`, `Lcz_neurali 2/` in `.gitignore`); nel sito solo aggregati, con le citazioni (dettagli in `persone.md`).
-- **Paper e clip generate fuori da git**: `paper/` (PDF con copyright), `sound-lab/*/clip/` e `sound-lab/metronomi/` (si rigenerano con gli script).
+- **Mai i paper nel repository**: i PDF (copyright degli editori) stanno fuori dal progetto, in `~/Documents/CityRhythm-paper/`. Non si aggiungono mai al repository né si committano, neanche per sbaglio: prima di ogni commit si controlla che non ci siano PDF. Anche le clip generate (`sound-lab/*/clip/`) e `sound-lab/metronomi/` restano fuori da git: si rigenerano con gli script.
 
 ## 4. Dove trovare cosa
 | File | Contenuto |

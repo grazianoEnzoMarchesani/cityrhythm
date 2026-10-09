@@ -2,7 +2,7 @@
 
 > Parte del second brain di CityRhythm: **indice in `SECOND_BRAIN.md`**, da leggere per primo. Questo file si legge quando il lavoro tocca questo argomento e si aggiorna col comando `/second-brain`.
 
-Quarto modo della musica (accanto a IA, classica e metronomi): musica **generata da regole**, senza file, dagli ingressi della bussola. È il "layer sotto la coscienza": sotto i suoni riconoscibili (folla, traffico, natura) che restano nel mix degli effetti. Legende: **[F]** fonte in `paper/` (locale, non in git), **[S]** scelta nostra, **[I]** inferenza, **[H]** ipotesi senza fonte.
+Quarto modo della musica (accanto a IA, classica e metronomi): musica **generata da regole**, senza file, dagli ingressi della bussola. È il "layer sotto la coscienza": sotto i suoni riconoscibili (folla, traffico, natura) che restano nel mix degli effetti. Legende: **[F]** fonte nei paper (PDF fuori dal progetto, mai in git), **[S]** scelta nostra, **[I]** inferenza, **[H]** ipotesi senza fonte.
 
 ## Decisioni valide
 | Tema | Decisione |
