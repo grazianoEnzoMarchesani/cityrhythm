@@ -57,6 +57,7 @@ import { getFullKmlGeoJson, getPoiData, getCrowdedData, getSpotMapperData, getLc
 import { addMapInteraction } from './map-interaction.js';
 import { cellMap, presence } from '../state/store.js';
 import { setCellMapActive } from '../compass/cell-map.js';
+import { coloreSuono } from '../compass/sound-color.js';
 
 let fullCrowdedGeoJson = null;
 let preparedCrowdedPoints = []; // prepared attractor points
@@ -1857,8 +1858,8 @@ function getLczFillColor(type) {
             'rgba(0,0,0,0)'];
     }
     if (type === 'stato') {
-        return ['match', ['coalesce', ['feature-state', 'stato'], ''],
-            ...Object.entries(SOUND_STATE_COLORS).flatMap(([k, c]) => [k, c]), 'rgba(0,0,0,0)'];
+        // Colore continuo calcolato per cella (src/compass/sound-color.js) e messo nel feature-state 'colore'
+        return ['to-color', ['coalesce', ['feature-state', 'colore'], 'rgba(0,0,0,0)']];
     }
     const view = LCZ_DATA_VIEWS[type];
     if (!view) return MAP_STYLES.LCZ_VITALITY.UHI_COLORS;
@@ -1982,7 +1983,8 @@ function applyCellMap(result) {
     for (let k = 0; k < result.ids.length; k++) {
         const u = result.utci[k];
         map.setFeatureState({ source: LCZ_VITALITY_SOURCE_ID, id: result.ids[k] },
-            { utci: Number.isNaN(u) ? null : u, stato: result.stato[k] });
+            { utci: Number.isNaN(u) ? null : u, stato: result.stato[k],
+              colore: coloreSuono(result.x[k], result.y[k], result.stato[k]) });
     }
 }
 cellMap.subscribe(applyCellMap);

@@ -534,11 +534,6 @@ export const UTCI_RAMP = [
 ];
 // Stati della bussola: riga = piacevolezza (sereno verde-azzurro, neutro grigio-viola, opprimente arancio-rosso),
 // colonna = energia (poca gente chiaro, tanta gente scuro). Stessa griglia di bussola.json.
-export const SOUND_STATE_COLORS = {
-  rifugio: '#b8e3d6', passeggiata: '#4fb39a', festa: '#17725c',
-  attesa: '#ddd8e8', routine: '#9a8fb5', corrente: '#5d4f85',
-  afa: '#fdc9a0', fatica: '#f0803c', calca: '#b33a0e',
-  notte: '#14204a'
-};
+export { SOUND_STATE_COLORS } from './sound-colors.js'; // in un file puro, per i test in Node
 
 export const DEBUG_MODE = false;

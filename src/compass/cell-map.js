@@ -66,6 +66,7 @@ export function computeCellMap(context, t) {
     const pick = climateFor(context, t);
     const n = cells.length;
     const utci = new Float32Array(n).fill(NaN), stato = new Array(n).fill(null), people = new Float32Array(n);
+    const x = new Float32Array(n).fill(NaN), y = new Float32Array(n).fill(NaN); // energia e piacevolezza, per la Sound map continua
     cells.forEach((c, k) => {
         const day = pick[k];
         if (!day) return;
@@ -73,6 +74,8 @@ export function computeCellMap(context, t) {
         const r = evaluate({ X: localEnergy(people[k], cfg), sun: day.sun, weather: day.weather, traits: c.traits }, cfg);
         utci[k] = r.T ?? NaN;
         stato[k] = r.stato;
+        x[k] = r.X;
+        y[k] = r.Y;
     });
-    return { ids: cells.map(c => c.f.properties.id), utci, stato, people };
+    return { ids: cells.map(c => c.f.properties.id), utci, stato, people, x, y };
 }

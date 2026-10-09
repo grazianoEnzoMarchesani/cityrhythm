@@ -1,0 +1,128 @@
+{
+  "rifugio": {
+    "titolo": "Morgenstimmung (Peer Gynt, suite n. 1, op. 46)",
+    "autore": "Edvard Grieg",
+    "file_sorgente": "EdvardGrieg-PeerGyntSuiteNo.1Op.46-01-Morning.flac",
+    "inizio_s": 17.67,
+    "fine_s": 88.56,
+    "durata_s": 70.89,
+    "similarita_bordi": 1.93,
+    "lufs": -18.0,
+    "guadagno_db": -1.5,
+    "mp3_kb": 1385
+  },
+  "passeggiata": {
+    "titolo": "Andante con moto (Sinfonia n. 4 «Italiana», op. 90)",
+    "autore": "Felix Mendelssohn",
+    "file_sorgente": "FelixMendelssohn-SymphonyNo.4InAMajorOp.90italian-02-AndanteConMoto.flac",
+    "inizio_s": 0.81,
+    "fine_s": 77.18,
+    "durata_s": 76.37,
+    "similarita_bordi": 1.945,
+    "lufs": -18.2,
+    "guadagno_db": 5.9,
+    "mp3_kb": 1493
+  },
+  "festa": {
+    "titolo": "Le nozze di Figaro, ouverture (K. 492)",
+    "autore": "Wolfgang Amadeus Mozart",
+    "file_sorgente": "WolfgangAmadeusMozart-MarriageOfFigaro.flac",
+    "inizio_s": 1.72,
+    "fine_s": 84.85,
+    "durata_s": 83.13,
+    "similarita_bordi": 1.962,
+    "lufs": -18.0,
+    "guadagno_db": -1.7,
+    "mp3_kb": 1624
+  },
+  "attesa": {
+    "titolo": "Adagio cantabile (Quartetto op. 64 n. 5, «L'allodola»)",
+    "autore": "Joseph Haydn",
+    "file_sorgente": "JosephHaydn-StringQuartetInDOp.645H363Lark-02-AdagioCantabile.flac",
+    "inizio_s": 0.88,
+    "fine_s": 72.47,
+    "durata_s": 71.59,
+    "similarita_bordi": 1.966,
+    "lufs": -18.0,
+    "guadagno_db": 6.3,
+    "mp3_kb": 1399
+  },
+  "routine": {
+    "titolo": "Menuetto (Quartetto op. 64 n. 5, «L'allodola»)",
+    "autore": "Joseph Haydn",
+    "file_sorgente": "JosephHaydn-StringQuartetInDOp.645H363Lark-03-MenuettoAllegretto.flac",
+    "inizio_s": 0.81,
+    "fine_s": 75.12,
+    "durata_s": 74.3,
+    "similarita_bordi": 1.948,
+    "lufs": -18.2,
+    "guadagno_db": 5.8,
+    "mp3_kb": 1452
+  },
+  "corrente": {
+    "titolo": "Saltarello presto (Sinfonia n. 4 «Italiana», op. 90)",
+    "autore": "Felix Mendelssohn",
+    "file_sorgente": "FelixMendelssohn-SymphonyNo.4InAMajorOp.90italian-04-Saltarellopresto.flac",
+    "inizio_s": 1.0,
+    "fine_s": 80.85,
+    "durata_s": 79.85,
+    "similarita_bordi": 1.749,
+    "lufs": -18.2,
+    "guadagno_db": 0.0,
+    "mp3_kb": 1560
+  },
+  "afa": {
+    "titolo": "Nelle steppe dell'Asia centrale",
+    "autore": "Aleksandr Borodin",
+    "file_sorgente": "AlexanderBorodin-InTheSteppesOfCentralAsia.flac",
+    "inizio_s": 77.09,
+    "fine_s": 153.86,
+    "durata_s": 76.77,
+    "similarita_bordi": 1.881,
+    "lufs": -18.0,
+    "guadagno_db": 12.2,
+    "mp3_kb": 1500
+  },
+  "fatica": {
+    "titolo": "Introduzione lenta (Egmont, ouverture, op. 84)",
+    "autore": "Ludwig van Beethoven",
+    "file_sorgente": "LudwigVanBeethoven-EgmontOvertureOp.84.flac",
+    "inizio_s": 0.0,
+    "fine_s": 68.0,
+    "durata_s": 68.0,
+    "similarita_bordi": null,
+    "lufs": -18.0,
+    "guadagno_db": -1.0,
+    "mp3_kb": 1329
+  },
+  "calca": {
+    "titolo": "Allegro energico e passionato (Sinfonia n. 4, op. 98)",
+    "autore": "Johannes Brahms",
+    "file_sorgente": "JohannesBrahms-SymphonyNo.4InEMinorOp.98-04-AllegroEnergicoEPassionato.flac",
+    "inizio_s": 0.79,
+    "fine_s": 87.35,
+    "durata_s": 86.56,
+    "similarita_bordi": 1.798,
+    "lufs": -18.0,
+    "guadagno_db": -1.6,
+    "mp3_kb": 1691
+  },
+  "notte": {
+    "titolo": "Andante (Sonata in la maggiore, D. 664)",
+    "autore": "Franz Schubert",
+    "file_sorgente": "FranzSchubert-SonataInAMajorD.664-02-Andante.flac",
+    "inizio_s": 2.55,
+    "fine_s": 90.88,
+    "durata_s": 88.33,
+    "similarita_bordi": 1.917,
+    "lufs": -21.2,
+    "guadagno_db": 0.7,
+    "mp3_kb": 1726
+  },
+  "_fonte": {
+    "raccolta": "Musopen Collection as FLAC, Internet Archive (https://archive.org/details/MusopenCollectionAsFlac)",
+    "licenza": "Public Domain Mark 1.0: dichiarata da chi ha caricato la raccolta nel 2012, non da Musopen. Da verificare su musopen.org per ogni registrazione prima della pubblicazione. Musopen chiede di citarlo nelle opere derivate",
+    "sito": "https://musopen.org/",
+    "trattamento": "estratto di 70-95 s per stato, in loop, con dissolvenza di 2 s, volume normalizzato a -18 LUFS"
+  }
+}
