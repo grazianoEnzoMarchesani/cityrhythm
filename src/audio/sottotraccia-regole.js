@@ -6,7 +6,7 @@
 //   Y -> coppia stonata (a 1 kHz), banda dell'hi-hat (da chiusa ad aperta), con compensazione del volume
 //   H -> registro (più grave con il caldo)                              [ipotesi: nessun paper]
 //   I -> scostamento degli hi-hat, separato da X e Y                    [scelta]
-// Legenda: [F] fonte in paper/, [S] scelta nostra, [I] inferenza, [H] ipotesi.
+// Legenda: [F] fonte (paper fuori dal progetto), [S] scelta nostra, [I] inferenza, [H] ipotesi.
 // La sorgente unica delle regole è questo file: la lista degli eventi (sottotraccia-eventi.js) la usa,
 // e la usano anche l'app e lo strumento di prova in sound-lab/sottotraccia/.
 
