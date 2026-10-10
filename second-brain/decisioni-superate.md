@@ -81,3 +81,19 @@ Decisioni che non valgono più, barrate, con il perché e cosa le sostituisce. N
 - ~~Stili inline e `cssText` nel JS, un `<style>` incorporato nella scheda~~ → classi in `style.css`.
 - ~~Play con `aria-pressed` e con l'etichetta che cambia insieme ("Ferma la timeline, premuto")~~ → solo l'etichetta.
 - ~~Ultimo valore dello slider perso durante un aggiornamento in corso~~ → il valore in attesa si applica alla fine (cursore ed etichetta coincidono).
+- ~~Pulsante di direzione (avanti/indietro) nella timeline~~ → tolto da tutte le versioni (2026-10-10): il «indietro» non serviva e aggiungeva codice. Il Play va sempre avanti; le frecce della tastiera restano (un'ora alla volta).
+- ~~Mappa sonora come scheda con interruttore, stato, modi e Dettagli in colonna a sinistra (fascia sopra la timeline sul telefono)~~ → quadrante con lancetta a sinistra della timeline; pannello con modi e dettagli sopra il quadrante (2026-10-10, `interfaccia.md`).
+- ~~Interruttore nel pannello, e il quadrante che apre il pannello (due tocchi per accendere)~~ → il quadrante accende e spegne con un tocco, anche col dito; il pulsante sotto apre il pannello (2026-10-10, richiesta dell'utente).
+- ~~Modo di partenza Musica IA~~ → **Sottotraccia** alla prima accensione (2026-10-10): l'utente può scegliere gli altri modi.
+- ~~Gruppo Persone aperto all'avvio dei Livelli, anche sul telefono~~ → sul telefono tutti i gruppi chiusi e un gruppo alla volta (2026-10-10); sul desktop Persone resta aperto.
+- ~~Telefono = solo larghezza sotto 720 px~~ → condizione `PHONE_QUERY`: larghezza sotto 720 px oppure altezza sotto 500 px con puntatore grossolano. Il telefono in orizzontale a 844×390 apriva Livelli a tutta altezza.
+- ~~Timeline sul telefono su due righe piene, con il Periodo che andava a capo (altezza 162–166 px)~~ → timeline di 138 px: quadrante e «Modi» a sinistra, Play, ora e Periodo a destra su una riga, cursore sotto.
+- ~~Livelli sul telefono come fascia sopra la timeline~~ → scendono dall'alto, con altezza massima che lascia libero il centro della mappa.
+- ~~Nome dello stato sul pulsante del telefono~~ → solo «Modi» sul telefono, per guadagnare spazio (scelta dell'utente). Il nome sta nel pannello e nell'etichetta per chi legge lo schermo.
+- ~~Pannello della Mappa sonora alto fino a 420 px, che copriva il centro della mappa~~ → altezza massima sopra la timeline, minimo 160 px. Sui telefoni più bassi (320×568) copre ancora un po' il centro: accettato dall'utente.
+- ~~Mirino nero, invisibile sui puntini neri del centro~~ → bianco con effetto differenza (`mix-blend-mode`).
+- ~~Frase «Sta per passare a…» nella scheda dello stato~~ → tolta: la frase cambiava ogni secondo e spostava le righe.
+- ~~Dettagli con numero di cella, sigla LCZ, sigla UTCI, «Energia» e «Piacevolezza»~~ → Zona, Tipo di zona, Temperatura percepita, Gente, Benessere: parole semplici, senza sigle né numero di cella.
+- ~~Riga della settimana tipo con «dei 35 del periodo»~~ → «35 lunedì del periodo»: il totale conta solo i giorni dello stesso giorno della settimana.
+- ~~Pulsante «Periodo» con l'anno ripetuto («8 giu 2025 – 14 giu 2025»)~~ → nello stesso anno l'anno una volta sola («8 giu – 14 giu 2025»); a cavallo dell'anno resta per esteso.
+- ~~Pubblicazione: `ui-redesign` da unire a `Music` e poi a `main` solo con un sì~~ → sì dell'utente il 2026-10-10 per Pages: `ui-redesign` unito in `main`. `Music` resta da decidere.

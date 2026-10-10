@@ -26,7 +26,7 @@
 
     --gutter: 12px;
     --col-w: 296px;
-    --timeline-h: 112px;     /* altezza della timeline sul desktop */
+    --timeline-h: 120px;     /* altezza della timeline sul desktop (quadrante, pulsante e cursore) */
     --target: 32px;          /* altezza minima dei controlli (44px sul telefono) */
 
     --font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -99,10 +99,11 @@ svg { display: block; }
     margin: -11px 0 0 -11px;
     pointer-events: none;
     z-index: 2;
+    /* Bianco con differenza: su un fondo chiaro si vede scuro, sui puntini neri si vede chiaro */
     background:
-        linear-gradient(var(--ink), var(--ink)) center / 2px 100% no-repeat,
-        linear-gradient(var(--ink), var(--ink)) center / 100% 2px no-repeat;
-    opacity: 0.75;
+        linear-gradient(#fff, #fff) center / 2px 100% no-repeat,
+        linear-gradient(#fff, #fff) center / 100% 2px no-repeat;
+    mix-blend-mode: difference;
 }
 
 /* 4. Pannelli e controlli -------------------------------------------------- */
@@ -364,69 +365,68 @@ svg { display: block; }
 /* Testo grigio di servizio nel pannello (prima era opacity 0,5 e sotto il contrasto minimo) */
 .spot-type-selector { display: flex; flex-direction: column; gap: 6px; padding-left: 28px; }
 
-/* 6. Mappa sonora (la scheda in basso a sinistra) ------------------------- */
-.card { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; flex: none; margin-top: auto; }
+/* 6. Mappa sonora: il pannello sopra il quadrante (il quadrante sta nella timeline, sezione 7) ---- */
+.compass-popover {
+    right: auto;
+    width: min(300px, calc(100vw - var(--gutter) * 2));
+    max-height: calc(100dvh - 160px);   /* con i Dettagli aperti sta intero sui 900 px; sui più bassi scorre dentro */
+    overflow-y: auto;
+    padding: 16px;
+    gap: 16px;
+    animation: pannello-entra 200ms ease-out;
+}
+/* Entrata breve e discreta: il pannello compare salendo di 4 px. Il movimento ridotto lo spegne (sezione 12) */
+@keyframes pannello-entra {
+    from { opacity: 0; transform: translateY(4px); }
+}
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .card-title { font-weight: 650; font-size: 0.95rem; }
 
-/* Interruttore a due stati: un button role="switch" con aria-checked */
-.switch {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
+/* Stato: nome in grande, una frase sotto */
+.card-state { display: flex; flex-direction: column; gap: 4px; }
+.state-name { font-size: 1.25rem; font-weight: 650; letter-spacing: -0.01em; line-height: 1.2; }
+.state-desc { font-size: 0.875rem; line-height: 1.45; color: var(--ink-2); }
+
+/* Musica: etichetta, quattro modi in una griglia 2×2 di caselle uguali, poi una riga sul modo scelto */
+.card-music { display: flex; flex-direction: column; gap: 8px; }
+.card-label { font-size: 0.8125rem; font-weight: 600; color: var(--ink-2); }
+.modes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.modes button {
     min-height: var(--target);
-    padding: 0;
-    border: 0;
-    background: none;
-    cursor: pointer;
-    font-size: 0.88rem;
-    color: var(--ink);
-}
-.switch-track {
-    position: relative;
-    width: 36px;
-    height: 20px;
-    border-radius: 999px;
-    background: var(--line-strong);
-    transition: background-color 150ms ease-out;
-    flex: none;
-}
-.switch-track::after {
-    content: "";
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
+    padding: 6px 10px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
     background: var(--paper);
-    transition: transform 150ms ease-out;
+    color: var(--ink);
+    font-size: 0.875rem;
+    cursor: pointer;
 }
-.switch[aria-checked="true"] .switch-track { background: var(--ink); }
-.switch[aria-checked="true"] .switch-track::after { transform: translateX(16px); }
+@media (hover: hover) { .modes button:hover { background: var(--paper-2); } }
+.modes button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.mode-desc { font-size: 0.8125rem; line-height: 1.45; color: var(--ink-3); }
 
-.card-state { display: flex; flex-direction: column; gap: 2px; }
-.state-name { font-size: 1.1rem; font-weight: 650; letter-spacing: -0.01em; }
-.state-desc { font-size: 0.88rem; color: var(--ink-2); }
-.card-off { font-size: 0.85rem; color: var(--ink-2); }
-.modes { display: flex; flex-wrap: wrap; gap: 6px; }
-
+/* Dettagli: come il titolo dei Livelli, con + e − a destra e un filetto sopra */
+.details { padding-top: 12px; border-top: 1px solid var(--line); }
 .details summary {
     min-height: var(--target);
     display: flex;
     align-items: center;
+    justify-content: space-between;
     cursor: pointer;
-    font-size: 0.88rem;
+    font-size: 0.875rem;
     font-weight: 500;
     color: var(--ink-2);
     list-style: none;
 }
 .details summary::-webkit-details-marker { display: none; }
-.details summary::before { content: "+ "; }
-.details[open] summary::before { content: "− "; }
-.details-body { display: flex; flex-direction: column; gap: 6px; font-size: 0.86rem; color: var(--ink-2); padding-bottom: 4px; }
-.details-body b { color: var(--ink); font-weight: 600; }
-.details-body i, .details-note { color: var(--ink-3); font-size: 0.82rem; }
+.details summary::after { content: "+"; font-size: 1.1rem; line-height: 1; color: var(--ink-3); }
+.details[open] summary::after { content: "−"; }
+.details-body { display: flex; flex-direction: column; gap: 12px; padding: 4px 0 2px; }
+/* Una lista etichetta-valore: le etichette a sinistra, i valori allineati a destra della colonna */
+.details-list { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; margin: 0; font-size: 0.875rem; }
+.details-list dt { color: var(--ink-2); font-size: 0.8125rem; }
+.details-list dd { margin: 0; color: var(--ink); font-variant-numeric: tabular-nums; }
+.details-note { font-size: 0.8125rem; line-height: 1.45; color: var(--ink-3); }
 
 /* 7. Timeline -------------------------------------------------------------- */
 .timeline {
@@ -440,12 +440,14 @@ svg { display: block; }
     border-radius: var(--radius);
     box-shadow: var(--shadow);
     z-index: 30;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr);   /* quadrante a sinistra, ora e cursore a destra */
+    column-gap: 12px;
+    row-gap: 6px;
+    align-items: center;
     padding-bottom: calc(12px + env(safe-area-inset-bottom));
 }
-.timeline-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.timeline-row { grid-column: 2; display: flex; align-items: center; gap: 8px; min-width: 0; }
 .timeline-time {
     flex: 1 1 auto;
     min-width: 0;
@@ -459,12 +461,117 @@ svg { display: block; }
 }
 .period-button { white-space: nowrap; }
 .timeline-slider {
+    grid-column: 2;
     width: 100%;
     height: 22px;
     margin: 0;
     cursor: pointer;
     accent-color: var(--ink);
 }
+
+/* Il quadrante della Mappa sonora: nove caselle con i colori degli stati, una lancetta dal centro al punto
+   (energia verso destra, piacevolezza verso l'alto). Il tocco sul quadrante accende e spegne; il pulsante sotto apre il pannello. */
+.compass-dial {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    width: 76px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    color: var(--ink);
+}
+.dial-toggle {
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+}
+.dial-square {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 2px;
+    background: var(--paper);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 0 0 1px var(--line-strong);
+}
+.dial-cell {
+    background: var(--c);
+    border-radius: 2px;
+    opacity: 0.35;                  /* le caselle degli altri stati sono sbiadite */
+    transition: opacity 300ms ease-out;
+}
+.dial-cell.on { opacity: 1; }
+/* Spenta, in caricamento o fuori dalle celle: niente colori né lancetta */
+.dial-square.is-spento .dial-cell { background: var(--paper-2); opacity: 1; }
+.dial-square.is-spento .dial-arm { display: none; }
+/* Notte: tutto il quadrante blu, lancetta bianca */
+.dial-square.is-notte { --needle: #fff; --needle-edge: #14204a; }
+
+/* Il braccio ruota dal centro e porta con sé lancetta e punto. Lancetta e punto si allungano con la stessa
+   durata e curva, così il punto resta sulla punta per tutto il movimento. --k è la lunghezza, in metà lato. */
+.dial-square { --move: 600ms cubic-bezier(0.22, 0.61, 0.36, 1); }
+.dial-arm {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 50%;                     /* metà lato del quadrato: la lunghezza piena */
+    height: 0;
+    transform-origin: 0 0;
+    transform: rotate(var(--a, 0deg));
+    transition: transform var(--move);
+}
+.dial-needle,
+.dial-dot {
+    position: absolute;
+    pointer-events: none;
+    background: var(--needle, var(--ink));
+    box-shadow: 0 0 0 1px var(--needle-edge, #fff);   /* bordo chiaro: si legge anche sui colori scuri */
+}
+.dial-needle {
+    left: 0;
+    top: -1px;
+    height: 2px;
+    width: calc(var(--k, 0) * 100%);
+    transition: width var(--move);
+}
+.dial-dot {
+    top: 0;
+    left: calc(var(--k, 0) * 100%);
+    width: 7px;
+    height: 7px;
+    margin: -3.5px 0 0 -3.5px;
+    border-radius: 50%;
+    transition: left var(--move);
+}
+/* Il pulsante sotto il quadrante: nome dello stato e una freccia che si gira quando il pannello è aperto */
+.dial-open {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-height: 32px;
+    max-width: 76px;
+    padding: 0 4px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: none;
+    cursor: pointer;
+    color: var(--ink);
+    font-size: 0.72rem;
+    font-weight: 600;
+}
+@media (hover: hover) { .dial-open:hover { background: var(--paper-2); } }   /* sul touch il colore di passaggio non deve restare acceso dopo il tocco */
+.dial-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.2; }
+.dial-modi { display: none; }
+.dial-chevron { width: 10px; height: 10px; flex: none; transition: transform 200ms ease-out; }
+.dial-chevron path { fill: none; stroke: var(--ink-2); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.dial-open[aria-expanded="true"] .dial-chevron { transform: rotate(180deg); }
 
 .popover {
     position: absolute;
@@ -661,40 +768,76 @@ div[id$="-chart"] p { padding: 16px; text-align: center; font-style: normal; col
     .timeline { width: min(560px, calc(100vw - var(--gutter) * 2)); }
 }
 
-@media (max-width: 719px) {
+@media (max-width: 719px), (max-height: 500px) and (pointer: coarse) {
     :root {
-        --timeline-h: 136px;
-        --target: 44px;   /* dimensione minima consigliata per il tocco */
+        --timeline-h: 138px;   /* timeline: quadrante a sinistra, due righe a destra, cursore sotto */
+        --target: 44px;        /* dimensione minima consigliata per il tocco */
     }
     html, body { font-size: 16px; }
 
-    /* La colonna diventa una fascia sopra la timeline: livelli (se aperti) e mappa sonora */
+    /* I livelli scendono dall'alto, dove sta il loro pulsante: il centro della mappa (il mirino) resta libero */
     .side-column {
-        top: auto;
-        right: var(--gutter);
-        width: auto;
-        bottom: calc(var(--timeline-h) + var(--gutter) * 2 + env(safe-area-inset-bottom));
+        top: calc(var(--gutter) + env(safe-area-inset-top));
+        bottom: auto;
         left: var(--gutter);
-        max-height: calc(100dvh - var(--timeline-h) - 90px);
+        right: auto;
+        width: min(320px, calc(100vw - var(--gutter) * 2 - 56px));   /* 56 px lasciano liberi i comandi di zoom */
+        max-height: calc(50dvh - 36px - env(safe-area-inset-top));
     }
-    .layers { max-height: min(56dvh, 520px); flex: 0 1 auto; }
-    .card { padding: 10px 12px; }
+    .layers { max-height: none; }
+    .panel-body { min-height: 0; overflow-y: auto; }
     .layers-toggle { top: calc(var(--gutter) + env(safe-area-inset-top)); left: var(--gutter); }
 
-    .timeline {
-        left: var(--gutter);
-        right: var(--gutter);
-        width: auto;
-        transform: none;
-        bottom: calc(var(--gutter) + env(safe-area-inset-bottom));
-        padding: 10px 12px 12px;
-    }
-    .timeline-slider { height: 28px; }
-    /* Sul telefono l'etichetta del tempo ha una riga tutta sua: il modo (settimana tipo o date) non si tronca */
-    .timeline-row { flex-wrap: wrap; row-gap: 6px; }
-    .timeline-time { order: -1; flex: 1 0 100%; font-size: 0.95rem; padding-left: 2px; }
-    .period-button { margin-left: auto; }
+    /* La Mappa sonora sta sopra la timeline, e per quanto possibile sotto il mirino */
     .popover { left: 0; right: 0; }
+    .compass-popover {
+        right: auto;
+        width: min(360px, calc(100vw - var(--gutter) * 2));
+        padding: 12px 14px;
+        gap: 12px;
+        max-height: max(calc(50dvh - var(--timeline-h) - 44px - env(safe-area-inset-bottom)), 160px);
+    }
+
+    /* Timeline: a sinistra il quadrante con sotto "Modi"; a destra Play, Direzione e l'ora, poi il Periodo
+       su una riga intera; sotto il cursore a tutta larghezza. Altezza circa 138 px. */
+    /* La larghezza e il centro restano quelli del desktop: sul telefono in verticale la timeline occupa tutta la riga */
+    .timeline {
+        bottom: calc(var(--gutter) + env(safe-area-inset-bottom));
+        grid-template-columns: 44px minmax(0, 1fr);
+        column-gap: 8px;
+        row-gap: 4px;
+        padding: 8px 10px calc(6px + env(safe-area-inset-bottom));
+    }
+    .compass-dial { grid-column: 1; grid-row: 1; width: 44px; }
+    .dial-square { width: 44px; height: 44px; }
+    .dial-open { min-height: var(--target); max-width: 44px; padding: 0; gap: 2px; font-size: 0.6875rem; }
+    .dial-label { display: none; }   /* il nome dello stato sta nel pannello e nel nome per chi legge lo schermo */
+    .dial-modi { display: inline; }
+    .timeline-row {
+        grid-column: 2;
+        grid-row: 1;
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr);
+        grid-template-rows: 44px auto;
+        column-gap: 6px;
+        row-gap: 4px;
+        align-items: center;
+        min-width: 0;
+    }
+    #playButton { grid-column: 1; grid-row: 1; }
+    .timeline-time { grid-column: 2; grid-row: 1; white-space: normal; font-size: 0.875rem; line-height: 1.2; padding-left: 2px; }
+    .period-button {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        justify-self: start;
+        max-width: 100%;
+        min-width: 0;
+        min-height: var(--target);
+        font-size: 0.875rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .timeline-slider { grid-column: 1 / -1; grid-row: 2; height: 28px; }
 
     /* Scheda area: a tutto schermo */
     .drawer {
@@ -713,7 +856,7 @@ div[id$="-chart"] p { padding: 16px; text-align: center; font-style: normal; col
     select, .field, input[type="text"], input[type="range"] { font-size: 16px; }
     .seg button { min-height: 36px; padding: 6px 13px; font-size: 0.95rem; }
     .icon-btn { width: 44px; height: 44px; }
-    .group > summary, .check, .switch { min-height: 44px; }
+    .group > summary, .check { min-height: 44px; }
 }
 
 /* 12. Movimento ridotto e stampa ------------------------------------------- */

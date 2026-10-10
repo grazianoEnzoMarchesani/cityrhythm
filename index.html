@@ -14,7 +14,7 @@
     <!-- Mappa a tutto schermo: il resto sta sopra, ai bordi -->
     <div id="map" class="map"></div>
 
-    <!-- Colonna a sinistra: livelli in alto, mappa sonora in basso. Non si sovrappongono: la colonna finisce sopra la timeline -->
+    <!-- Colonna a sinistra: i livelli. Finisce sopra la timeline, così non si sovrappone a niente -->
     <div id="side-column" class="side-column">
         <section id="layer-controls" class="panel layers" aria-labelledby="layers-title">
             <div class="panel-head">
@@ -23,7 +23,7 @@
             </div>
 
             <div class="panel-body">
-                <details class="group" open>
+                <details class="group">
                     <summary>Persone</summary>
                     <div class="group-body">
                         <label class="check">
@@ -148,9 +148,6 @@
                 </div>
             </div>
         </section>
-
-        <!-- Mappa sonora: riempita da src/ui/ui-compass.js -->
-        <section id="compass-panel" class="panel card" aria-label="Mappa sonora"></section>
     </div>
 
     <button id="layers-toggle" class="btn layers-toggle" type="button" aria-expanded="false" aria-controls="layer-controls" hidden>Livelli</button>
@@ -169,8 +166,22 @@
         <span id="status-message"></span>
     </div>
 
-    <!-- Timeline: ora della settimana e periodo -->
+    <!-- Timeline: a sinistra il quadrante della Mappa sonora (src/ui/ui-compass.js), poi ora della settimana e periodo -->
     <div class="timeline" id="timeline-container">
+        <div class="compass-dial">
+            <!-- Il quadrante accende e spegne la musica con un tocco -->
+            <button id="compass-button" class="dial-toggle" type="button" role="switch" aria-checked="false" aria-label="Mappa sonora">
+                <span class="dial-square"></span>
+            </button>
+            <!-- Il pulsante sotto apre i modi di musica e i dettagli -->
+            <button id="compass-open" class="dial-open" type="button" aria-expanded="false" aria-controls="compass-panel">
+                <span class="dial-label">Spenta</span>
+                <span class="dial-modi">Modi</span>
+                <svg class="dial-chevron" viewBox="0 0 10 10" aria-hidden="true">
+                    <path d="M2 6.5 5 3.5 8 6.5"/>
+                </svg>
+            </button>
+        </div>
         <div class="timeline-row">
             <button id="playButton" class="icon-btn" type="button" aria-label="Avvia la timeline" title="Avvia la timeline">
                 <svg class="play-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -178,11 +189,6 @@
                 </svg>
                 <svg class="pause-icon" viewBox="0 0 24 24" aria-hidden="true" style="display: none;">
                     <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-                </svg>
-            </button>
-            <button id="directionButton" class="icon-btn" type="button" aria-label="Direzione: avanti" title="Direzione: avanti">
-                <svg class="direction-icon" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M8 4L16 12l-8 8"/>
                 </svg>
             </button>
             <span id="timeDisplay" class="timeline-time"></span>
@@ -195,6 +201,9 @@
             <div id="calendar-container" class="calendar-row"></div>
             <p class="note" id="period-note">Con meno di 7 giorni la timeline mostra i giorni veri. Con 7 giorni o più mostra la settimana tipo: ogni giorno della settimana, mediato su tutto il periodo scelto.</p>
         </div>
+
+        <!-- Pannello della Mappa sonora: interruttore, stato, modi di musica, dettagli. Lo riempie ui-compass.js -->
+        <section id="compass-panel" class="popover compass-popover" aria-label="Mappa sonora" hidden></section>
     </div>
 
     <script type="module" src="main.js"></script>

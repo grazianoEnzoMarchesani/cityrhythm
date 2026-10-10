@@ -16,14 +16,11 @@ import { time } from '../state/store.js';
 const timeSlider = document.getElementById('timeSlider');
 const timeDisplay = document.getElementById('timeDisplay');
 const playButton = document.getElementById('playButton');
-const directionButton = document.getElementById('directionButton');
 const playIcon = playButton?.querySelector('.play-icon');
 const pauseIcon = playButton?.querySelector('.pause-icon');
-const directionIcon = directionButton?.querySelector('.direction-icon');
 
 let currentHour = 0;
 let isPlaying = false;
-let isForward = true;
 let animationFrameId = null;
 let updateInProgress = false;
 // Pausa fra un'ora e l'altra col Play: lo spostamento dei puntini più un attimo fermi a guardare
@@ -32,7 +29,6 @@ const PLAY_STEP_MS = PRESENCE_MOVE_MS + 300;
 // --- FUNZIONI ESPORTATE ---
 export function setupTimelineControls() {
     if (playButton) playButton.addEventListener('click', togglePlay);
-    if (directionButton) directionButton.addEventListener('click', toggleDirection);
     if (timeSlider) timeSlider.addEventListener('input', handleSliderInput);
     setupKeyboard();
     initializeTimelineUI();
@@ -57,7 +53,8 @@ function timeLabel(hourIndex) {
         const entry = window._timelineMap[hourIndex];
         return entry ? entry.label : 'Non disponibile';
     }
-    return `Settimana tipo · ${hourToLabel(hourIndex)}`;
+    // Spazi indivisibili dentro "Settimana tipo" e "Lun 00:00": sul telefono l'etichetta va a capo solo dopo il punto
+    return `Settimana tipo · ${hourToLabel(hourIndex).replace(' ', ' ')}`;
 }
 
 function showTime() {
@@ -70,7 +67,6 @@ function initializeTimelineUI() {
     showTime();
     if (timeSlider) timeSlider.value = currentHour;
     updatePlayButton();
-    updateDirectionButton();
 }
 
 function updatePlayButton() {
@@ -81,15 +77,6 @@ function updatePlayButton() {
     const testo = isPlaying ? 'Ferma la timeline' : 'Avvia la timeline';
     playButton.setAttribute('aria-label', testo);
     playButton.setAttribute('title', testo);
-}
-
-function updateDirectionButton() {
-    if (!directionButton || !directionIcon) return;
-    directionIcon.classList.toggle('reversed', !isForward);
-    directionButton.classList.toggle('active', !isForward);
-    const testo = isForward ? 'Direzione: avanti' : 'Direzione: indietro';
-    directionButton.setAttribute('aria-label', testo);
-    directionButton.setAttribute('title', testo);
 }
 
 // Scorciatoie: barra spaziatrice avvia e ferma, frecce spostano di un'ora.
@@ -163,7 +150,7 @@ async function stepAnimation() {
     if (updateInProgress) return;
     updateInProgress = true;
     let maxIdx = (window._timelineMap && window._timelineMap.length) ? window._timelineMap.length - 1 : 167;
-    let nextHour = isForward ? currentHour + 1 : currentHour - 1;
+    let nextHour = currentHour + 1;
     if (nextHour > maxIdx) nextHour = 0;
     if (nextHour < 0) nextHour = maxIdx;
     currentHour = nextHour;
@@ -193,11 +180,6 @@ function togglePlay() {
         animationFrameId = null;
     }
     if (isPlaying) requestAnimationFrame(stepAnimation);
-}
-
-function toggleDirection() {
-    isForward = !isForward;
-    updateDirectionButton();
 }
 
 // Trascinando veloce lo slider manda più valori mentre l'ora precedente si sta ancora aggiornando:
