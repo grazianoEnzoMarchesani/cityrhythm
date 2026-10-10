@@ -4,32 +4,32 @@
 // prendono la prima categoria, i successivi la seconda, ecc. Così i conteggi sono esatti e,
 // cambiando ora, le persone tengono il loro colore finché le percentuali non cambiano davvero.
 import { CHART_COLORS } from '../data/config.js';
-import { getDateTimeFromIndex, hash01 } from '../utils/utils.js';
+import { getDateTimeFromIndex, hash01, rangeDays, WEEK_TYPE_FROM_DAYS } from '../utils/utils.js';
 
 export const PRESENCE_COLOR_VARIABLES = {
     gender: {
-        label: 'Gender',
+        label: 'Genere',
         categories: [
-            { name: 'Male', fields: ['% M'], color: CHART_COLORS.GENDER_CHART.MALE },
-            { name: 'Female', fields: ['% F'], color: CHART_COLORS.GENDER_CHART.FEMALE }
+            { name: 'Uomini', fields: ['% M'], color: CHART_COLORS.GENDER_CHART.MALE },
+            { name: 'Donne', fields: ['% F'], color: CHART_COLORS.GENDER_CHART.FEMALE }
         ]
     },
     age: {
-        label: 'Age',
+        label: 'Età',
         categories: ['18-24', '25-34', '35-44', '45-54', '55-64', '65+'].map(a => (
             { name: a, fields: [`% ${a}`], color: CHART_COLORS.AGE_CHART[a] }
         ))
     },
     nationality: {
-        label: 'Nationality',
+        label: 'Nazionalità',
         categories: [
-            { name: 'Italians', fields: ['% Italiani', 'perc_italiani'], color: CHART_COLORS.NATIONALITY_CHART.ITALIANS },
-            { name: 'Foreigners', fields: ['% Stranieri', 'perc_stranieri'], color: CHART_COLORS.NATIONALITY_CHART.FOREIGNERS }
+            { name: 'Italiani', fields: ['% Italiani', 'perc_italiani'], color: CHART_COLORS.NATIONALITY_CHART.ITALIANS },
+            { name: 'Stranieri', fields: ['% Stranieri', 'perc_stranieri'], color: CHART_COLORS.NATIONALITY_CHART.FOREIGNERS }
         ]
     },
     visits: {
-        label: 'Visits',
-        categories: ['1 visit', '2 visits', '3 visits', '4 visits', '5+ visits'].map((name, i) => (
+        label: 'Visite',
+        categories: ['1 visita', '2 visite', '3 visite', '4 visite', '5+ visite'].map((name, i) => (
             { name, fields: [`visite_${i + 1}`], color: CHART_COLORS.VISITS_CHART[`VISIT_${i + 1}`] }
         ))
     }
@@ -56,7 +56,7 @@ function filterRecords(records, timelineHourIndex) {
     const range = window.selectedDateRange;
     const min = range?.min instanceof Date ? range.min : null;
     const max = range?.max instanceof Date ? range.max : null;
-    const shortRange = min && max && (max - min) / 86400000 < 7;
+    const shortRange = min && max && rangeDays(min, max) < WEEK_TYPE_FROM_DAYS;
     const { jsDayOfWeek } = getDateTimeFromIndex(timelineHourIndex);
     return records.filter(r => {
         const d = r.parsedDate;

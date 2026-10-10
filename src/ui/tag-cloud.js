@@ -109,7 +109,7 @@ export function updateTagCloud(timelineHourIndex, kmlFeatureId = null, parentEle
     
     // Recreate the title
     const newTitle = document.createElement('h4');
-    newTitle.textContent = 'Interest';
+    newTitle.textContent = 'Interessi';
     container.appendChild(newTitle);
     
     // Container dimensions
@@ -141,7 +141,7 @@ export function createTagCloudElement() {
 function createWordCloud(container, words, width, height) {
     if (!words || words.length === 0) {
         const message = document.createElement('p');
-        message.textContent = 'No tags available for this area/time.';
+        message.textContent = 'Nessun interesse per quest’area in questo momento.';
         message.style.textAlign = 'center';
         message.style.color = '#888';
         message.style.padding = '20px';
@@ -200,12 +200,12 @@ function createWordCloud(container, words, width, height) {
                 .attr("transform", d => `translate(${d.x},${d.y}) rotate(${d.rotate})`)
                 .text(d => d.text)
                 .append("title")
-                .text(d => `${d.text}: ${Math.round(d.avgCrowdedness)} average crowdedness (${d.count} points)`);
+                .text(d => `${d.text}: affollamento medio ${Math.round(d.avgCrowdedness)} (${d.count} punti)`);
         }
     } catch (error) {
         if (DEBUG_MODE) console.error("Error creating tag cloud:", error);
         const message = document.createElement('p');
-        message.textContent = 'Error displaying tags.';
+        message.textContent = 'Errore nella visualizzazione degli interessi.';
         message.style.textAlign = 'center';
         message.style.color = 'red';
         message.style.padding = '20px';

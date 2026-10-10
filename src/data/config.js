@@ -446,68 +446,68 @@ export const MAP_STYLES = {
 // celle senza valore (o con il valore di difetto `missing`) trasparenti.
 export const LCZ_DATA_VIEWS = {
   svf_mean: {
-    label: 'Sky view factor', unit: '0–1', missing: 0,
-    note: 'Share of sky visible from the street: dark = narrow alleys, light = open space',
+    label: 'Cielo visibile (SVF)', unit: '0–1', missing: 0,
+    note: 'Quota di cielo visibile dalla strada: scuro = vicoli stretti, chiaro = spazio aperto',
     stops: [[0.2, '#0d1a3a'], [0.4, '#2d4a8a'], [0.55, '#3f86b4'], [0.7, '#7fc3d6'], [0.9, '#e3f5fa']]
   },
   aspect_ratio: {
-    label: 'Street canyon (H/W)', unit: '',
-    note: 'Building height ÷ street width: deep purple = deep, shaded canyons',
+    label: 'Canyon stradale (H/W)', unit: '',
+    note: 'Altezza degli edifici ÷ larghezza della strada: viola scuro = canyon profondi e in ombra',
     stops: [[0, '#efedf5'], [0.3, '#bcbddc'], [0.7, '#9e9ac8'], [1.2, '#756bb1'], [2, '#3f007d']]
   },
   building_frac: {
-    label: 'Built surface', unit: '%',
-    note: 'Ground covered by buildings',
+    label: 'Superficie edificata', unit: '%',
+    note: 'Suolo coperto da edifici',
     stops: [[0, '#eef0f8'], [15, '#b7bde0'], [35, '#7a83c4'], [60, '#4a4f98'], [100, '#1d1f56']]
   },
   impervious_frac: {
-    label: 'Sealed surface', unit: '%',
-    note: 'Asphalt and paving: water cannot soak in',
+    label: 'Superficie impermeabile', unit: '%',
+    note: 'Asfalto e pavimentazioni: l’acqua non penetra',
     stops: [[0, '#f1edf3'], [15, '#c9bcd3'], [35, '#9580aa'], [60, '#5e4a78'], [100, '#2a1c40']]
   },
   pervious_frac: {
-    label: 'Permeable surface', unit: '%',
-    note: 'Soil, grass and trees: ground that breathes and cools',
+    label: 'Superficie permeabile', unit: '%',
+    note: 'Terra, prato e alberi: suolo che respira e raffresca',
     stops: [[0, '#e8f6f5'], [25, '#a3dcd6'], [50, '#4fb7b0'], [75, '#178a8a'], [100, '#0b4f58']]
   },
   z_h: {
-    label: 'Height of buildings and trees', unit: 'm',
-    note: 'Average height of what stands on the cell',
+    label: 'Altezza di edifici e alberi', unit: 'm',
+    note: 'Altezza media di ciò che sta sulla cella',
     stops: [[0, '#f2eefa'], [6, '#c7c0ea'], [12, '#8f86d6'], [18, '#5a4cb0'], [26, '#2b1d72']]
   },
   terrain_rough: {
-    label: 'Roughness class', unit: '1–8',
-    note: 'Davenport classes: how much the cell brakes the wind (8 = city centre)',
+    label: 'Classe di rugosità', unit: '1–8',
+    note: 'Classi di Davenport: quanto la cella frena il vento (8 = centro della città)',
     stops: [[2, '#e0f7fa'], [4, '#80deea'], [6, '#26c6da'], [7, '#00838f'], [8, '#004d57']]
   },
   z0_value: {
-    label: 'Roughness length z0', unit: 'm',
-    note: 'Wind brake used for the sound compass: dark = sheltered, light = windy',
+    label: 'Lunghezza di rugosità z0', unit: 'm',
+    note: 'Freno al vento usato dalla mappa sonora: scuro = riparato, chiaro = ventoso',
     stops: [[0.005, '#e0f7fa'], [0.1, '#a5e8f1'], [0.5, '#26c6da'], [1, '#00838f'], [2, '#004d57']]
   },
   admittance: {
-    label: 'Thermal admittance', unit: 'J m⁻² s⁻½ K⁻¹',
-    note: 'How much heat the materials store by day and release at night',
+    label: 'Ammettenza termica', unit: 'J m⁻² s⁻½ K⁻¹',
+    note: 'Quanto calore accumulano i materiali di giorno e rilasciano di notte',
     stops: [[1000, '#f6eef7'], [1200, '#d4b9da'], [1400, '#c994c7'], [1600, '#a8509e'], [1800, '#5b1a63']]
   },
   albedo: {
     label: 'Albedo', unit: '0–1',
-    note: 'Sunlight reflected: dark = absorbs and heats, light = reflects',
+    note: 'Luce solare riflessa: scuro = assorbe e scalda, chiaro = riflette',
     stops: [[0.2, '#1b1b3a'], [0.25, '#45446e'], [0.28, '#7b78a6'], [0.31, '#b8b5d6'], [0.36, '#f1f0fa']]
   },
   anthro_heat: {
-    label: 'Human-made heat', unit: 'W/m²',
-    note: 'Heat from traffic, heating and air conditioning',
+    label: 'Calore prodotto dalle persone', unit: 'W/m²',
+    note: 'Calore del traffico, del riscaldamento e del condizionamento',
     stops: [[0, '#f9e8f2'], [2, '#e6a0c8'], [10, '#c9479b'], [30, '#7d1d72'], [100, '#2c0b3f']]
   },
   industry_heat: {
-    label: 'Industrial heat', unit: 'W/m²',
-    note: 'Only the 48 industrial cells; the rest is transparent',
+    label: 'Calore industriale', unit: 'W/m²',
+    note: 'Solo le 48 celle industriali; il resto è trasparente',
     stops: [[0, '#f9e8f2'], [5, '#e6a0c8'], [30, '#c9479b'], [70, '#7d1d72'], [150, '#2c0b3f']]
   },
   lcz_matches: {
-    label: 'Classification agreement', unit: 'of 10',
-    note: 'How many of the 10 parameters agree with the assigned class: dark = reliable',
+    label: 'Accordo della classificazione', unit: 'su 10',
+    note: 'Quanti dei 10 parametri concordano con la classe assegnata: scuro = affidabile',
     stops: [[3, '#eceaf6'], [5, '#b8b3dc'], [7, '#7c74bd'], [9, '#4b3f99'], [10, '#1e1660']]
   }
 };

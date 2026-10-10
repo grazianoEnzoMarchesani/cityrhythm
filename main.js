@@ -11,7 +11,7 @@ import {
     addKmlLayer, updateAllPresencePoints, addCrowdedPointsLayer,
     updateCrowdedPointsLayerStyle, getTimelineCrowdednessColumn, addSpotsLayer, addLczVitalityLayer
 } from './src/map/map-layers.js';
-import { fitMapToBounds } from './src/utils/utils.js';
+import { fitMapToBounds, rangeDays, WEEK_TYPE_FROM_DAYS } from './src/utils/utils.js';
 import { updateStatusMessage, initializeSidebar } from './src/ui/ui-sidebar.js';
 import { setupTimelineControls, getCurrentHour, setHour } from './src/ui/ui-timeline.js';
 import { setupLayerControls, initializeSpotTypeFilter } from './src/ui/ui-layer-controls.js';
@@ -19,40 +19,50 @@ import { startCompass } from './src/compass/compass.js';
 import { initCompassUI } from './src/ui/ui-compass.js';
 import { initAudioEngine } from './src/audio/audio-engine.js';
 
-// Main DOM references
+// Riferimenti al DOM
 const mapContainerId = 'map';
 const sidebarElement = document.getElementById('info-content');
-const loadingIndicator = document.getElementById('loading-indicator');
+const PHONE = window.matchMedia('(max-width: 719px)');
 
 // Variabili globali per il filtro data
 window.selectedDateRange = { min: null, max: null };
 
+const fmtData = d => d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+const iso = d => d.toISOString().slice(0, 10);
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+// --- PERIODO: calendario dentro il pannello "Periodo" della timeline ---
 function setupCalendarDateRange() {
     const calendarContainer = document.getElementById('calendar-container');
     if (!calendarContainer) return;
     const { min, max } = getPoiDateRange();
     if (!min || !max) return;
 
-    // Un solo input per il range
-    calendarContainer.innerHTML = `
-        <input type="text" id="calendar-range-picker" style="font-size:0.95em; width: 220px; text-align:center;" readonly>
-        <button id="calendar-reset-btn" style="font-size:0.95em; padding: 2px 10px; margin-left: 10px;">Reset</button>
-    `;
+    // Un solo campo per l'intervallo, più il ripristino
+    calendarContainer.replaceChildren();
+    const rangeInput = document.createElement('input');
+    rangeInput.type = 'text';
+    rangeInput.id = 'calendar-range-picker';
+    rangeInput.readOnly = true;
+    rangeInput.setAttribute('aria-label', 'Periodo dei dati: apri il calendario');
+    const resetBtn = document.createElement('button');
+    resetBtn.type = 'button';
+    resetBtn.id = 'calendar-reset-btn';
+    resetBtn.className = 'btn';
+    resetBtn.textContent = 'Tutto il periodo';
+    calendarContainer.append(rangeInput, resetBtn);
 
-    const rangeInput = document.getElementById('calendar-range-picker');
-    const resetBtn = document.getElementById('calendar-reset-btn');
-
-    // Inizializza Litepicker
+    // Inizializza Litepicker in italiano (mesi e giorni dal browser, via Intl)
     const picker = new Litepicker({
         element: rangeInput,
         singleMode: false,
         format: 'YYYY-MM-DD',
-        minDate: min.toISOString().slice(0,10),
-        maxDate: max.toISOString().slice(0,10),
-        startDate: min.toISOString().slice(0,10),
-        endDate: max.toISOString().slice(0,10),
+        minDate: iso(min),
+        maxDate: iso(max),
+        startDate: iso(min),
+        endDate: iso(max),
         autoApply: true,
-        lang: 'en',
+        lang: 'it-IT',
         tooltipText: { one: 'giorno', other: 'giorni' }
     });
 
@@ -65,13 +75,50 @@ function setupCalendarDateRange() {
         document.dispatchEvent(new CustomEvent('dateRangeChanged', { detail: { ...window.selectedDateRange } }));
     });
 
-    // Reset
+    // Ripristino: tutto il periodo
     resetBtn.addEventListener('click', (e) => {
         e.preventDefault();
-        picker.setDateRange(min.toISOString().slice(0,10), max.toISOString().slice(0,10));
+        picker.setDateRange(iso(min), iso(max));
         window.selectedDateRange = { min, max };
         document.dispatchEvent(new CustomEvent('dateRangeChanged', { detail: { ...window.selectedDateRange } }));
     });
+
+    setupPeriodPopover(min, max);
+}
+
+// Il pulsante "Periodo" apre e chiude il pannello con il calendario; l'etichetta dice il periodo scelto
+function setupPeriodPopover(min, max) {
+    const button = document.getElementById('period-button');
+    const popover = document.getElementById('period-popover');
+    if (!button || !popover) return;
+    button.disabled = false; // si attiva solo quando i dati ci sono
+    const setOpen = (open) => {
+        popover.hidden = !open;
+        button.setAttribute('aria-expanded', String(open));
+    };
+    button.addEventListener('click', () => setOpen(popover.hidden));
+    // Clic fuori chiude il pannello, ma non il calendario di Litepicker che sta fuori dal pannello
+    document.addEventListener('pointerdown', (e) => {
+        if (popover.hidden) return;
+        if (popover.contains(e.target) || button.contains(e.target) || e.target.closest?.('.litepicker')) return;
+        setOpen(false);
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !popover.hidden) {
+            setOpen(false);
+            button.focus();
+        }
+    });
+    updatePeriodButton();
+}
+
+function updatePeriodButton() {
+    const button = document.getElementById('period-button');
+    if (!button) return;
+    const { min, max } = window.selectedDateRange || {};
+    const { min: minTutto, max: maxTutto } = getPoiDateRange() || {};
+    const tutto = !min || !max || (minTutto && max.getTime() === maxTutto.getTime() && min.getTime() === minTutto.getTime());
+    button.textContent = tutto ? 'Periodo: tutto' : `${fmtData(min)} – ${fmtData(max)}`;
 }
 
 // Funzione di utilità per aggiornare la timeline in base al range selezionato
@@ -79,31 +126,21 @@ function updateTimelineForDateRange() {
     const slider = document.getElementById('timeSlider');
     if (!slider) return;
     const { min, max } = window.selectedDateRange || {};
-    // Calcola i giorni unici (UTC) nell'intervallo
-    const days = [];
-    if (min && max) {
-        let d = new Date(min.getTime());
-        d.setUTCHours(0,0,0,0);
-        const maxDay = new Date(max.getTime());
-        maxDay.setUTCHours(0,0,0,0);
-        while (d <= maxDay) {
-            days.push(new Date(d.getTime()));
-            d.setUTCDate(d.getUTCDate() + 1);
-        }
-    }
-    // >= 7 giorni (o nessun intervallo): settimana tipo 168 h, senza date
+    // Meno di una settimana: giorni veri, ore con data; da 7 giorni in su: settimana tipo 168 h, senza date
+    const giorni = rangeDays(min, max);
     let timelineMap = null;
-    if (days.length > 0 && days.length < 7) {
-        // Mappa: per ogni giorno, 24 ore
+    if (giorni > 0 && giorni < WEEK_TYPE_FROM_DAYS) {
         timelineMap = [];
-        days.forEach(day => {
+        for (let k = 0; k < giorni; k++) {
+            const day = new Date(Date.UTC(min.getUTCFullYear(), min.getUTCMonth(), min.getUTCDate() + k));
+            const etichetta = day.toLocaleDateString('it-IT', { weekday: 'short', day: '2-digit', month: '2-digit', timeZone: 'UTC' });
             for (let h = 0; h < 24; h++) {
                 timelineMap.push({
                     date: new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), h)),
-                    label: day.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: '2-digit' }) + ` ${h.toString().padStart(2,'0')}:00`
+                    label: `${etichetta} ${h.toString().padStart(2, '0')}:00`
                 });
             }
-        });
+        }
     }
     // Letta da ui-timeline.js (etichette e data vera)
     window._timelineMap = timelineMap;
@@ -112,11 +149,32 @@ function updateTimelineForDateRange() {
     slider.max = maxIdx;
     const hour = parseInt(slider.value, 10);
     setHour(hour > maxIdx ? 0 : hour);
+    updatePeriodButton();
+}
+
+// --- PANNELLO DEI LIVELLI: aperto su schermi grandi, chiuso sul telefono ---
+function setupLayersPanel() {
+    const panel = document.getElementById('layer-controls');
+    const toggle = document.getElementById('layers-toggle');
+    const close = document.getElementById('layers-close');
+    if (!panel || !toggle) return;
+    const setOpen = (open) => {
+        panel.hidden = !open;
+        toggle.hidden = open;
+        toggle.setAttribute('aria-expanded', String(open));
+        if (!open && document.activeElement === close) toggle.focus();
+    };
+    toggle.addEventListener('click', () => setOpen(true));
+    close?.addEventListener('click', () => setOpen(false));
+    setOpen(!PHONE.matches);
+    // Sul telefono Esc chiude il pannello dei livelli
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !e.defaultPrevented && PHONE.matches && !panel.hidden) setOpen(false);
+    });
 }
 
 // Tutta l'inizializzazione della app dentro una funzione async
 async function startApp() {
-    // Sposto qui l'inizializzazione, senza attendere DOMContentLoaded
     if (!sidebarElement) { return; }
 
     initializeSidebar(sidebarElement);
@@ -124,67 +182,44 @@ async function startApp() {
     try {
         const map = initializeMap(mapContainerId);
         setupLayerControls(); // dopo la mappa: gli interruttori 3D si applicano appena è pronta
+        setupLayersPanel();
 
         map.on('load', async () => {
-            if(loadingIndicator) loadingIndicator.style.display = 'block';
-            updateStatusMessage("Loading initial data...");
-
-            let poiData, crowdedData, kmlGeoJson, spotsData, lczVitalityData;
-
             try {
-                updateStatusMessage("Loading POI data...");
-                poiData = await loadPoiData();
+                updateStatusMessage('Carico i luoghi…');
+                const poiData = await loadPoiData();
 
-                updateStatusMessage("Loading KML data...");
-                kmlGeoJson = await loadKMLLayer();
+                updateStatusMessage('Carico le aree…');
+                const kmlGeoJson = await loadKMLLayer();
 
-                updateStatusMessage("Loading Crowded data...");
-                crowdedData = await loadCrowdedData();
-                
-                updateStatusMessage("Loading Spots data...");
-                spotsData = await loadSpotMapperData();
-                
-                updateStatusMessage("Loading LCZ Vitality data...");
-                lczVitalityData = await loadLczVitalityData();
+                updateStatusMessage('Carico gli affollamenti…');
+                const crowdedData = await loadCrowdedData();
 
-                if (!poiData) { }
-                if (!crowdedData) { }
-                if (!spotsData) { }
+                updateStatusMessage('Carico gli spot…');
+                const spotsData = await loadSpotMapperData();
+
+                updateStatusMessage('Carico le celle…');
+                const lczVitalityData = await loadLczVitalityData();
 
                 const fullKmlGeoJson = getFullKmlGeoJson();
-                let boundsHaveData = !!(fullKmlGeoJson?.features?.length > 0);
+                const boundsHaveData = !!(fullKmlGeoJson?.features?.length > 0);
 
-                // Imposta KML layer a visibile
-                const kmlVisible = true;
-                if (boundsHaveData) {
-                    addKmlLayer(fullKmlGeoJson, kmlVisible);
-                } else {
-                }
+                // Aree KML sempre visibili: su di esse si clicca per aprire la scheda
+                if (boundsHaveData) addKmlLayer(fullKmlGeoJson, true);
 
-                // Imposta Crowded layer a non visibile
-                const crowdedVisible = false;
-                if (crowdedData?.length > 0) {
-                    addCrowdedPointsLayer(crowdedVisible);
-                } else {
-                }
-                
-                // Imposta POI Spots layer a non visibile
-                const spotsVisible = false;
+                // Affollamento e spot: spenti all'avvio
+                if (crowdedData?.length > 0) addCrowdedPointsLayer(false);
                 if (spotsData?.length > 0) {
-                    addSpotsLayer(spotsVisible);
-                    // Inizializza il selettore di tipi di POI
+                    addSpotsLayer(false);
                     initializeSpotTypeFilter();
-                } else {
                 }
-                
-                // Imposta LCZ Vitality layer a non visibile
-                const lczVisible = false;
+
+                // Celle LCZ spente all'avvio; la mappa sonora parte solo se i dati ci sono
                 if (lczVitalityData?.length > 0) {
-                    addLczVitalityLayer(lczVisible, 'LCZ');
+                    addLczVitalityLayer(false, 'LCZ');
                     initCompassUI(map);
                     initAudioEngine();
                     startCompass().catch(err => console.error('Bussola non avviata:', err));
-                } else {
                 }
 
                 setupTimelineControls();
@@ -193,69 +228,40 @@ async function startApp() {
                 const initialColumnName = getTimelineCrowdednessColumn(initialHour);
                 const initialCrowdednessMap = new Map();
                 if (initialColumnName && crowdedData?.length > 0) {
-                    let maxCrowdedness = 0;
-                    let countNonZero = 0;
-                    
                     crowdedData.forEach(record => {
                         if (record?.id !== undefined && record?.id !== null) {
-                             const val = parseFloat(record[initialColumnName]);
-                             const crowdednessValue = !isNaN(val) ? val : 0;
-                             initialCrowdednessMap.set(String(record.id), crowdednessValue);
-                             
-                             if (crowdednessValue > 0) {
-                                 countNonZero++;
-                                 maxCrowdedness = Math.max(maxCrowdedness, crowdednessValue);
-                             }
+                            const val = parseFloat(record[initialColumnName]);
+                            initialCrowdednessMap.set(String(record.id), !isNaN(val) ? val : 0);
                         }
                     });
                 }
-
                 if (crowdedData?.length > 0) {
                     updateCrowdedPointsLayerStyle(initialHour, initialCrowdednessMap);
                 }
 
-                const updatePresenceSequence = () => {
-                    // Imposta Presence layer a visibile
-                    const presenceVisible = true;
-                    if (boundsHaveData && poiData && Object.keys(poiData).length > 0) {
-                        updateAllPresencePoints(initialHour, initialCrowdednessMap, presenceVisible);
-                        
-                        setTimeout(() => {
-                            updateAllPresencePoints(initialHour, initialCrowdednessMap, presenceVisible);
-                            
-                            setTimeout(() => {
-                                updateAllPresencePoints(initialHour, initialCrowdednessMap, presenceVisible);
-                                
-                                if (boundsHaveData) {
-                                    fitMapToBounds(map, fullKmlGeoJson);
-                                }
-                                
-                                updateStatusMessage("Map ready.");
-                            }, 1000);
-                        }, 700);
-                    } else {
-                        if (boundsHaveData) {
-                            fitMapToBounds(map, fullKmlGeoJson);
-                        }
-                        updateStatusMessage("Map ready.");
-                    }
-                };
-                
-                setTimeout(updatePresenceSequence, 1000);
-
                 setupCalendarDateRange();
 
+                // Puntini: tre passi di aggiornamento, perché la sorgente non è pronta subito
+                await wait(1000);
+                if (boundsHaveData && poiData && Object.keys(poiData).length > 0) {
+                    updateAllPresencePoints(initialHour, initialCrowdednessMap, true);
+                    await wait(700);
+                    updateAllPresencePoints(initialHour, initialCrowdednessMap, true);
+                    await wait(1000);
+                    updateAllPresencePoints(initialHour, initialCrowdednessMap, true);
+                }
+                if (boundsHaveData) fitMapToBounds(map, fullKmlGeoJson);
+
+                updateStatusMessage('');
+                document.documentElement.dataset.ready = '1';
             } catch (error) {
-                updateStatusMessage(`Loading error: ${error.message}`, true);
-            } finally {
-                 if(loadingIndicator) loadingIndicator.style.display = 'none';
+                updateStatusMessage(`Errore nel caricamento: ${error.message}`, true);
             }
         });
 
-         map.on('error', (e) => { });
-
     } catch (error) {
         console.error("Error initializing map or app:", error);
+        updateStatusMessage('Non riesco ad avviare la mappa.', true);
     }
 }
 
