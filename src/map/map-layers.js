@@ -1881,15 +1881,15 @@ export function getLczLegend(type) {
     if (type === 'utci') {
         return {
             kind: 'ramp', stops: UTCI_RAMP.map(([t, c, label]) => [label, c]), unit: '',
-            note: 'Estimated "feels like" temperature of a person standing in each cell, at the timeline hour: '
-                + '9–26 °C no thermal stress, from 26 moderate, 32 strong, 38 very strong heat stress. '
-                + 'Typical week: a hot day (90th percentile).'
+            note: 'Temperatura percepita stimata di una persona ferma in ogni cella, all’ora della timeline: '
+                + '9–26 °C nessuno stress termico, da 26 moderato, da 32 forte, da 38 molto forte. '
+                + 'Settimana tipo: una giornata calda (90° percentile).'
         };
     }
     if (type === 'stato') {
         return {
             kind: 'compass', colors: SOUND_STATE_COLORS,
-            note: 'What the sound map plays in each cell at the timeline hour.'
+            note: 'Cosa suona la mappa sonora in ogni cella, all’ora della timeline.'
         };
     }
     const view = LCZ_DATA_VIEWS[type];

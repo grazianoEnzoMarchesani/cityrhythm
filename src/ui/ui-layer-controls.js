@@ -5,6 +5,7 @@ import { getMapInstance, whenMapReady, setBaseStyle } from '../map/map-setup.js'
 import { getSpotMapperData } from '../data/data-loader.js';
 import { PRESENCE_COLOR_VARIABLES, setPresenceColorBy } from '../map/presence-colors.js';
 import { coloreSuono, POSIZIONE_STATI } from '../compass/sound-color.js';
+import { time } from '../state/store.js';
 
 let kmlToggle = null;
 let crowdedToggle = null;
@@ -34,21 +35,14 @@ export function setupLayerControls() {
     lczOpacityValue = document.getElementById('lcz-opacity-value');
     uhiDynamicVisibilityToggle = document.getElementById('uhi-dynamic-visibility');
 
-    if (kmlToggle && DEBUG_MODE) {
-        kmlToggle.checked = true;
-        kmlToggle.addEventListener('change', (event) => handleToggleChange(event, KML_LAYER_ID));
-    } else if (kmlToggle && !DEBUG_MODE) {
-        kmlToggle.checked = false;
-        kmlToggle.disabled = true;
-        kmlToggle.parentElement.style.display = 'none';
-    }
-    if (crowdedToggle && DEBUG_MODE) {
-        crowdedToggle.checked = false;
-        crowdedToggle.addEventListener('change', (event) => handleToggleChange(event, CROWDED_LAYER_ID));
-    } else if (crowdedToggle && !DEBUG_MODE) {
-        crowdedToggle.checked = false;
-        crowdedToggle.disabled = true;
-        crowdedToggle.parentElement.style.display = 'none';
+    // Aree KML e punti di affollamento: visibili solo in modalità sviluppatore (DEBUG_MODE in config.js)
+    if (DEBUG_MODE) {
+        document.querySelectorAll('[data-dev]').forEach(el => { el.hidden = false; });
+        if (kmlToggle) kmlToggle.addEventListener('change', (event) => handleToggleChange(event, KML_LAYER_ID));
+        if (crowdedToggle) {
+            crowdedToggle.checked = false;
+            crowdedToggle.addEventListener('change', (event) => handleToggleChange(event, CROWDED_LAYER_ID));
+        }
     }
     if (presenceToggle) {
         presenceToggle.checked = true;
@@ -58,58 +52,17 @@ export function setupLayerControls() {
     if (spotsToggle) {
         spotsToggle.checked = false;
         spotsToggle.addEventListener('change', (event) => handleToggleChange(event, SPOTS_LAYER_ID));
-    } else {
-        const layerControls = document.querySelector('.layer-controls');
-        if (layerControls) {
-            const spotsToggleDiv = document.createElement('div');
-            spotsToggleDiv.className = 'layer-toggle';
-            spotsToggle = document.createElement('input');
-            spotsToggle.type = 'checkbox';
-            spotsToggle.id = 'toggle-spots';
-            spotsToggle.checked = false;
-            const spotsLabel = document.createElement('label');
-            spotsLabel.htmlFor = 'toggle-spots';
-            spotsLabel.textContent = 'POI Spots';
-            spotsToggleDiv.appendChild(spotsToggle);
-            spotsToggleDiv.appendChild(spotsLabel);
-            layerControls.appendChild(spotsToggleDiv);
-            spotsToggle.addEventListener('change', (event) => handleToggleChange(event, SPOTS_LAYER_ID));
-        }
     }
     if (spotTypeFilter) {
-        spotTypeFilter.addEventListener('change', (event) => {
-            filterSpotsByType(event.target.value);
-        });
-        if (getSpotMapperData()?.length > 0) {
-            populateSpotTypeSelector();
-        }
-    } else {
-        const layerControls = document.querySelector('.layer-controls');
-        if (layerControls) {
-            const filterDiv = document.createElement('div');
-            filterDiv.className = 'spot-type-selector';
-            spotTypeFilter = document.createElement('select');
-            spotTypeFilter.id = 'spot-type-filter';
-            const allOption = document.createElement('option');
-            allOption.value = 'all';
-            allOption.textContent = 'All types';
-            spotTypeFilter.appendChild(allOption);
-            filterDiv.appendChild(spotTypeFilter);
-            layerControls.appendChild(filterDiv);
-            spotTypeFilter.addEventListener('change', (event) => {
-                filterSpotsByType(event.target.value);
-            });
-            if (getSpotMapperData()?.length > 0) {
-                populateSpotTypeSelector();
-            }
-        }
+        spotTypeFilter.addEventListener('change', (event) => filterSpotsByType(event.target.value));
+        if (getSpotMapperData()?.length > 0) populateSpotTypeSelector();
     }
     if (syntheticCrowdedToggle) {
         syntheticCrowdedToggle.checked = false;
         syntheticCrowdedToggle.addEventListener('change', (event) => handleToggleChange(event, 'synthetic-crowded'));
     }
-    
-    // LCZ Vitality toggle
+
+    // Celle LCZ: interruttore, scelta della mappa, trasparenza, rischio UHI dinamico
     if (lczVitalityToggle) {
         lczVitalityToggle.checked = false;
         lczVitalityToggle.addEventListener('change', (event) => {
@@ -118,19 +71,13 @@ export function setupLayerControls() {
                 const selectedType = lczVisualizationSelect?.value ?? 'LCZ';
                 addLczVitalityLayer(true, selectedType);
                 renderLczLegend(selectedType);
-                if (lczVisualizationSelector) {
-                    lczVisualizationSelector.style.display = 'block';
-                }
+                if (lczVisualizationSelector) lczVisualizationSelector.hidden = false;
             } else {
                 removeLczVitalityLayer();
-                if (lczVisualizationSelector) {
-                    lczVisualizationSelector.style.display = 'none';
-                }
+                if (lczVisualizationSelector) lczVisualizationSelector.hidden = true;
             }
         });
     }
-    
-    // Selettore della mappa LCZ: classi, rischio UHI o un parametro delle celle
     if (lczVisualizationSelect) {
         lczVisualizationSelect.addEventListener('change', (event) => {
             renderLczLegend(event.target.value);
@@ -139,29 +86,25 @@ export function setupLayerControls() {
             }
         });
     }
-
-    // LCZ Opacity Slider
     if (lczOpacitySlider && lczOpacityValue) {
         lczOpacitySlider.addEventListener('input', (event) => {
-            const opacity = parseInt(event.target.value);
+            const opacity = parseInt(event.target.value, 10);
             lczOpacityValue.textContent = opacity + '%';
             if (lczVitalityToggle && lczVitalityToggle.checked) {
                 setLczLayerOpacity(opacity / 100);
             }
         });
     }
-    
-    // UHI Dynamic Visibility Toggle
     if (uhiDynamicVisibilityToggle) {
         uhiDynamicVisibilityToggle.addEventListener('change', (event) => {
-            const isEnabled = event.target.checked;
             if (lczVitalityToggle && lczVitalityToggle.checked) {
-                setUhiDynamicVisibility(isEnabled);
+                setUhiDynamicVisibility(event.target.checked);
             }
         });
     }
-    // --- 3D Terrain e 3D Buildings ---
-    // Applicati anche all'avvio: al ricaricamento il browser può ricordare la casella com'era.
+
+    // Terreno e edifici 3D: spenti all'avvio. Applicati anche al caricamento:
+    // il browser può ricordare com'erano le caselle.
     const terrainToggle = document.getElementById('toggle-3d-terrain');
     if (terrainToggle) {
         const applyTerrain = () => whenMapReady(() => {
@@ -189,7 +132,7 @@ function setupMapStyleSelector() {
     const group = document.getElementById('map-style');
     if (!group) return;
     const select = (name) => {
-        group.querySelectorAll('button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.style === name)));
+        group.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.style === name)));
         try { localStorage.setItem(MAP_STYLE_KEY, name); } catch (e) { /* archivio del browser non disponibile */ }
         whenMapReady(() => {
             setBaseStyle(name);
@@ -199,9 +142,9 @@ function setupMapStyleSelector() {
     [['toner', 'Toner'], ['nolli', 'Nolli']].forEach(([name, label]) => {
         const button = document.createElement('button');
         button.type = 'button';
-        button.role = 'radio';
         button.dataset.style = name;
         button.textContent = label;
+        button.setAttribute('aria-pressed', 'false');
         button.addEventListener('click', () => select(name));
         group.appendChild(button);
     });
@@ -246,30 +189,29 @@ export function getLayerToggleState(layerName) {
 function setupPresenceColorSelector() {
     const group = document.getElementById('presence-color-by');
     if (!group) return;
-    const options = [['none', 'Off'], ...Object.entries(PRESENCE_COLOR_VARIABLES).map(([key, v]) => [key, v.label])];
+    const options = [['none', 'Nessuno'], ...Object.entries(PRESENCE_COLOR_VARIABLES).map(([key, v]) => [key, v.label])];
     options.forEach(([key, label]) => {
         const button = document.createElement('button');
         button.type = 'button';
-        button.role = 'radio';
         button.dataset.colorBy = key;
         button.textContent = label;
-        button.setAttribute('aria-checked', String(key === 'none'));
+        button.setAttribute('aria-pressed', String(key === 'none'));
         button.addEventListener('click', () => setPresenceColorSelection(key));
         group.appendChild(button);
     });
 }
 
-// Usata anche dal clic su un grafico della barra laterale
+// Usata anche dal clic su un grafico della scheda area
 // (refresh = false: chi chiama ricolora i puntini da sé)
 export function setPresenceColorSelection(key, refresh = true) {
     setPresenceColorBy(key);
     const active = PRESENCE_COLOR_VARIABLES[key] ? key : 'none';
     document.querySelectorAll('#presence-color-by button').forEach(b => {
-        b.setAttribute('aria-checked', String(b.dataset.colorBy === active));
+        b.setAttribute('aria-pressed', String(b.dataset.colorBy === active));
     });
     const legend = document.getElementById('presence-color-legend');
     if (legend) {
-        legend.innerHTML = '';
+        legend.replaceChildren();
         PRESENCE_COLOR_VARIABLES[key]?.categories.forEach(c => {
             const item = document.createElement('span');
             item.textContent = c.name;
@@ -280,13 +222,13 @@ export function setPresenceColorSelection(key, refresh = true) {
     if (refresh) refreshPresencePoints(presenceToggle ? presenceToggle.checked : undefined);
 }
 
-/** Legenda della mappa LCZ scelta; il controllo "UHI Dynamic Visibility" compare solo con UHI. */
+/** Legenda della mappa LCZ scelta; il controllo di rischio dinamico compare solo con UHI. */
 function renderLczLegend(type) {
     const uhiControl = document.getElementById('uhi-dynamic-control');
-    if (uhiControl) uhiControl.style.display = type === 'UHI' ? 'block' : 'none';
+    if (uhiControl) uhiControl.hidden = type !== 'UHI';
     const legend = document.getElementById('lcz-legend');
     if (!legend) return;
-    legend.innerHTML = '';
+    legend.replaceChildren();
     const info = getLczLegend(type);
     if (info.kind === 'categories') {
         const list = document.createElement('div');
@@ -329,17 +271,14 @@ function renderLczLegend(type) {
     legend.append(bar, ticks, note);
 }
 
-// Legenda della Sound map: un quadrato con la sfumatura, nomi degli stati agli angoli e al centro.
+// Legenda della Mappa sonora: un quadrato con la sfumatura, nomi degli stati sulle loro posizioni.
 // Asse verticale = piacevolezza (sereno in alto), orizzontale = energia (poca gente → tanta gente).
 function soundGradientLegend() {
     const wrap = document.createElement('div');
-    wrap.className = 'lcz-legend-compass-wrap';
-    // Quadrato di 150 px dentro il pannello, con margine per i nomi agli angoli (che escono dal quadrato)
-    wrap.style.cssText = 'position:relative;width:150px;height:150px;margin:26px 0 34px 46px';
+    wrap.className = 'lcz-legend-compass';
     const canvas = document.createElement('canvas');
     const N = 60;
     canvas.width = N; canvas.height = N;
-    canvas.style.cssText = 'width:100%;height:100%;display:block;border-radius:3px';
     const ctx = canvas.getContext('2d');
     for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
         const X = -1 + 2 * (i + 0.5) / N, Y = 1 - 2 * (j + 0.5) / N;
@@ -349,26 +288,26 @@ function soundGradientLegend() {
     wrap.appendChild(canvas);
     for (const [stato, [X, Y]] of Object.entries(POSIZIONE_STATI)) {
         const nome = document.createElement('span');
+        nome.className = 'state-tag';
         nome.textContent = stato[0].toUpperCase() + stato.slice(1);
-        const left = (X + 1) / 2 * 100, top = (1 - Y) / 2 * 100;
-        // Testo scuro con alone bianco: si legge sia sul colore della sfumatura sia sul fondo del pannello
-        nome.style.cssText = `position:absolute;left:${left}%;top:${top}%;transform:translate(-50%,-50%);`
-            + 'font:600 11px sans-serif;color:#111;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 2px #fff;'
-            + 'pointer-events:none;white-space:nowrap';
+        // Alone bianco: il nome si legge sia sul colore della sfumatura sia sul fondo del pannello
+        nome.style.left = `${(X + 1) / 2 * 100}%`;
+        nome.style.top = `${(1 - Y) / 2 * 100}%`;
+        nome.style.textShadow = '0 0 3px #fff, 0 0 3px #fff, 0 0 2px #fff';
         wrap.appendChild(nome);
     }
     const asse = document.createElement('span');
-    asse.textContent = 'few people → crowded';
-    asse.style.cssText = 'position:absolute;left:0;top:100%;margin-top:16px;font:11px sans-serif;color:#555;white-space:nowrap';
+    asse.className = 'axis';
+    asse.textContent = 'Poca gente → molta gente';
     wrap.appendChild(asse);
     return wrap;
 }
 
 function notteLegendRow(color) {
     const night = document.createElement('div');
-    night.className = 'lcz-legend-compass-night';
+    night.className = 'lcz-legend-night';
     night.appendChild(compassCell('notte', color));
-    night.append(' dark and few people');
+    night.append('buio e poca gente');
     return night;
 }
 
@@ -395,9 +334,8 @@ function handleToggleChange(event, layerId) {
     const isChecked = event.target.checked;
     if (layerId === 'synthetic-crowded') {
         if (isChecked) {
-            // Usa ora corrente della timeline
-            const hourIndex = window.getCurrentHour ? window.getCurrentHour() : 0;
-            addSyntheticCrowdedPointsLayer(hourIndex, true);
+            // Usa l'ora corrente della timeline (dallo store)
+            addSyntheticCrowdedPointsLayer(time.get()?.index ?? 0, true);
         } else {
             removeSyntheticCrowdedPointsLayer();
         }
@@ -433,9 +371,7 @@ function populateSpotTypeSelector() {
     if (!spotsData || !spotsData.length) return;
     const types = new Set();
     spotsData.forEach(spot => {
-        if (spot.Tipo) {
-            types.add(spot.Tipo);
-        }
+        if (spot.Tipo) types.add(spot.Tipo);
     });
     const sortedTypes = Array.from(types).sort();
     while (spotTypeFilter.options.length > 1) {

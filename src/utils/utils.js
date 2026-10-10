@@ -17,7 +17,7 @@ export function hourToLabel(hourIndex) {
         return "N/A";
     }
 
-    const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const days = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
     // Index 0 corresponds to Monday 00:00
     const dayIndex = Math.floor(hourIndex / 24);
     const hourOfDay = hourIndex % 24;
@@ -32,6 +32,18 @@ export function hourToLabel(hourIndex) {
     const hourString = hourOfDay.toString().padStart(2, '0');
 
     return `${dayName} ${hourString}:00`;
+}
+
+/** Dal 7° giorno (compreso) la timeline mostra la settimana tipo. Una sola soglia per tutta l'app. */
+export const WEEK_TYPE_FROM_DAYS = 7;
+
+/** Giorni del periodo, estremi compresi (min e max sono date UTC). */
+export function rangeDays(min, max) {
+    if (!min || !max) return 0;
+    const day = 24 * 3600 * 1000;
+    const a = Date.UTC(min.getUTCFullYear(), min.getUTCMonth(), min.getUTCDate());
+    const b = Date.UTC(max.getUTCFullYear(), max.getUTCMonth(), max.getUTCDate());
+    return Math.round((b - a) / day) + 1;
 }
 
 /** Data vera della posizione della timeline (intervallo < 7 giorni), o null nella settimana tipo. */
@@ -139,23 +151,9 @@ export function fitMapToBounds(map, geojsonData, options = {}) {
             duration: 1000 // Animation duration in ms
         };
 
-        // Adjust right padding dynamically based on sidebar visibility and width
-        const sidebar = document.getElementById('sidebar');
-        let sidebarWidth = 0;
-        if (sidebar) {
-             // Check if the sidebar is actually visible (not just present in DOM)
-             const sidebarVisible = window.getComputedStyle(sidebar).display !== 'none';
-             if (sidebarVisible) {
-                 sidebarWidth = sidebar.offsetWidth || 350; // Use offsetWidth for actual rendered width
-                 // console.log("Sidebar detected, width:", sidebarWidth);
-             }
-        }
-        // Add sidebar width to right padding only if it's visible
-        defaultOptions.padding.right = (options.padding?.right ?? 50) + sidebarWidth;
-        // Ensure left padding isn't affected unless explicitly passed in options
-        defaultOptions.padding.left = options.padding?.left ?? 50;
-        defaultOptions.padding.top = options.padding?.top ?? 50;
-        defaultOptions.padding.bottom = options.padding?.bottom ?? 80; // Keep bottom padding for timeline
+        // Padding simmetrico: il centro dei dati coincide col centro della mappa, dove sta il mirino
+        // (la bussola sonora legge quel centro). Le colonne sono sopra la mappa, non la restringono.
+        defaultOptions.padding = { top: 50, bottom: 50, left: 50, right: 50, ...options.padding };
 
         // Merge default options with user-provided options
         const fitOptions = { ...defaultOptions, ...options, padding: defaultOptions.padding }; // Ensure padding object is updated correctly

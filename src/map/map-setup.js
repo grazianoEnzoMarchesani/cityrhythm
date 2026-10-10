@@ -12,6 +12,18 @@ maplibregl.addProtocol('pmtiles', new Protocol().tile);
 
 // MapLibre vuole URL assoluti per font, icone e sorgenti.
 const mapDataUrl = (path) => new URL(MAP_DATA_BASE + path, location.href).href;
+const mapContainerEl = (id) => document.getElementById(id);
+
+// Etichette dei controlli di MapLibre (tooltip e pulsanti) in italiano
+const ITALIAN_LABELS = {
+    'AttributionControl.ToggleAttribution': 'Crediti',
+    'AttributionControl.MapFeedback': 'Segnala un problema',
+    'NavigationControl.ResetBearing': 'Trascina per ruotare, clic per riportare a nord',
+    'NavigationControl.ZoomIn': 'Avvicina',
+    'NavigationControl.ZoomOut': 'Allontana',
+    'Map.Title': 'Mappa di Ascoli Piceno',
+    'Popup.Close': 'Chiudi il popup',
+};
 
 // Aspetto "Toner" (Stamen / MapTiler, github.com/openmaptiles/maptiler-toner-gl-style) rifatto sullo
 // schema Protomaps: carta bianca, acqua e strade nere, verde a trama. Edifici bianchi, senza tratteggio.
@@ -172,10 +184,18 @@ export function initializeMap(containerId) {
             center: INITIAL_CENTER,
             zoom: INITIAL_ZOOM,
             trackResize: true,
+            attributionControl: false, // lo aggiungiamo sotto, compatto
+            locale: ITALIAN_LABELS,
         });
         mapInstance.once('load', () => { mapReady = true; });
 
-        mapInstance.addControl(new maplibregl.NavigationControl());
+        // In alto a destra: zoom, poi i crediti (chiusi). Il tasto "i" apre il testo completo.
+        mapInstance.addControl(new maplibregl.NavigationControl(), 'top-right');
+        mapInstance.addControl(new maplibregl.AttributionControl({ compact: true }), 'top-right');
+        // Con la mappa caricata i crediti partono chiusi: li apre solo il tasto "i"
+        mapInstance.once('load', () => {
+            mapContainerEl(containerId)?.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');
+        });
 
         const publishViewport = () => {
             const b = mapInstance.getBounds();
@@ -190,24 +210,15 @@ export function initializeMap(containerId) {
 
         mapInstance.on('error', (e) => {
             console.error("Mapbox Error:", e);
-            // Gestione specifica per errori di caricamento stile/tile
+            // Errori di caricamento dello stile o delle tessere: un messaggio visibile in mappa
             if (e.error && (e.error.message.includes('Failed to fetch') || e.error.message.includes('style'))) {
                  console.error("Could not load map style or tiles. Check style URL and network connection.");
-                 // Potresti mostrare un messaggio all'utente qui
                  const mapContainer = document.getElementById(containerId);
-                 if (mapContainer && !mapContainer.querySelector('.map-error-message')) {
+                 if (mapContainer && !mapContainer.querySelector('.map-error')) {
                      const errorDiv = document.createElement('div');
-                     errorDiv.className = 'map-error-message';
-                     errorDiv.style.position = 'absolute';
-                     errorDiv.style.top = '0';
-                     errorDiv.style.left = '0';
-                     errorDiv.style.width = '100%';
-                     errorDiv.style.padding = '10px';
-                     errorDiv.style.backgroundColor = 'rgba(255, 0, 0, 0.7)';
-                     errorDiv.style.color = 'white';
-                     errorDiv.style.textAlign = 'center';
-                     errorDiv.style.zIndex = '1000';
-                     errorDiv.textContent = 'Error loading map style. Please check the console for details.';
+                     errorDiv.className = 'map-error';
+                     errorDiv.setAttribute('role', 'alert');
+                     errorDiv.textContent = 'Non riesco a caricare la mappa. Controlla la connessione e ricarica la pagina.';
                      mapContainer.appendChild(errorDiv);
                  }
             }
@@ -219,7 +230,7 @@ export function initializeMap(containerId) {
          console.error("Failed to initialize map:", error);
          const mapContainer = document.getElementById(containerId);
          if (mapContainer) {
-             mapContainer.innerHTML = `<div style="padding: 20px; color: red; background: #fdd; border: 1px solid red;">Failed to initialize map: ${error.message}. Please ensure MapLibre GL JS is loaded correctly.</div>`;
+             mapContainer.innerHTML = `<div class="map-error" role="alert">Non riesco ad avviare la mappa: ${error.message}</div>`;
          }
          throw error; // Rilancia l'errore per bloccare eventualmente l'esecuzione
     }

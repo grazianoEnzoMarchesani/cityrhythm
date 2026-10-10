@@ -1,6 +1,6 @@
 import { createChart } from '../charts/charts.js';
 import Papa from 'papaparse';
-import { hourToLabel, getDateTimeFromIndex, calculateAveragePresenceForFeature } from '../utils/utils.js';
+import { hourToLabel, getDateTimeFromIndex, calculateAveragePresenceForFeature, rangeDays, WEEK_TYPE_FROM_DAYS } from '../utils/utils.js';
 import { getPoiData } from '../data/data-loader.js';
 import { 
   CHART_COLORS, 
@@ -17,40 +17,57 @@ import { DEBUG_MODE } from '../data/config.js';
 let sidebarContainerElement = null;
 let sidebarContentElement = null;
 let statusMessageElement = null;
+let statusBarElement = null;
 
 const kmlChartInstances = {};
 
 let selectedKmlFeature = null;
 let lastKmlTimelineHour = -1;
+const PHONE = window.matchMedia('(max-width: 719px)');
+let returnFocusEl = null; // dove si trovava il fuoco prima di aprire la scheda
+// Ruotando il telefono la scheda può passare da tutto schermo a laterale: lo sfondo inerte segue il cambio
+PHONE.addEventListener('change', () => setBackgroundInert(PHONE.matches && !!sidebarContainerElement && !sidebarContainerElement.hidden));
 
 // --- FUNZIONI ESPORTATE ---
 export function initializeSidebar(contentElement) {
     sidebarContentElement = contentElement;
     sidebarContainerElement = sidebarContentElement?.closest('#sidebar');
-    if (sidebarContainerElement) {
-        statusMessageElement = sidebarContainerElement.querySelector('#status-message');
-    } else {
-        console.error("Could not find #sidebar container for status message.");
-    }
+    // Messaggi di stato: nella barra in alto, non nella scheda
+    statusMessageElement = document.getElementById('status-message');
+    statusBarElement = document.getElementById('status-bar');
     if (!sidebarContentElement) {
         console.error("Sidebar content element not provided to initializeSidebar.");
         return;
     }
     if (!statusMessageElement) {
-        console.warn("Status message element not found in sidebar.");
+        console.warn("Status message element not found.");
     }
+    document.getElementById('sidebar-close')?.addEventListener('click', closeSidebar);
+    // Esc chiude la scheda, ma non se è aperto il calendario del periodo (gestisce lui l'Esc)
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape' || e.defaultPrevented || !sidebarContainerElement || sidebarContainerElement.hidden) return;
+        if (document.getElementById('period-popover') && !document.getElementById('period-popover').hidden) return;
+        e.preventDefault(); // avvisa gli altri ascoltatori di Esc (il pannello dei livelli sul telefono)
+        closeSidebar();
+    });
     window.addEventListener('resize', resizeActiveCharts);
     addChartClickListeners();
     if (DEBUG_MODE) console.log("Sidebar UI Initialized.");
     addExportSyntheticCrowdedButton();
 }
 
+// Messaggio nella barra in alto. Testo vuoto = barra nascosta. Errori: annunciati subito.
 export function updateStatusMessage(message, isError = false) {
-    if (statusMessageElement) {
-        statusMessageElement.innerHTML = `<p${isError ? ' style="color:red; font-weight: bold;"' : ''}>${message || ""}</p>`;
-    } else {
+    if (!statusMessageElement) {
         const level = isError ? 'error' : 'log';
         console[level]("Status:", message);
+        return;
+    }
+    statusMessageElement.textContent = message || '';
+    if (statusBarElement) {
+        statusBarElement.hidden = !message;
+        statusBarElement.dataset.error = String(!!isError);
+        statusBarElement.setAttribute('role', isError ? 'alert' : 'status');
     }
 }
 
@@ -58,32 +75,65 @@ export function resetSidebar() {
     clearSidebarContent();
 }
 
+// La scheda compare solo quando c'è un'area selezionata; il fuoco va al titolo per chi usa la tastiera
+function openSidebar() {
+    if (!sidebarContainerElement || !sidebarContainerElement.hidden) return;
+    returnFocusEl = document.activeElement;
+    sidebarContainerElement.hidden = false;
+    // Sul telefono la scheda copre tutto: il resto della pagina non si tocca né riceve il fuoco
+    if (PHONE.matches) setBackgroundInert(true);
+    document.getElementById('drawer-title')?.focus({ preventScroll: true });
+}
+
+// Chiude la scheda e deseleziona l'area (il × e l'Esc); il fuoco torna dov'era
+export function closeSidebar() {
+    const eraAperta = sidebarContainerElement && !sidebarContainerElement.hidden;
+    clearSidebarContent(true);
+    if (eraAperta && returnFocusEl?.isConnected) returnFocusEl.focus({ preventScroll: true });
+    returnFocusEl = null;
+}
+
+// Titolo della scheda: il nome dell'area (o "Area" senza selezione)
+function setDrawerTitle(nome) {
+    const titolo = document.getElementById('drawer-title');
+    if (titolo) titolo.textContent = nome || 'Area';
+}
+
+// Sul telefono: tutto il resto della pagina inerte mentre la scheda è aperta
+function setBackgroundInert(on) {
+    ['side-column', 'timeline-container', 'layers-toggle', 'map'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.inert = on;
+    });
+}
+
 export function displayKmlFeatureInfoAndCalculateAverages(kmlFeature, timelineHourIndex) {
     if (!sidebarContentElement) return;
     if (!kmlFeature || !kmlFeature.properties || !kmlFeature.geometry) {
         if (DEBUG_MODE) console.warn("displayKmlFeatureInfoAndCalculateAverages called without valid KML feature.");
         clearSidebarContent();
-        updateStatusMessage("Invalid KML area data.", true);
+        updateStatusMessage("Dati dell’area non validi.", true);
         return;
     }
     const kmlProperties = kmlFeature.properties;
     const featureId = kmlFeature.id;
     const isSameKml = selectedKmlFeature?.id === featureId;
     clearSidebarContent(false, isSameKml);
+    openSidebar();
+    setDrawerTitle(kmlProperties.kml_name);
     selectedKmlFeature = kmlFeature;
     lastKmlTimelineHour = -1;
     setKmlFeatureSelectedState(featureId);
     if (!kmlProperties.poi_data_available) {
-        const kmlName = kmlProperties.kml_name || "Unnamed KML Area";
+        const kmlName = kmlProperties.kml_name || "Area senza nome";
         let htmlContent = `<h3>${kmlName}</h3>`;
         if (kmlProperties.description) {
             const tempDiv = document.createElement('div'); tempDiv.innerHTML = kmlProperties.description;
             const cleanDescription = tempDiv.textContent || tempDiv.innerText || "";
-            if (cleanDescription.trim()) { htmlContent += `<p style="font-size: 0.9em;"><em>${cleanDescription.trim()}</em></p>`; }
+            if (cleanDescription.trim()) { htmlContent += `<p class="small"><em>${cleanDescription.trim()}</em></p>`; }
         }
-        htmlContent += `<p style="text-align: center; margin-top: 20px;">This area does not have historical data (POI) available. Information about visitor presence and demographic characteristics is only available for areas with associated historical records.</p>`;
+        htmlContent += `<p class="note-center note-gap">Per quest’area non ci sono dati storici dei luoghi: presenze e caratteristiche dei visitatori esistono solo dove ci sono questi dati.</p>`;
         sidebarContentElement.innerHTML = htmlContent;
-        updateStatusMessage(`Details for area ${kmlName} (no POI data).`);
         return;
     }
     calculateAndDisplayAverages(kmlFeature, timelineHourIndex);
@@ -113,15 +163,10 @@ function clearSidebarContent(showDefaultMessage = true, preserveKmlSelection = f
         selectedKmlFeature = null;
         lastKmlTimelineHour = -1;
     }
-    if (showDefaultMessage) {
-        sidebarContentElement.innerHTML = `
-        <div style="padding: 30px 10px; text-align: center;">
-            <svg width="60" height="60" viewBox="0 0 24 24" style="margin-bottom: 15px; opacity: 0.3;">
-                <path fill="currentColor" d="M12 2C8.14 2 5 5.14 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.86-3.14-7-7-7zm0 10.5c-1.93 0-3.5-1.57-3.5-3.5S10.07 6.5 12 6.5s3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/>
-            </svg>
-            <p style="margin-bottom: 15px; opacity: 0.75;">Select an area on the map to view historical footfall data, demographic distribution and prevalent interests of visitors.</p>
-            <p style="font-size: 0.9em; opacity: 0.5;">Data is displayed based on day of week and hour</p>
-        </div>`;
+    // Nessuna selezione: la scheda si chiude del tutto (niente pannello vuoto)
+    if (showDefaultMessage && sidebarContainerElement) {
+        sidebarContainerElement.hidden = true;
+        setBackgroundInert(false);
     }
 }
 
@@ -129,13 +174,13 @@ function calculateAndDisplayAverages(kmlFeature, timelineHourIndex) {
     if (!kmlFeature || !kmlFeature.properties || !kmlFeature.geometry) {
         if (DEBUG_MODE) console.warn("calculateAndDisplayAverages: Invalid KML feature.");
         clearSidebarContent(false, true);
-        sidebarContentElement.innerHTML = `<h3>${kmlFeature?.properties?.kml_name || 'Selected Area'}</h3><p style="text-align: center;">Internal error or invalid KML data.</p>`;
+        sidebarContentElement.innerHTML = `<h3>${kmlFeature?.properties?.kml_name || 'Area selezionata'}</h3><p class="note-center">Errore interno o dati dell’area non validi.</p>`;
         return;
     }
     if (!kmlFeature.properties.poi_data_available) {
         if (DEBUG_MODE) console.warn("calculateAndDisplayAverages: Called for KML without POI data.");
         clearSidebarContent(false, true);
-        sidebarContentElement.innerHTML = `<h3>${kmlFeature.properties.kml_name || 'Selected Area'}</h3><p style="text-align: center;">This area does not have historical data (POI) available. Information about visitor presence and demographic characteristics is only available for areas with associated historical records.</p>`;
+        sidebarContentElement.innerHTML = `<h3>${kmlFeature.properties.kml_name || 'Area selezionata'}</h3><p class="note-center">Per quest’area non ci sono dati storici dei luoghi: presenze e caratteristiche dei visitatori esistono solo dove ci sono questi dati.</p>`;
         lastKmlTimelineHour = timelineHourIndex;
         return;
     }
@@ -147,10 +192,10 @@ function calculateAndDisplayAverages(kmlFeature, timelineHourIndex) {
 
     if (!poiRecords || poiRecords.length === 0) {
         if (DEBUG_MODE) console.warn(`No POI records found for ${poiName}.`);
-        const kmlName = kmlProperties.kml_name || "KML Area";
+        const kmlName = kmlProperties.kml_name || "Area";
         clearSidebarContent(false, true);
-        sidebarContentElement.innerHTML = `<h3>${kmlName}</h3><p style="text-align: center;">Associated data exists for this area, but no specific records were found. This could be due to a temporary issue accessing the data or a configuration error. Please try again later or contact the system administrator.</p>`;
-        updateStatusMessage(`No POI data for ${kmlName}.`);
+        sidebarContentElement.innerHTML = `<h3>${kmlName}</h3><p class="note-center">Ci sono dati per quest’area, ma non ci sono record per questo momento. Può essere un problema temporaneo: riprova più tardi.</p>`;
+        if (DEBUG_MODE) console.log(`Nessun dato dei luoghi per ${kmlName}.`);
         lastKmlTimelineHour = timelineHourIndex;
         return;
     }
@@ -166,7 +211,8 @@ function calculateAndDisplayAverages(kmlFeature, timelineHourIndex) {
     }
 
     let filteredRecords;
-    if (dateMin && dateMax && ((dateMax - dateMin) / (1000 * 3600 * 24)) < 7) {
+    // Stessa soglia della timeline (main.js): meno di 7 giorni = giorni veri, altrimenti settimana tipo
+    if (dateMin && dateMax && rangeDays(dateMin, dateMax) < WEEK_TYPE_FROM_DAYS) {
         // If the selected date range is shorter than 7 days, ignore the day-of-week filter
         filteredRecords = poiRecords.filter(record => {
             const validDate = record.parsedDate instanceof Date && !isNaN(record.parsedDate.getTime());
@@ -242,7 +288,7 @@ function calculateAndDisplayAverages(kmlFeature, timelineHourIndex) {
             };
 
             const recordDate = rec.parsedDate;
-            const formattedDate = recordDate instanceof Date ? recordDate.toLocaleDateString() : 'N/A';
+            const formattedDate = recordDate instanceof Date ? recordDate.toLocaleDateString('it-IT', { timeZone: 'UTC' }) : 'n.d.';
             
             // Aggiorna sums e min/max per presenza
             const presenceValue = rec[presenzeKey];
@@ -380,12 +426,12 @@ function calculateAndDisplayAverages(kmlFeature, timelineHourIndex) {
                 if (!isNaN(val)) {
                     if (val < absoluteMinPresence.value) {
                         absoluteMinPresence.value = val;
-                        absoluteMinPresence.date = rec.parsedDate instanceof Date ? rec.parsedDate.toLocaleDateString() : 'N/A';
+                        absoluteMinPresence.date = rec.parsedDate instanceof Date ? rec.parsedDate.toLocaleDateString('it-IT', { timeZone: 'UTC' }) : 'n.d.';
                         absoluteMinPresence.hour = h;
                     }
                     if (val > absoluteMaxPresence.value) {
                         absoluteMaxPresence.value = val;
-                        absoluteMaxPresence.date = rec.parsedDate instanceof Date ? rec.parsedDate.toLocaleDateString() : 'N/A';
+                        absoluteMaxPresence.date = rec.parsedDate instanceof Date ? rec.parsedDate.toLocaleDateString('it-IT', { timeZone: 'UTC' }) : 'n.d.';
                         absoluteMaxPresence.hour = h;
                     }
                 }
@@ -394,7 +440,7 @@ function calculateAndDisplayAverages(kmlFeature, timelineHourIndex) {
     }
     
     // Ora prepariamo il contenuto HTML
-    const kmlName = kmlProperties.kml_name || "KML Area";
+    const kmlName = kmlProperties.kml_name || "Area";
     
     // Determiniamo se stiamo aggiornando la stessa KML o cambiando area
     const isUpdateForSameKml = lastKmlTimelineHour !== -1 && selectedKmlFeature?.id === kmlFeature.id;
@@ -404,119 +450,93 @@ function calculateAndDisplayAverages(kmlFeature, timelineHourIndex) {
         clearSidebarContent(false, true);
 
         let htmlContent = `<h3>${kmlName}</h3>`;
-        htmlContent += `<p style="font-size: 0.9em; text-align:center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #f0f0f0;">
-                            Showing average data for: <strong>${currentTimelineLabel}</strong><br>
-                            (Based on ${count} matching day(s))
-                            <br><span style="font-style: italic; font-size: 0.85em; opacity: 0.6;">Shows historical statistics for this area on selected day and time</span>
+        htmlContent += `<p class="timeline-info">
+                            Medie per: <strong>${currentTimelineLabel}</strong><br>
+                            (basate su ${count} giorno/i corrispondenti)
+                            <br><span class="note">Statistiche storiche di quest’area nel giorno e nell’ora scelti</span>
                         </p>`;
 
         if (count > 0) {
-            htmlContent += `<style>
-                                .chart-container {
-                                    position: relative;
-                                    width: 100%;
-                                    margin-bottom: 20px;
-                                }
-                                .stat-details {
-                                    font-size: 0.8em;
-                                    margin: 10px 0;
-                                    padding: 10px;
-                                    background-color: #f5f5f5;
-                                    border-radius: 5px;
-                                    display: flex;
-                                    justify-content: space-between;
-                                }
-                                .stat-min, .stat-max {
-                                    flex: 1;
-                                    text-align: center;
-                                }
-                                .stat-value {
-                                    font-weight: bold;
-                                }
-                                .stat-date {
-                                    font-size: 0.9em;
-                                    color: #666;
-                                }
-                            </style>
-                            <h4>Avg. Presence</h4>
-                            <p class="chart-description">Average number of people detected in this area at this specific time of the week. This data represents the typical footfall based on historical observations.</p>
-                            <p id="presenze-value" style="text-align: center;">
+            htmlContent += `
+                            <h4>Presenze medie</h4>
+                            <p class="chart-description">Quante persone ci sono in media in quest’area in questo momento della settimana: è l’andamento tipico, ricavato dalle osservazioni storiche.</p>
+                            <p id="presenze-value" class="note-center">
                                 <strong>${averages.presenzeOra?.toFixed(1) || '0.0'}</strong>
                             </p>
                             <div class="stat-details">
                                 <div class="stat-min">
-                                    <div>Min: <span class="stat-value">${stats.presenzeOra.min.value.toFixed(1)}</span></div>
-                                    <div class="stat-date">${stats.presenzeOra.min.date || 'N/A'}</div>
+                                    <div>Minimo: <span class="stat-value">${stats.presenzeOra.min.value.toFixed(1)}</span></div>
+                                    <div class="stat-date">${stats.presenzeOra.min.date || 'n.d.'}</div>
                                 </div>
                                 <div class="stat-max">
-                                    <div>Max: <span class="stat-value">${stats.presenzeOra.max.value.toFixed(1)}</span></div>
-                                    <div class="stat-date">${stats.presenzeOra.max.date || 'N/A'}</div>
+                                    <div>Massimo: <span class="stat-value">${stats.presenzeOra.max.value.toFixed(1)}</span></div>
+                                    <div class="stat-date">${stats.presenzeOra.max.date || 'n.d.'}</div>
                                 </div>
                             </div>
                             <div class="stat-details">
                                 <div class="stat-min">
-                                    <div>Min assoluto: <span class="stat-value">${absoluteMinPresence.value !== Infinity ? absoluteMinPresence.value.toFixed(1) : 'N/A'}</span></div>
-                                    <div class="stat-date">${absoluteMinPresence.date || 'N/A'} ${absoluteMinPresence.hour !== null ? ('- ' + absoluteMinPresence.hour + ':00') : ''}</div>
+                                    <div>Minimo assoluto: <span class="stat-value">${absoluteMinPresence.value !== Infinity ? absoluteMinPresence.value.toFixed(1) : 'n.d.'}</span></div>
+                                    <div class="stat-date">${absoluteMinPresence.date || 'n.d.'} ${absoluteMinPresence.hour !== null ? ('- ' + absoluteMinPresence.hour + ':00') : ''}</div>
                                 </div>
                                 <div class="stat-max">
-                                    <div>Max assoluto: <span class="stat-value">${absoluteMaxPresence.value !== -Infinity ? absoluteMaxPresence.value.toFixed(1) : 'N/A'}</span></div>
-                                    <div class="stat-date">${absoluteMaxPresence.date || 'N/A'} ${absoluteMaxPresence.hour !== null ? ('- ' + absoluteMaxPresence.hour + ':00') : ''}</div>
+                                    <div>Massimo assoluto: <span class="stat-value">${absoluteMaxPresence.value !== -Infinity ? absoluteMaxPresence.value.toFixed(1) : 'n.d.'}</span></div>
+                                    <div class="stat-date">${absoluteMaxPresence.date || 'n.d.'} ${absoluteMaxPresence.hour !== null ? ('- ' + absoluteMaxPresence.hour + ':00') : ''}</div>
                                 </div>
                             </div>
-                            <div id="real-presence-bar-chart" style="height: 180px; margin-bottom: 25px;"></div>
+                            <div id="real-presence-bar-chart" class="h-180"></div>
                             <div id="tag-cloud-placeholder"></div>
-                            <h4>Average Interests</h4>
-                            <p class="chart-description">Prevalent interest categories among visitors to the area, based on affinity indices. This data indicates the preferences, hobbies and purchasing behaviours of people who frequent this area.</p>
-                            <div id="interests-chart" style="height: 280px; margin-bottom: 25px;"></div>
-                            <h4>Average Demographics</h4>
-                            <p class="chart-description">Demographic distribution of visitors by gender and age. The charts show the average percentages of men/women and the age breakdown of people who visit this area.</p>
+                            <h4>Interessi medi</h4>
+                            <p class="chart-description">Categorie di interesse più diffuse fra i frequentatori, da indici di affinità: preferenze, passatempi e abitudini d’acquisto di chi frequenta quest’area.</p>
+                            <div id="interests-chart" class="h-280"></div>
+                            <h4>Genere ed età, medie</h4>
+                            <p class="chart-description">Ripartizione dei frequentatori per genere e per età: percentuali medie di uomini e donne e fasce d’età di chi frequenta quest’area.</p>
                             <div class="chart-row">
-                                <div id="gender-chart" style="width: 48%; height: 200px;"></div>
-                                <div id="age-chart" style="width: 48%; height: 200px;"></div>
+                                <div id="gender-chart" class="h-200"></div>
+                                <div id="age-chart" class="h-200"></div>
                             </div>
                             <div class="stat-details">
                                 <div class="stat-min">
-                                    <div>Min Male: <span class="stat-value">${stats.percM.min.value.toFixed(1)}%</span> (${stats.percM.min.date || 'N/A'})</div>
-                                    <div>Min Female: <span class="stat-value">${stats.percF.min.value.toFixed(1)}%</span> (${stats.percF.min.date || 'N/A'})</div>
+                                    <div>Minimo uomini: <span class="stat-value">${stats.percM.min.value.toFixed(1)}%</span> (${stats.percM.min.date || 'n.d.'})</div>
+                                    <div>Minimo donne: <span class="stat-value">${stats.percF.min.value.toFixed(1)}%</span> (${stats.percF.min.date || 'n.d.'})</div>
                                 </div>
                                 <div class="stat-max">
-                                    <div>Max Male: <span class="stat-value">${stats.percM.max.value.toFixed(1)}%</span> (${stats.percM.max.date || 'N/A'})</div>
-                                    <div>Max Female: <span class="stat-value">${stats.percF.max.value.toFixed(1)}%</span> (${stats.percF.max.date || 'N/A'})</div>
+                                    <div>Massimo uomini: <span class="stat-value">${stats.percM.max.value.toFixed(1)}%</span> (${stats.percM.max.date || 'n.d.'})</div>
+                                    <div>Massimo donne: <span class="stat-value">${stats.percF.max.value.toFixed(1)}%</span> (${stats.percF.max.date || 'n.d.'})</div>
                                 </div>
                             </div>
-                            <div id="real-gender-bar-chart" style="height: 180px; margin-bottom: 25px;"></div>
-                            <div id="real-age-bar-chart" style="height: 180px; margin-bottom: 25px;"></div>
-                            <div id="nationality-chart" style="height: 200px; margin-bottom: 25px;"></div>
+                            <div id="real-gender-bar-chart" class="h-180"></div>
+                            <div id="real-age-bar-chart" class="h-180"></div>
+                            <div id="nationality-chart" class="h-200"></div>
                             <div class="stat-details">
                                 <div class="stat-min">
-                                    <div>Min Italians: <span class="stat-value">${stats.percItaliani.min.value.toFixed(1)}%</span> (${stats.percItaliani.min.date || 'N/A'})</div>
-                                    <div>Min Foreigners: <span class="stat-value">${stats.percStranieri.min.value.toFixed(1)}%</span> (${stats.percStranieri.min.date || 'N/A'})</div>
+                                    <div>Minimo italiani: <span class="stat-value">${stats.percItaliani.min.value.toFixed(1)}%</span> (${stats.percItaliani.min.date || 'n.d.'})</div>
+                                    <div>Minimo stranieri: <span class="stat-value">${stats.percStranieri.min.value.toFixed(1)}%</span> (${stats.percStranieri.min.date || 'n.d.'})</div>
                                 </div>
                                 <div class="stat-max">
-                                    <div>Max Italians: <span class="stat-value">${stats.percItaliani.max.value.toFixed(1)}%</span> (${stats.percItaliani.max.date || 'N/A'})</div>
-                                    <div>Max Foreigners: <span class="stat-value">${stats.percStranieri.max.value.toFixed(1)}%</span> (${stats.percStranieri.max.date || 'N/A'})</div>
+                                    <div>Massimo italiani: <span class="stat-value">${stats.percItaliani.max.value.toFixed(1)}%</span> (${stats.percItaliani.max.date || 'n.d.'})</div>
+                                    <div>Massimo stranieri: <span class="stat-value">${stats.percStranieri.max.value.toFixed(1)}%</span> (${stats.percStranieri.max.date || 'n.d.'})</div>
                                 </div>
                             </div>
-                            <div id="real-nationality-bar-chart" style="height: 180px; margin-bottom: 25px;"></div>
-                            <h4>Average Origin (Top 6 Prov, Top 5 Nat)</h4>
-                            <p class="chart-description">Geographic origin of visitors divided by Italian provinces (top 6) and countries (top 5). This data helps understand which geographic areas the visitors of the selected area come from.</p>
-                            <div id="province-chart" style="height: 200px; margin-bottom: 20px;"></div>
-                            <div id="country-chart" style="height: 200px; margin-bottom: 25px;"></div>
-                            <h4>Average Visit Frequency</h4>
-                            <p class="chart-description">Average frequency of repeat visits to this area. The chart shows how many people return once, twice, etc., providing an indication of visitor loyalty and habits.</p>
-                            <div id="visits-chart" style="height: 200px; margin-bottom: 25px;"></div>
-                            <div id="real-visits-bar-chart" style="height: 180px; margin-bottom: 25px;"></div>
+                            <div id="real-nationality-bar-chart" class="h-180"></div>
+                            <h4>Provenienza media (prime 6 province, prime 5 nazioni)</h4>
+                            <p class="chart-description">Da quali province italiane (prime 6) e nazioni (prime 5) arrivano i frequentatori di quest’area.</p>
+                            <div id="province-chart" class="h-200"></div>
+                            <div id="country-chart" class="h-200"></div>
+                            <h4>Frequenza media delle visite</h4>
+                            <p class="chart-description">Quante volte tornano i frequentatori: una, due o più visite. Dice quanto sono abituali.</p>
+                            <div id="visits-chart" class="h-200"></div>
+                            <div id="real-visits-bar-chart" class="h-180"></div>
                             `;
         } else {
-             htmlContent += `<p style="text-align: center; opacity: 0.6; margin-top: 30px;">No historical data available for this specific day and time. Try selecting a different moment in the timeline to view statistics for other days or times.</p>`;
+             htmlContent += `<p class="note note-center note-gap">Nessun dato storico per questo giorno e quest’ora. Prova un altro momento sulla timeline.</p>`;
         }
         sidebarContentElement.innerHTML = htmlContent;
     } else {
-        const timelineInfoEl = sidebarContentElement.querySelector('p[style*="border-bottom"]');
+        const timelineInfoEl = sidebarContentElement.querySelector('p.timeline-info');
         if (timelineInfoEl) {
-            timelineInfoEl.innerHTML = `Showing average data for: <strong>${currentTimelineLabel}</strong><br>
-                                       (Based on ${count} matching day(s))
-                                       <br><span style="font-style: italic; font-size: 0.85em; opacity: 0.6;">Shows historical statistics for this area on selected day and time</span>`;
+            timelineInfoEl.innerHTML = `Medie per: <strong>${currentTimelineLabel}</strong><br>
+                                       (basate su ${count} giorno/i corrispondenti)
+                                       <br><span class="note">Statistiche storiche di quest’area nel giorno e nell’ora scelti</span>`;
         }
 
         const presenzeEl = document.getElementById('presenze-value');
@@ -531,12 +551,12 @@ function calculateAndDisplayAverages(kmlFeature, timelineHourIndex) {
             const presenzeDetails = statDetailsElements[0];
             presenzeDetails.innerHTML = `
                 <div class="stat-min">
-                    <div>Min: <span class="stat-value">${stats.presenzeOra.min.value.toFixed(1)}</span></div>
-                    <div class="stat-date">${stats.presenzeOra.min.date || 'N/A'}</div>
+                    <div>Minimo: <span class="stat-value">${stats.presenzeOra.min.value.toFixed(1)}</span></div>
+                    <div class="stat-date">${stats.presenzeOra.min.date || 'n.d.'}</div>
                 </div>
                 <div class="stat-max">
-                    <div>Max: <span class="stat-value">${stats.presenzeOra.max.value.toFixed(1)}</span></div>
-                    <div class="stat-date">${stats.presenzeOra.max.date || 'N/A'}</div>
+                    <div>Massimo: <span class="stat-value">${stats.presenzeOra.max.value.toFixed(1)}</span></div>
+                    <div class="stat-date">${stats.presenzeOra.max.date || 'n.d.'}</div>
                 </div>
             `;
             
@@ -544,15 +564,15 @@ function calculateAndDisplayAverages(kmlFeature, timelineHourIndex) {
             if (statDetailsElements[1]) {
                 // Il secondo elemento può essere quello delle presenze assolute
                 // Verifica se contiene "Min assoluto" nel testo
-                if (statDetailsElements[1].textContent.includes('Min assoluto')) {
+                if (statDetailsElements[1].textContent.includes('Minimo assoluto')) {
                     statDetailsElements[1].innerHTML = `
                         <div class="stat-min">
-                            <div>Min assoluto: <span class="stat-value">${absoluteMinPresence.value !== Infinity ? absoluteMinPresence.value.toFixed(1) : 'N/A'}</span></div>
-                            <div class="stat-date">${absoluteMinPresence.date || 'N/A'} ${absoluteMinPresence.hour !== null ? ('- ' + absoluteMinPresence.hour + ':00') : ''}</div>
+                            <div>Minimo assoluto: <span class="stat-value">${absoluteMinPresence.value !== Infinity ? absoluteMinPresence.value.toFixed(1) : 'n.d.'}</span></div>
+                            <div class="stat-date">${absoluteMinPresence.date || 'n.d.'} ${absoluteMinPresence.hour !== null ? ('- ' + absoluteMinPresence.hour + ':00') : ''}</div>
                         </div>
                         <div class="stat-max">
-                            <div>Max assoluto: <span class="stat-value">${absoluteMaxPresence.value !== -Infinity ? absoluteMaxPresence.value.toFixed(1) : 'N/A'}</span></div>
-                            <div class="stat-date">${absoluteMaxPresence.date || 'N/A'} ${absoluteMaxPresence.hour !== null ? ('- ' + absoluteMaxPresence.hour + ':00') : ''}</div>
+                            <div>Massimo assoluto: <span class="stat-value">${absoluteMaxPresence.value !== -Infinity ? absoluteMaxPresence.value.toFixed(1) : 'n.d.'}</span></div>
+                            <div class="stat-date">${absoluteMaxPresence.date || 'n.d.'} ${absoluteMaxPresence.hour !== null ? ('- ' + absoluteMaxPresence.hour + ':00') : ''}</div>
                         </div>
                     `;
                 }
@@ -560,18 +580,18 @@ function calculateAndDisplayAverages(kmlFeature, timelineHourIndex) {
             
             // Aggiorna dettagli genere
             // Trova il box giusto per genere (può essere il secondo o terzo)
-            const genderDetailsIndex = statDetailsElements[1].textContent.includes('Min Male') ? 1 : 
-                                      (statDetailsElements[2] && statDetailsElements[2].textContent.includes('Min Male') ? 2 : -1);
+            const genderDetailsIndex = statDetailsElements[1].textContent.includes('Minimo uomini') ? 1 : 
+                                      (statDetailsElements[2] && statDetailsElements[2].textContent.includes('Minimo uomini') ? 2 : -1);
             
             if (genderDetailsIndex !== -1 && statDetailsElements[genderDetailsIndex]) {
                 statDetailsElements[genderDetailsIndex].innerHTML = `
                     <div class="stat-min">
-                        <div>Min Male: <span class="stat-value">${stats.percM.min.value.toFixed(1)}%</span> (${stats.percM.min.date || 'N/A'})</div>
-                        <div>Min Female: <span class="stat-value">${stats.percF.min.value.toFixed(1)}%</span> (${stats.percF.min.date || 'N/A'})</div>
+                        <div>Minimo uomini: <span class="stat-value">${stats.percM.min.value.toFixed(1)}%</span> (${stats.percM.min.date || 'n.d.'})</div>
+                        <div>Minimo donne: <span class="stat-value">${stats.percF.min.value.toFixed(1)}%</span> (${stats.percF.min.date || 'n.d.'})</div>
                     </div>
                     <div class="stat-max">
-                        <div>Max Male: <span class="stat-value">${stats.percM.max.value.toFixed(1)}%</span> (${stats.percM.max.date || 'N/A'})</div>
-                        <div>Max Female: <span class="stat-value">${stats.percF.max.value.toFixed(1)}%</span> (${stats.percF.max.date || 'N/A'})</div>
+                        <div>Massimo uomini: <span class="stat-value">${stats.percM.max.value.toFixed(1)}%</span> (${stats.percM.max.date || 'n.d.'})</div>
+                        <div>Massimo donne: <span class="stat-value">${stats.percF.max.value.toFixed(1)}%</span> (${stats.percF.max.date || 'n.d.'})</div>
                     </div>
                 `;
             }
@@ -579,17 +599,17 @@ function calculateAndDisplayAverages(kmlFeature, timelineHourIndex) {
             // Aggiorna dettagli nazionalità
             // Trova il box giusto per nazionalità 
             const nationalityDetailsIndex = Array.from(statDetailsElements).findIndex(el => 
-                el.textContent.includes('Min Italians'));
+                el.textContent.includes('Minimo italiani'));
             
             if (nationalityDetailsIndex !== -1 && statDetailsElements[nationalityDetailsIndex]) {
                 statDetailsElements[nationalityDetailsIndex].innerHTML = `
                     <div class="stat-min">
-                        <div>Min Italians: <span class="stat-value">${stats.percItaliani.min.value.toFixed(1)}%</span> (${stats.percItaliani.min.date || 'N/A'})</div>
-                        <div>Min Foreigners: <span class="stat-value">${stats.percStranieri.min.value.toFixed(1)}%</span> (${stats.percStranieri.min.date || 'N/A'})</div>
+                        <div>Minimo italiani: <span class="stat-value">${stats.percItaliani.min.value.toFixed(1)}%</span> (${stats.percItaliani.min.date || 'n.d.'})</div>
+                        <div>Minimo stranieri: <span class="stat-value">${stats.percStranieri.min.value.toFixed(1)}%</span> (${stats.percStranieri.min.date || 'n.d.'})</div>
                     </div>
                     <div class="stat-max">
-                        <div>Max Italians: <span class="stat-value">${stats.percItaliani.max.value.toFixed(1)}%</span> (${stats.percItaliani.max.date || 'N/A'})</div>
-                        <div>Max Foreigners: <span class="stat-value">${stats.percStranieri.max.value.toFixed(1)}%</span> (${stats.percStranieri.max.date || 'N/A'})</div>
+                        <div>Massimo italiani: <span class="stat-value">${stats.percItaliani.max.value.toFixed(1)}%</span> (${stats.percItaliani.max.date || 'n.d.'})</div>
+                        <div>Massimo stranieri: <span class="stat-value">${stats.percStranieri.max.value.toFixed(1)}%</span> (${stats.percStranieri.max.date || 'n.d.'})</div>
                     </div>
                 `;
             }
@@ -602,14 +622,14 @@ function calculateAndDisplayAverages(kmlFeature, timelineHourIndex) {
             if (visitsDetailsIndex !== -1 && statDetailsElements[visitsDetailsIndex]) {
                 statDetailsElements[visitsDetailsIndex].innerHTML = `
                     <div class="stat-min">
-                        <div>Min 1 visit: <span class="stat-value">${stats.visite1.min.value.toFixed(1)}%</span></div>
-                        <div>Min 2 visits: <span class="stat-value">${stats.visite2.min.value.toFixed(1)}%</span></div>
-                        <div>Min 3 visits: <span class="stat-value">${stats.visite3.min.value.toFixed(1)}%</span></div>
+                        <div>Minimo 1 visita: <span class="stat-value">${stats.visite1.min.value.toFixed(1)}%</span></div>
+                        <div>Minimo 2 visite: <span class="stat-value">${stats.visite2.min.value.toFixed(1)}%</span></div>
+                        <div>Minimo 3 visite: <span class="stat-value">${stats.visite3.min.value.toFixed(1)}%</span></div>
                     </div>
                     <div class="stat-max">
-                        <div>Max 1 visit: <span class="stat-value">${stats.visite1.max.value.toFixed(1)}%</span></div>
-                        <div>Max 2 visits: <span class="stat-value">${stats.visite2.max.value.toFixed(1)}%</span></div>
-                        <div>Max 3 visits: <span class="stat-value">${stats.visite3.max.value.toFixed(1)}%</span></div>
+                        <div>Massimo 1 visita: <span class="stat-value">${stats.visite1.max.value.toFixed(1)}%</span></div>
+                        <div>Massimo 2 visite: <span class="stat-value">${stats.visite2.max.value.toFixed(1)}%</span></div>
+                        <div>Massimo 3 visite: <span class="stat-value">${stats.visite3.max.value.toFixed(1)}%</span></div>
                     </div>
                 `;
             }
@@ -631,7 +651,6 @@ function calculateAndDisplayAverages(kmlFeature, timelineHourIndex) {
         }
         updateOrCreateInterestsChart(averages);
         createOrUpdateRealBarCharts(filteredRecords, hour);
-        updateStatusMessage(`Sidebar averages for ${kmlName} (${currentTimelineLabel}) loaded.`);
     }
 
     lastKmlTimelineHour = timelineHourIndex;
@@ -649,7 +668,7 @@ function resizeActiveCharts() {
     }
 }
 
-function createAndRegisterChart(domId, options, errorMessage = "Data not available.") {
+function createAndRegisterChart(domId, options, errorMessage = "Dati non disponibili.") {
     const chartDom = document.getElementById(domId);
     if (!chartDom) return null;
 
@@ -663,7 +682,7 @@ function createAndRegisterChart(domId, options, errorMessage = "Data not availab
 
     if (kmlChartInstances[domId]) {
         if (!hasValidData(options)) {
-            chartDom.innerHTML = `<p style="text-align: center; opacity: 0.6; padding: 20px;">${errorMessage}</p>`;
+            chartDom.innerHTML = `<p class="note note-center chart-msg">${errorMessage}</p>`;
             try { kmlChartInstances[domId].dispose(); } catch(e) {}
             delete kmlChartInstances[domId];
             return null;
@@ -692,7 +711,7 @@ function createAndRegisterChart(domId, options, errorMessage = "Data not availab
     chartDom.innerHTML = '';
 
     if (!hasValidData(options)) {
-        chartDom.innerHTML = `<p style="text-align: center; opacity: 0.6; padding: 20px;">${errorMessage}</p>`;
+        chartDom.innerHTML = `<p class="note note-center chart-msg">${errorMessage}</p>`;
         return null;
     }
 
@@ -725,7 +744,7 @@ function createAndRegisterChart(domId, options, errorMessage = "Data not availab
         return chart;
     } catch (e) {
         console.error(`Error creating chart #${domId}:`, e);
-        chartDom.innerHTML = "<p style='opacity: 0.6; text-align: center;'>Error loading chart.</p>";
+        chartDom.innerHTML = "<p class='note note-center'>Errore nel caricamento del grafico.</p>";
         kmlChartInstances[domId] = null;
         return null;
     }
@@ -824,17 +843,17 @@ function styleChartOptions(options) {
 
 function updateOrCreateDemographicCharts(avgData) {
     const genderData = [
-        { name: 'Male', value: parseFloat(avgData.percM?.toFixed(1)) || 0 },
-        { name: 'Female', value: parseFloat(avgData.percF?.toFixed(1)) || 0 }
+        { name: 'Uomini', value: parseFloat(avgData.percM?.toFixed(1)) || 0 },
+        { name: 'Donne', value: parseFloat(avgData.percF?.toFixed(1)) || 0 }
     ].filter(d => !isNaN(d.value));
     
     const genderOption = {
-        title: { text: 'Avg. Gender (%)', left: 'left', textStyle: { fontSize: 14, fontWeight: 'normal' }, top: 0, padding: [5, 0, 0, 0] },
+        title: { text: 'Genere, media (%)', left: 'left', textStyle: { fontSize: 14, fontWeight: 'normal' }, top: 0, padding: [5, 0, 0, 0] },
         tooltip: { trigger: 'item', formatter: '{b}: {c}%' },
         legend: { bottom: 0, left: 'center', data: genderData.map(d => d.name), itemGap: 10, textStyle: { fontSize: 10 } },
         color: [CHART_COLORS.GENDER_CHART.MALE, CHART_COLORS.GENDER_CHART.FEMALE],
         series: [{
-            name: 'Avg. Gender', type: 'pie', radius: ['40%', '70%'], center: ['50%', '50%'], avoidLabelOverlap: false,
+            name: 'Genere medio', type: 'pie', radius: ['40%', '70%'], center: ['50%', '50%'], avoidLabelOverlap: false,
             itemStyle: {
                 borderRadius: 5,
                 borderColor: '#fff',
@@ -849,7 +868,7 @@ function updateOrCreateDemographicCharts(avgData) {
         }],
         grid: { containLabel: true }
     };
-    createAndRegisterChart('gender-chart', genderOption, "Gender data N/A.");
+    createAndRegisterChart('gender-chart', genderOption, "Nessun dato sul genere.");
 
     const ageData = [
         { name: '18-24', value: parseFloat(avgData.perc18_24?.toFixed(1)) || 0 }, { name: '25-34', value: parseFloat(avgData.perc25_34?.toFixed(1)) || 0 },
@@ -858,12 +877,12 @@ function updateOrCreateDemographicCharts(avgData) {
     ].filter(d => !isNaN(d.value));
     
     const ageOption = {
-        title: { text: 'Avg. Age (%)', left: 'left', textStyle: { fontSize: 14, fontWeight: 'normal' }, top: 0, padding: [5, 0, 0, 0] },
+        title: { text: 'Età, media (%)', left: 'left', textStyle: { fontSize: 14, fontWeight: 'normal' }, top: 0, padding: [5, 0, 0, 0] },
         tooltip: { trigger: 'item', formatter: '{b}: {c}%' },
         legend: { bottom: 0, left: 'center', data: ageData.map(d => d.name), itemGap: 5, textStyle: { fontSize: 9 }, itemWidth: 15, itemHeight: 10 },
         color: Object.values(CHART_COLORS.AGE_CHART),
         series: [{
-            name: 'Avg. Age', 
+            name: 'Età media', 
             type: 'pie', 
             radius: ['40%', '70%'], 
             center: ['50%', '50%'], 
@@ -882,11 +901,11 @@ function updateOrCreateDemographicCharts(avgData) {
         }],
         grid: { containLabel: true }
     };
-    createAndRegisterChart('age-chart', ageOption, "Age data N/A.");
+    createAndRegisterChart('age-chart', ageOption, "Nessun dato sull’età.");
 
     const natData = [
-        { name: 'Italians', value: parseFloat(avgData.percItaliani?.toFixed(1)) || 0 },
-        { name: 'Foreigners', value: parseFloat(avgData.percStranieri?.toFixed(1)) || 0 }
+        { name: 'Italiani', value: parseFloat(avgData.percItaliani?.toFixed(1)) || 0 },
+        { name: 'Stranieri', value: parseFloat(avgData.percStranieri?.toFixed(1)) || 0 }
     ].filter(d => !isNaN(d.value));
     
     const nationalityColors = [
@@ -894,12 +913,12 @@ function updateOrCreateDemographicCharts(avgData) {
         CHART_COLORS.NATIONALITY_CHART.FOREIGNERS
     ];
     const nationalityOption = {
-        title: { text: 'Avg. Nationality (%)', left: 'left', textStyle: { fontSize: 14, fontWeight: 'normal' }, top: 0, padding: [5, 0, 0, 0] },
+        title: { text: 'Nazionalità, media (%)', left: 'left', textStyle: { fontSize: 14, fontWeight: 'normal' }, top: 0, padding: [5, 0, 0, 0] },
         tooltip: { trigger: 'item', formatter: '{b}: {c}%' },
         legend: { bottom: 0, left: 'center', data: natData.map(d => d.name), itemGap: 10, textStyle: { fontSize: 10 } },
         color: nationalityColors,
         series: [{
-            name: 'Avg. Nationality', type: 'pie', radius: ['40%', '70%'], center: ['50%', '50%'], avoidLabelOverlap: false,
+            name: 'Nazionalità media', type: 'pie', radius: ['40%', '70%'], center: ['50%', '50%'], avoidLabelOverlap: false,
             itemStyle: {
                 borderRadius: 5,
                 borderColor: '#fff',
@@ -914,7 +933,7 @@ function updateOrCreateDemographicCharts(avgData) {
         }],
         grid: { containLabel: true }
     };
-    createAndRegisterChart('nationality-chart', nationalityOption, "Nationality data N/A.");
+    createAndRegisterChart('nationality-chart', nationalityOption, "Nessun dato sulla nazionalità.");
 }
 
 function updateOrCreateGeographicCharts(avgData) {
@@ -941,7 +960,7 @@ function updateOrCreateGeographicCharts(avgData) {
         .slice(0, 6);
 
     const provinceOption = {
-        title: { text: 'Avg. Provinces (Top 6)', left: 'left', textStyle: { fontSize: 14, fontWeight: 'normal' }, top: 0, padding: [5, 0, 0, 0] },
+        title: { text: 'Province, media (prime 6)', left: 'left', textStyle: { fontSize: 14, fontWeight: 'normal' }, top: 0, padding: [5, 0, 0, 0] },
         tooltip: { trigger: 'item', formatter: '{b}: {c}%' },
         legend: { 
             bottom: 0, 
@@ -961,7 +980,7 @@ function updateOrCreateGeographicCharts(avgData) {
             return CHART_COLORS.PROVINCE_CHART[provinceKeys[index]] || '#ccc';
         }),
         series: [{
-            name: 'Avg. Percentage', 
+            name: 'Percentuale media', 
             type: 'pie', 
             radius: ['40%', '70%'], 
             center: ['50%', '50%'], 
@@ -980,7 +999,7 @@ function updateOrCreateGeographicCharts(avgData) {
         }],
         grid: { containLabel: true }
     };
-    createAndRegisterChart('province-chart', provinceOption, "Province data N/A.");
+    createAndRegisterChart('province-chart', provinceOption, "Nessun dato sulle province.");
 
     // Gestione Countries
     let countriesData = Object.entries(avgData.countries || {})
@@ -1005,7 +1024,7 @@ function updateOrCreateGeographicCharts(avgData) {
         .slice(0, 5);
 
     const countryOption = {
-        title: { text: 'Avg. Countries (Top 5)', left: 'left', textStyle: { fontSize: 14, fontWeight: 'normal' }, top: 0, padding: [5, 0, 0, 0] },
+        title: { text: 'Nazioni, media (prime 5)', left: 'left', textStyle: { fontSize: 14, fontWeight: 'normal' }, top: 0, padding: [5, 0, 0, 0] },
         tooltip: { trigger: 'item', formatter: '{b}: {c}%' },
         legend: { 
             bottom: 0, 
@@ -1025,7 +1044,7 @@ function updateOrCreateGeographicCharts(avgData) {
             return CHART_COLORS.COUNTRY_CHART[countryKeys[index]] || '#ccc';
         }),
         series: [{
-            name: 'Avg. Percentage', 
+            name: 'Percentuale media', 
             type: 'pie', 
             radius: ['40%', '70%'], 
             center: ['50%', '50%'], 
@@ -1044,16 +1063,16 @@ function updateOrCreateGeographicCharts(avgData) {
         }],
         grid: { containLabel: true }
     };
-    createAndRegisterChart('country-chart', countryOption, "Country data N/A.");
+    createAndRegisterChart('country-chart', countryOption, "Nessun dato sulle nazioni.");
 }
 
 function updateOrCreateVisitsChart(avgData) {
     const visitData = [
-        { name: '1 visit', value: parseFloat(avgData.visite1?.toFixed(1)) || 0 },
-        { name: '2 visits', value: parseFloat(avgData.visite2?.toFixed(1)) || 0 },
-        { name: '3 visits', value: parseFloat(avgData.visite3?.toFixed(1)) || 0 },
-        { name: '4 visits', value: parseFloat(avgData.visite4?.toFixed(1)) || 0 },
-        { name: '5+ visits', value: parseFloat(avgData.visite5?.toFixed(1)) || 0 }
+        { name: '1 visita', value: parseFloat(avgData.visite1?.toFixed(1)) || 0 },
+        { name: '2 visite', value: parseFloat(avgData.visite2?.toFixed(1)) || 0 },
+        { name: '3 visite', value: parseFloat(avgData.visite3?.toFixed(1)) || 0 },
+        { name: '4 visite', value: parseFloat(avgData.visite4?.toFixed(1)) || 0 },
+        { name: '5+ visite', value: parseFloat(avgData.visite5?.toFixed(1)) || 0 }
     ].filter(d => !isNaN(d.value));
     const visitsColors = [
         CHART_COLORS.VISITS_CHART.VISIT_1,
@@ -1063,12 +1082,12 @@ function updateOrCreateVisitsChart(avgData) {
         CHART_COLORS.VISITS_CHART.VISIT_5
     ];
     const visitsOption = {
-        title: { text: 'Number of visits (%)', left: 'left', textStyle: { fontSize: 14, fontWeight: 'normal' }, top: 0, padding: [5, 0, 0, 0] },
+        title: { text: 'Numero di visite (%)', left: 'left', textStyle: { fontSize: 14, fontWeight: 'normal' }, top: 0, padding: [5, 0, 0, 0] },
         tooltip: { trigger: 'item', formatter: '{b}: {c}%' },
         legend: { bottom: 0, left: 'center', data: visitData.map(d => d.name), itemGap: 5, textStyle: { fontSize: 9 }, itemWidth: 15, itemHeight: 10 },
         color: visitsColors,
         series: [{
-            name: 'Visits', type: 'pie', radius: ['40%', '70%'], center: ['50%', '50%'], avoidLabelOverlap: false,
+            name: 'Visite', type: 'pie', radius: ['40%', '70%'], center: ['50%', '50%'], avoidLabelOverlap: false,
             itemStyle: {
                 borderRadius: 5,
                 borderColor: '#fff',
@@ -1101,12 +1120,12 @@ function updateOrCreateInterestsChart(avgData) {
     });
     
     const interestsOption = {
-        title: { text: 'Avg. Interests (Affinity Index)', left: 'left', textStyle: { fontSize: 14, fontWeight: 'normal' }, top: 0, padding: [5, 0, 15, 0] },
+        title: { text: 'Interessi, indice di affinità medio', left: 'left', textStyle: { fontSize: 14, fontWeight: 'normal' }, top: 0, padding: [5, 0, 15, 0] },
         tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: '{b}: {c}' },
-        xAxis: { type: 'value', name: 'Avg. Index', nameLocation: 'end', nameTextStyle: { fontSize: 10 }, axisLabel: { fontSize: 9 } },
+        xAxis: { type: 'value', name: 'Indice medio', nameLocation: 'end', nameTextStyle: { fontSize: 10 }, axisLabel: { fontSize: 9 } },
         yAxis: { type: 'category', data: interestData.map(d => d.name), axisLabel: { fontSize: 9, interval: 0 } },
         series: [{ 
-            name: 'Avg. Index', 
+            name: 'Indice medio', 
             type: 'bar', 
             data: interestData.map(d => d.value),
             itemStyle: {
@@ -1121,7 +1140,7 @@ function updateOrCreateInterestsChart(avgData) {
         grid: { left: '30%', right: '8%', bottom: '5%', top: '15%', containLabel: true },
         legend: { bottom: 0, left: 'center', show: false } // aggiunto per coerenza, ma nascosto
     };
-    createAndRegisterChart('interests-chart', interestsOption, "Interest data N/A.");
+    createAndRegisterChart('interests-chart', interestsOption, "Nessun dato sugli interessi.");
 }
 
 function addChartClickListeners() {
@@ -1333,30 +1352,30 @@ function createOrUpdateRealBarCharts(filteredRecords, hour) {
     if (!filteredRecords || filteredRecords.length === 0) return;
     // Presenze reali
     const presenceData = filteredRecords.map(rec => ({
-        date: rec.parsedDate instanceof Date ? rec.parsedDate.toLocaleDateString() : 'N/A',
+        date: rec.parsedDate instanceof Date ? rec.parsedDate.toLocaleDateString('it-IT', { timeZone: 'UTC' }) : 'n.d.',
         value: parseFloat(rec[`presenze_${hour}`]) || 0
     }));
     const presenceOption = {
-        title: { text: 'Actual presence', left: 'center', textStyle: { fontSize: 12 }, top: 0 },
+        title: { text: 'Presenze effettive', left: 'center', textStyle: { fontSize: 12 }, top: 0 },
         tooltip: { trigger: 'axis' },
         xAxis: { type: 'category', data: presenceData.map(d => d.date), axisLabel: { fontSize: 9 } },
-        yAxis: { type: 'value', name: 'Presence', axisLabel: { fontSize: 9 } },
+        yAxis: { type: 'value', axisLabel: { fontSize: 9 } },
         series: [{
-            name: 'Presence', type: 'bar', data: presenceData.map(d => d.value),
+            name: 'Presenze', type: 'bar', data: presenceData.map(d => d.value),
             itemStyle: { color: '#3498db', borderRadius: [3, 3, 0, 0] }, barWidth: '60%'
         }],
         grid: { left: '8%', right: '8%', bottom: '10%', top: '18%', containLabel: true }
     };
-    createAndRegisterChart('real-presence-bar-chart', presenceOption, 'No actual presence data.');
+    createAndRegisterChart('real-presence-bar-chart', presenceOption, 'Nessun dato sulle presenze effettive.');
 
     // Genere reale
     const genderData = filteredRecords.map(rec => ({
-        date: rec.parsedDate instanceof Date ? rec.parsedDate.toLocaleDateString() : 'N/A',
+        date: rec.parsedDate instanceof Date ? rec.parsedDate.toLocaleDateString('it-IT', { timeZone: 'UTC' }) : 'n.d.',
         male: parseFloat(rec['% M']) || 0,
         female: parseFloat(rec['% F']) || 0
     }));
     const genderOption = {
-        title: { text: 'Actual gender (%)', left: 'center', textStyle: { fontSize: 12 }, top: 0 },
+        title: { text: 'Genere effettivo (%)', left: 'center', textStyle: { fontSize: 12 }, top: 0 },
         tooltip: { trigger: 'axis' },
         legend: { data: ['% M', '% F'], bottom: 0, textStyle: { fontSize: 9 } },
         xAxis: { type: 'category', data: genderData.map(d => d.date), axisLabel: { fontSize: 9 } },
@@ -1367,14 +1386,14 @@ function createOrUpdateRealBarCharts(filteredRecords, hour) {
         ],
         grid: { left: '8%', right: '8%', bottom: '10%', top: '18%', containLabel: true }
     };
-    createAndRegisterChart('real-gender-bar-chart', genderOption, 'No actual gender data.');
+    createAndRegisterChart('real-gender-bar-chart', genderOption, 'Nessun dato sul genere effettivo.');
 
     // Età reale
     const ageKeys = ['% 18-24','% 25-34','% 35-44','% 45-54','% 55-64','% 65+'];
     const ageLabels = ['18-24','25-34','35-44','45-54','55-64','65+'];
     const ageColors = ageLabels.map(l => CHART_COLORS.AGE_CHART[l]);
     const ageData = filteredRecords.map(rec => {
-        const date = rec.parsedDate instanceof Date ? rec.parsedDate.toLocaleDateString() : 'N/A';
+        const date = rec.parsedDate instanceof Date ? rec.parsedDate.toLocaleDateString('it-IT', { timeZone: 'UTC' }) : 'n.d.';
         return { date, ...Object.fromEntries(ageKeys.map(k => [k, parseFloat(rec[k]) || 0])) };
     });
     const ageSeries = ageKeys.map((k, i) => ({
@@ -1382,7 +1401,7 @@ function createOrUpdateRealBarCharts(filteredRecords, hour) {
         itemStyle: { color: ageColors[i] }, barWidth: '40%'
     }));
     const ageOption = {
-        title: { text: 'Actual age (%)', left: 'center', textStyle: { fontSize: 12 }, top: 0 },
+        title: { text: 'Età effettiva (%)', left: 'center', textStyle: { fontSize: 12 }, top: 0 },
         tooltip: { trigger: 'axis' },
         legend: { data: ageLabels, bottom: 0, textStyle: { fontSize: 9 } },
         xAxis: { type: 'category', data: ageData.map(d => d.date), axisLabel: { fontSize: 9 } },
@@ -1390,11 +1409,11 @@ function createOrUpdateRealBarCharts(filteredRecords, hour) {
         series: ageSeries,
         grid: { left: '8%', right: '8%', bottom: '10%', top: '18%', containLabel: true }
     };
-    createAndRegisterChart('real-age-bar-chart', ageOption, 'No actual age data.');
+    createAndRegisterChart('real-age-bar-chart', ageOption, 'Nessun dato sull’età effettiva.');
 
     // Nazionalità reale
     const nationalityData = filteredRecords.map(rec => {
-        const date = rec.parsedDate instanceof Date ? rec.parsedDate.toLocaleDateString() : 'N/A';
+        const date = rec.parsedDate instanceof Date ? rec.parsedDate.toLocaleDateString('it-IT', { timeZone: 'UTC' }) : 'n.d.';
         const itaKey = Object.keys(rec).find(k => k.toLowerCase() === '% italiani' || k.toLowerCase() === 'perc_italiani');
         const strKey = Object.keys(rec).find(k => k.toLowerCase() === '% stranieri' || k.toLowerCase() === 'perc_stranieri');
         return {
@@ -1408,27 +1427,27 @@ function createOrUpdateRealBarCharts(filteredRecords, hour) {
         CHART_COLORS.NATIONALITY_CHART.FOREIGNERS
     ];
     const nationalityOption = {
-        title: { text: 'Actual nationality (%)', left: 'center', textStyle: { fontSize: 12 }, top: 0 },
+        title: { text: 'Nazionalità effettiva (%)', left: 'center', textStyle: { fontSize: 12 }, top: 0 },
         tooltip: { trigger: 'axis' },
         legend: {
-            data: ['Italians', 'Foreigners'],
+            data: ['Italiani', 'Stranieri'],
             bottom: 0,
             textStyle: { fontSize: 9 },
-            selected: { 'Italians': false, 'Foreigners': true } // Italians spento di default
+            selected: { 'Italiani': false, 'Stranieri': true } // Italians spento di default
         },
         xAxis: { type: 'category', data: nationalityData.map(d => d.date), axisLabel: { fontSize: 9 } },
         yAxis: { type: 'value', name: '%', axisLabel: { fontSize: 9 } },
         series: [
-            { name: 'Italians', type: 'bar', stack: 'nationality', data: nationalityData.map(d => d.italians), itemStyle: { color: nationalityColors[0] }, barWidth: '40%' },
-            { name: 'Foreigners', type: 'bar', stack: 'nationality', data: nationalityData.map(d => d.foreigners), itemStyle: { color: nationalityColors[1] }, barWidth: '40%' }
+            { name: 'Italiani', type: 'bar', stack: 'nationality', data: nationalityData.map(d => d.italians), itemStyle: { color: nationalityColors[0] }, barWidth: '40%' },
+            { name: 'Stranieri', type: 'bar', stack: 'nationality', data: nationalityData.map(d => d.foreigners), itemStyle: { color: nationalityColors[1] }, barWidth: '40%' }
         ],
         grid: { left: '8%', right: '8%', bottom: '10%', top: '18%', containLabel: true }
     };
-    createAndRegisterChart('real-nationality-bar-chart', nationalityOption, 'No actual nationality data.');
+    createAndRegisterChart('real-nationality-bar-chart', nationalityOption, 'Nessun dato sulla nazionalità effettiva.');
 
     // Visite reali
     const visitsData = filteredRecords.map(rec => {
-        const date = rec.parsedDate instanceof Date ? rec.parsedDate.toLocaleDateString() : 'N/A';
+        const date = rec.parsedDate instanceof Date ? rec.parsedDate.toLocaleDateString('it-IT', { timeZone: 'UTC' }) : 'n.d.';
         return {
             date,
             v1: parseFloat(rec['visite_1']) || 0,
@@ -1446,21 +1465,21 @@ function createOrUpdateRealBarCharts(filteredRecords, hour) {
         CHART_COLORS.VISITS_CHART.VISIT_5
     ];
     const visitsOption = {
-        title: { text: 'Actual visits (%)', left: 'center', textStyle: { fontSize: 12 }, top: 0 },
+        title: { text: 'Visite effettive (%)', left: 'center', textStyle: { fontSize: 12 }, top: 0 },
         tooltip: { trigger: 'axis' },
-        legend: { data: ['1 visit', '2 visits', '3 visits', '4 visits', '5+ visits'], bottom: 0, textStyle: { fontSize: 9 } },
+        legend: { data: ['1 visita', '2 visite', '3 visite', '4 visite', '5+ visite'], bottom: 0, textStyle: { fontSize: 9 } },
         xAxis: { type: 'category', data: visitsData.map(d => d.date), axisLabel: { fontSize: 9 } },
         yAxis: { type: 'value', axisLabel: { fontSize: 9 } },
         series: [
-            { name: '1 visit', type: 'bar', stack: 'visits', data: visitsData.map(d => d.v1), itemStyle: { color: visitsColors[0] }, barWidth: '40%' },
-            { name: '2 visits', type: 'bar', stack: 'visits', data: visitsData.map(d => d.v2), itemStyle: { color: visitsColors[1] }, barWidth: '40%' },
-            { name: '3 visits', type: 'bar', stack: 'visits', data: visitsData.map(d => d.v3), itemStyle: { color: visitsColors[2] }, barWidth: '40%' },
-            { name: '4 visits', type: 'bar', stack: 'visits', data: visitsData.map(d => d.v4), itemStyle: { color: visitsColors[3] }, barWidth: '40%' },
-            { name: '5+ visits', type: 'bar', stack: 'visits', data: visitsData.map(d => d.v5), itemStyle: { color: visitsColors[4] }, barWidth: '40%' }
+            { name: '1 visita', type: 'bar', stack: 'visits', data: visitsData.map(d => d.v1), itemStyle: { color: visitsColors[0] }, barWidth: '40%' },
+            { name: '2 visite', type: 'bar', stack: 'visits', data: visitsData.map(d => d.v2), itemStyle: { color: visitsColors[1] }, barWidth: '40%' },
+            { name: '3 visite', type: 'bar', stack: 'visits', data: visitsData.map(d => d.v3), itemStyle: { color: visitsColors[2] }, barWidth: '40%' },
+            { name: '4 visite', type: 'bar', stack: 'visits', data: visitsData.map(d => d.v4), itemStyle: { color: visitsColors[3] }, barWidth: '40%' },
+            { name: '5+ visite', type: 'bar', stack: 'visits', data: visitsData.map(d => d.v5), itemStyle: { color: visitsColors[4] }, barWidth: '40%' }
         ],
         grid: { left: '8%', right: '8%', bottom: '10%', top: '18%', containLabel: true }
     };
-    createAndRegisterChart('real-visits-bar-chart', visitsOption, 'No actual visit data.');
+    createAndRegisterChart('real-visits-bar-chart', visitsOption, 'Nessun dato sulle visite effettive.');
     // RIMOSSO: Interessi reali
 }
 
@@ -1470,12 +1489,12 @@ function setExportProgressStatus(msg, percent = null) {
     if (!status) {
         status = document.createElement('div');
         status.id = 'export-synthetic-crowded-status';
-        status.style = 'margin-bottom: 6px; font-size: 0.98em; color: #333; min-height: 18px; text-align: left;';
+        status.className = 'export-status';
         const btn = document.getElementById('export-synthetic-crowded-btn');
         if (btn && btn.parentNode) btn.parentNode.insertBefore(status, btn);
     }
     if (percent !== null && percent >= 0 && percent <= 100) {
-        status.innerHTML = `${msg} <span style='color:#5a3ec8;font-weight:bold;'>${percent}%</span>`;
+        status.innerHTML = `${msg} <span class='export-pct'>${percent}%</span>`;
     } else {
         status.textContent = msg;
     }
@@ -1658,7 +1677,7 @@ function addExportSyntheticCrowdedButton() {
         btn = document.createElement('button');
         btn.id = 'export-synthetic-crowded-btn';
         btn.textContent = 'Scarica CSV punti synthetic crowded (168h)';
-        btn.style = 'margin: 10px 0; width: 95%; background: #5a3ec8; color: white; border: none; border-radius: 5px; padding: 10px; font-size: 1em; cursor: pointer;';
+        btn.className = 'btn export-btn';
         btn.onclick = exportSyntheticCrowdedCSV;
         sidebarContainerElement.insertBefore(btn, sidebarContainerElement.firstChild);
     }

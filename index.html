@@ -1,157 +1,200 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Online Data Map</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="description" content="CityRhythm: come si vive Ascoli Piceno, ora per ora, sulla mappa e nel suono.">
+    <meta name="color-scheme" content="light">
+    <title>CityRhythm · Ascoli Piceno</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <noscript><p class="noscript">CityRhythm richiede JavaScript per mostrare la mappa.</p></noscript>
 
-    <div class="container">
-        <div id='map'>
-            <!-- Layer Control Panel -->
-            <div id="layer-controls" class="layer-controls">
-              <h4>Map Layers</h4>
-              <div class="layer-toggle">
-                <input type="checkbox" id="toggle-kml" name="kml" checked>
-                <label for="toggle-kml">KML Areas</label>
-              </div>
-              <div class="layer-toggle" id="crowded-toggle-container">
-                <input type="checkbox" id="toggle-crowded" name="crowded" checked>
-                <label for="toggle-crowded">Crowded Points</label>
-              </div>
-              <!-- NEW: Toggle for presence points -->
-              <div class="layer-toggle">
-                <input type="checkbox" id="toggle-presence" name="presence" checked>
-                <label for="toggle-presence">Presence Density</label>
-              </div>
-              <div class="presence-color-selector">
-                <div class="presence-color-title">Color dots by</div>
-                <div id="presence-color-by" class="presence-color-buttons" role="radiogroup" aria-label="Color presence dots by"></div>
-                <div id="presence-color-legend" class="presence-color-legend"></div>
-                <div class="presence-color-note">Real percentages of each area</div>
-              </div>
-              <!-- NEW: Toggle for spots points -->
-              <div class="layer-toggle">
-                <input type="checkbox" id="toggle-spots" name="spots" checked>
-                <label for="toggle-spots">POI Spots</label>
-              </div>
-              <!-- NEW: Type selector for POI spots -->
-              <div class="spot-type-selector">
-                <select id="spot-type-filter">
-                  <option value="all">All types</option>
-                </select>
-              </div>
-              <div class="layer-toggle">
-                <input type="checkbox" id="toggle-synthetic-crowded" name="synthetic-crowded">
-                <label for="toggle-synthetic-crowded">Synthetic Crowded Points</label>
-              </div>
-              <!-- NEW: Toggle for LCZ Vitality -->
-              <div class="layer-toggle">
-                <input type="checkbox" id="toggle-lcz-vitality" name="lcz-vitality">
-                <label for="toggle-lcz-vitality">LCZ Vitality</label>
-              </div>
-              <!-- NEW: LCZ visualization options -->
-              <div class="lcz-visualization-selector" id="lcz-visualization-selector" style="display: none; margin-left: 20px;">
-                <label for="lcz-visualization-select" class="lcz-view-title">Show</label>
-                <select id="lcz-visualization-select" class="lcz-view-select">
-                  <optgroup label="Hour by hour (sound compass)">
-                    <option value="utci">UTCI heat stress (estimate)</option>
-                    <option value="stato">Sound map</option>
-                  </optgroup>
-                  <optgroup label="Classification">
-                    <option value="LCZ" selected>LCZ types</option>
-                    <option value="UHI">UHI risk</option>
-                    <option value="lcz_matches">Classification agreement</option>
-                  </optgroup>
-                  <optgroup label="Shape of the city">
-                    <option value="svf_mean">Sky view factor</option>
-                    <option value="aspect_ratio">Street canyon (H/W)</option>
-                    <option value="z_h">Height of buildings and trees</option>
-                  </optgroup>
-                  <optgroup label="Ground cover">
-                    <option value="building_frac">Built surface</option>
-                    <option value="impervious_frac">Sealed surface</option>
-                    <option value="pervious_frac">Permeable surface</option>
-                  </optgroup>
-                  <optgroup label="Heat">
-                    <option value="albedo">Albedo</option>
-                    <option value="admittance">Thermal admittance</option>
-                    <option value="anthro_heat">Human-made heat</option>
-                    <option value="industry_heat">Industrial heat</option>
-                  </optgroup>
-                  <optgroup label="Wind">
-                    <option value="terrain_rough">Roughness class</option>
-                    <option value="z0_value">Roughness length z0</option>
-                  </optgroup>
-                </select>
-                <div id="lcz-legend" class="lcz-legend"></div>
-                <!-- NEW: LCZ Opacity Control -->
-                <div class="opacity-control" style="margin-top: 10px;">
-                  <label for="lcz-opacity-slider" style="font-size: 12px;">LCZ Opacity:</label>
-                  <input type="range" id="lcz-opacity-slider" min="0" max="100" value="70" style="width: 100%; margin-top: 5px;">
-                  <span id="lcz-opacity-value" style="font-size: 11px;">70%</span>
+    <!-- Mappa a tutto schermo: il resto sta sopra, ai bordi -->
+    <div id="map" class="map"></div>
+
+    <!-- Colonna a sinistra: livelli in alto, mappa sonora in basso. Non si sovrappongono: la colonna finisce sopra la timeline -->
+    <div id="side-column" class="side-column">
+        <section id="layer-controls" class="panel layers" aria-labelledby="layers-title">
+            <div class="panel-head">
+                <h2 id="layers-title" class="panel-title">Livelli</h2>
+                <button id="layers-close" class="icon-btn" type="button" aria-label="Chiudi i livelli">×</button>
+            </div>
+
+            <div class="panel-body">
+                <details class="group" open>
+                    <summary>Persone</summary>
+                    <div class="group-body">
+                        <label class="check">
+                            <input type="checkbox" id="toggle-presence" name="presence" checked>
+                            <span>Puntini delle persone</span>
+                        </label>
+                        <div class="sub">
+                            <div class="sub-title" id="presence-color-title">Colora i puntini per</div>
+                            <div id="presence-color-by" class="seg" role="group" aria-labelledby="presence-color-title"></div>
+                            <div id="presence-color-legend" class="legend-inline"></div>
+                            <p class="note">Percentuali reali di ogni quartiere.</p>
+                        </div>
+                    </div>
+                </details>
+
+                <details class="group">
+                    <summary>Luoghi</summary>
+                    <div class="group-body">
+                        <label class="check">
+                            <input type="checkbox" id="toggle-spots" name="spots">
+                            <span>Luoghi della città (spot)</span>
+                        </label>
+                        <div class="spot-type-selector">
+                            <label class="field-label" for="spot-type-filter">Tipo di luogo</label>
+                            <select id="spot-type-filter" class="field">
+                                <option value="all">Tutti i tipi</option>
+                            </select>
+                        </div>
+                        <label class="check">
+                            <input type="checkbox" id="toggle-synthetic-crowded" name="synthetic-crowded">
+                            <span>Punti di affollamento simulati</span>
+                        </label>
+                    </div>
+                </details>
+
+                <details class="group">
+                    <summary>Clima e celle</summary>
+                    <div class="group-body">
+                        <label class="check">
+                            <input type="checkbox" id="toggle-lcz-vitality" name="lcz-vitality">
+                            <span>Mostra le celle LCZ</span>
+                        </label>
+                        <div id="lcz-visualization-selector" class="lcz-controls" hidden>
+                            <label class="field-label" for="lcz-visualization-select">Cosa mostrare</label>
+                            <select id="lcz-visualization-select" class="field">
+                                <optgroup label="Ora per ora (bussola sonora)">
+                                    <option value="utci">Stress termico UTCI (stima)</option>
+                                    <option value="stato">Mappa sonora</option>
+                                </optgroup>
+                                <optgroup label="Classificazione">
+                                    <option value="LCZ" selected>Tipi LCZ</option>
+                                    <option value="UHI">Rischio isola di calore</option>
+                                    <option value="lcz_matches">Accordo della classificazione</option>
+                                </optgroup>
+                                <optgroup label="Forma della città">
+                                    <option value="svf_mean">Cielo visibile (SVF)</option>
+                                    <option value="aspect_ratio">Canyon stradale (H/W)</option>
+                                    <option value="z_h">Altezza di edifici e alberi</option>
+                                </optgroup>
+                                <optgroup label="Superficie del suolo">
+                                    <option value="building_frac">Superficie edificata</option>
+                                    <option value="impervious_frac">Superficie impermeabile</option>
+                                    <option value="pervious_frac">Superficie permeabile</option>
+                                </optgroup>
+                                <optgroup label="Calore">
+                                    <option value="albedo">Albedo</option>
+                                    <option value="admittance">Ammettenza termica</option>
+                                    <option value="anthro_heat">Calore prodotto dalle persone</option>
+                                    <option value="industry_heat">Calore industriale</option>
+                                </optgroup>
+                                <optgroup label="Vento">
+                                    <option value="terrain_rough">Classe di rugosità</option>
+                                    <option value="z0_value">Lunghezza di rugosità z0</option>
+                                </optgroup>
+                            </select>
+                            <div id="lcz-legend" class="legend"></div>
+                            <div class="range-row">
+                                <label class="field-label" for="lcz-opacity-slider">Trasparenza dello strato</label>
+                                <div class="range-line">
+                                    <input type="range" id="lcz-opacity-slider" min="0" max="100" value="70" aria-describedby="lcz-opacity-value">
+                                    <output id="lcz-opacity-value" for="lcz-opacity-slider">70%</output>
+                                </div>
+                            </div>
+                            <div id="uhi-dynamic-control" class="uhi-control" hidden>
+                                <label class="check">
+                                    <input type="checkbox" id="uhi-dynamic-visibility" name="uhi-dynamic">
+                                    <span>Mostra il rischio solo dove ci sono persone</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <details class="group">
+                    <summary>Mappa</summary>
+                    <div class="group-body">
+                        <div class="sub">
+                            <div class="sub-title" id="map-style-title">Stile della mappa</div>
+                            <div id="map-style" class="seg" role="group" aria-labelledby="map-style-title"></div>
+                        </div>
+                        <label class="check">
+                            <input type="checkbox" id="toggle-3d-terrain" name="3d-terrain">
+                            <span>Rilievo in 3D</span>
+                        </label>
+                        <label class="check">
+                            <input type="checkbox" id="toggle-3d-buildings" name="3d-buildings">
+                            <span>Edifici in 3D</span>
+                        </label>
+                    </div>
+                </details>
+
+                <!-- Solo in modalità sviluppatore (DEBUG_MODE in config.js): nascosti per il pubblico -->
+                <div class="dev-only" data-dev hidden>
+                    <label class="check" id="kml-toggle-container">
+                        <input type="checkbox" id="toggle-kml" name="kml" checked>
+                        <span>Aree KML</span>
+                    </label>
+                    <label class="check" id="crowded-toggle-container">
+                        <input type="checkbox" id="toggle-crowded" name="crowded">
+                        <span>Affollamento (punti)</span>
+                    </label>
                 </div>
-                <!-- NEW: UHI Dynamic Visibility Control -->
-                <div class="uhi-dynamic-control" id="uhi-dynamic-control" style="margin-top: 10px; display: none;">
-                  <div class="checkbox-group">
-                    <input type="checkbox" id="uhi-dynamic-visibility" name="uhi-dynamic">
-                    <label for="uhi-dynamic-visibility" style="font-size: 12px;">UHI Dynamic Visibility</label>
-                  </div>
-                  <div style="font-size: 10px; color: #666; margin-top: 2px;">
-                    Show UHI Risk areas based on presence points density
-                  </div>
-                </div>
-              </div>
-              <div class="layer-toggle">
-                <input type="checkbox" id="toggle-3d-terrain" name="3d-terrain">
-                <label for="toggle-3d-terrain">3D Terrain</label>
-              </div>
-              <div class="layer-toggle">
-                <input type="checkbox" id="toggle-3d-buildings" name="3d-buildings">
-                <label for="toggle-3d-buildings">3D Buildings</label>
-              </div>
-              <div class="presence-color-selector map-style-selector">
-                <div class="presence-color-title">Map style</div>
-                <div id="map-style" class="presence-color-buttons" role="radiogroup" aria-label="Map style"></div>
-              </div>
             </div>
-        </div>
-        <div id='sidebar'>
-            <h2>Place Information</h2>
-            <div id="loading-indicator" class="loading-spinner" style="display: none;"></div>
-            <div id="status-message">
-                <p>Initializing map...</p>
-            </div>
-            <div id="info-content">
-                <!-- Content will be populated by JS -->
-            </div>
-        </div>
+        </section>
+
+        <!-- Mappa sonora: riempita da src/ui/ui-compass.js -->
+        <section id="compass-panel" class="panel card" aria-label="Mappa sonora"></section>
     </div>
 
-    <div class="timeline-container">
-        <div class="timeline-upper-row">
-             <div class="timeline-controls">
-                 <button id="playButton" class="control-button" title="Play/Pause">
-                     <svg class="play-icon" viewBox="0 0 24 24">
-                         <path d="M8 5v14l11-7z"/>
-                     </svg>
-                     <svg class="pause-icon" viewBox="0 0 24 24" style="display: none;">
-                         <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-                     </svg>
-                 </button>
-                 <button id="directionButton" class="control-button" title="Reverse Direction">
-                     <svg class="direction-icon" viewBox="0 0 24 24">
-                          <path d="M8 4L16 12l-8 8"/>
-                     </svg>
-                 </button>
-             </div>
-             <div id="timeDisplay"></div>
+    <button id="layers-toggle" class="btn layers-toggle" type="button" aria-expanded="false" aria-controls="layer-controls" hidden>Livelli</button>
+
+    <!-- Scheda dell'area selezionata: compare solo quando si clicca un'area -->
+    <aside id="sidebar" class="drawer" aria-labelledby="drawer-title" hidden>
+        <header class="drawer-head">
+            <h2 id="drawer-title" class="drawer-title" tabindex="-1">Area</h2>
+            <button id="sidebar-close" class="icon-btn" type="button" aria-label="Chiudi la scheda dell'area">×</button>
+        </header>
+        <div id="info-content" class="drawer-body"></div>
+    </aside>
+
+    <!-- Messaggi di caricamento ed errori: in alto, spariscono quando i dati sono pronti -->
+    <div id="status-bar" class="status-bar" role="status" aria-live="polite" hidden>
+        <span id="status-message"></span>
+    </div>
+
+    <!-- Timeline: ora della settimana e periodo -->
+    <div class="timeline" id="timeline-container">
+        <div class="timeline-row">
+            <button id="playButton" class="icon-btn" type="button" aria-label="Avvia la timeline" title="Avvia la timeline">
+                <svg class="play-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M8 5v14l11-7z"/>
+                </svg>
+                <svg class="pause-icon" viewBox="0 0 24 24" aria-hidden="true" style="display: none;">
+                    <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                </svg>
+            </button>
+            <button id="directionButton" class="icon-btn" type="button" aria-label="Direzione: avanti" title="Direzione: avanti">
+                <svg class="direction-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M8 4L16 12l-8 8"/>
+                </svg>
+            </button>
+            <span id="timeDisplay" class="timeline-time"></span>
+            <button id="period-button" class="btn period-button" type="button" aria-expanded="false" aria-controls="period-popover" disabled>Periodo</button>
         </div>
-        <div id="calendar-container" style="margin: 10px 0; display: flex; justify-content: center; gap: 10px;"></div>
-        <input type="range" id="timeSlider" min="0" max="167" value="0" class="timeline-slider" title="Select hour">
-        <!-- Cluster toggle element removed -->
+        <input type="range" id="timeSlider" class="timeline-slider" min="0" max="167" value="0" aria-label="Ora della settimana">
+
+        <div id="period-popover" class="popover" hidden>
+            <p class="popover-title">Periodo dei dati</p>
+            <div id="calendar-container" class="calendar-row"></div>
+            <p class="note" id="period-note">Con meno di 7 giorni la timeline mostra i giorni veri. Con 7 giorni o più mostra la settimana tipo: ogni giorno della settimana, mediato su tutto il periodo scelto.</p>
+        </div>
     </div>
 
     <script type="module" src="main.js"></script>
