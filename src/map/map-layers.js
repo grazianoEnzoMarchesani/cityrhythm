@@ -1818,7 +1818,7 @@ export function addLczVitalityLayer(initialVisibility = true, visualizationType 
 }
 
 // Nomi delle classi LCZ (Stewart & Oke) e del rischio isola di calore
-const LCZ_NAMES = {
+export const LCZ_NAMES = {
     '1': 'Compatto alto', '2': 'Compatto medio', '3': 'Compatto basso', '4': 'Aperto alto',
     '5': 'Aperto medio', '6': 'Aperto basso', '7': 'Leggero basso', '8': 'Grandi edifici bassi',
     '9': 'Edificato sparso', '10': 'Industria pesante', 'A': 'Alberi fitti', 'B': 'Alberi sparsi',

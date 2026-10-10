@@ -18,11 +18,12 @@ import { setupLayerControls, initializeSpotTypeFilter } from './src/ui/ui-layer-
 import { startCompass } from './src/compass/compass.js';
 import { initCompassUI } from './src/ui/ui-compass.js';
 import { initAudioEngine } from './src/audio/audio-engine.js';
+import { PHONE_QUERY } from './src/data/config.js';
 
 // Riferimenti al DOM
 const mapContainerId = 'map';
 const sidebarElement = document.getElementById('info-content');
-const PHONE = window.matchMedia('(max-width: 719px)');
+const PHONE = window.matchMedia(PHONE_QUERY);
 
 // Variabili globali per il filtro data
 window.selectedDateRange = { min: null, max: null };
@@ -95,8 +96,11 @@ function setupPeriodPopover(min, max) {
     const setOpen = (open) => {
         popover.hidden = !open;
         button.setAttribute('aria-expanded', String(open));
+        if (open) document.dispatchEvent(new CustomEvent('timeline-popover', { detail: 'periodo' }));
     };
     button.addEventListener('click', () => setOpen(popover.hidden));
+    // Un solo pannello della timeline aperto alla volta: quello della Mappa sonora chiude questo
+    document.addEventListener('timeline-popover', (e) => { if (e.detail !== 'periodo') setOpen(false); });
     // Clic fuori chiude il pannello, ma non il calendario di Litepicker che sta fuori dal pannello
     document.addEventListener('pointerdown', (e) => {
         if (popover.hidden) return;
@@ -112,13 +116,19 @@ function setupPeriodPopover(min, max) {
     updatePeriodButton();
 }
 
+// Intervallo sul pulsante: l'anno una sola volta quando le due date sono nello stesso anno ("8 giu – 14 giu 2025"), per stare nel telefono
+const etichettaPeriodo = (min, max) => {
+    const giorno = d => d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+    return min.getUTCFullYear() === max.getUTCFullYear() ? `${giorno(min)} – ${fmtData(max)}` : `${fmtData(min)} – ${fmtData(max)}`;
+};
+
 function updatePeriodButton() {
     const button = document.getElementById('period-button');
     if (!button) return;
     const { min, max } = window.selectedDateRange || {};
     const { min: minTutto, max: maxTutto } = getPoiDateRange() || {};
     const tutto = !min || !max || (minTutto && max.getTime() === maxTutto.getTime() && min.getTime() === minTutto.getTime());
-    button.textContent = tutto ? 'Periodo: tutto' : `${fmtData(min)} – ${fmtData(max)}`;
+    button.textContent = tutto ? 'Periodo: tutto' : etichettaPeriodo(min, max);
 }
 
 // Funzione di utilità per aggiornare la timeline in base al range selezionato
@@ -163,10 +173,20 @@ function setupLayersPanel() {
         toggle.hidden = open;
         toggle.setAttribute('aria-expanded', String(open));
         if (!open && document.activeElement === close) toggle.focus();
+        // Sul telefono un solo pannello alla volta: aprire i livelli chiude la Mappa sonora e il Periodo
+        if (open && PHONE.matches) document.dispatchEvent(new CustomEvent('timeline-popover', { detail: 'livelli' }));
     };
     toggle.addEventListener('click', () => setOpen(true));
     close?.addEventListener('click', () => setOpen(false));
+    document.addEventListener('timeline-popover', (e) => { if (PHONE.matches && e.detail !== 'livelli' && !panel.hidden) setOpen(false); });
     setOpen(!PHONE.matches);
+    // Sul telefono i gruppi partono chiusi e se ne apre uno alla volta. Sul desktop il primo (Persone) è aperto
+    const gruppi = [...panel.querySelectorAll('details.group')];
+    gruppi.forEach((g) => g.addEventListener('toggle', () => {
+        if (!g.open || !PHONE.matches) return;
+        gruppi.forEach((altro) => { if (altro !== g) altro.open = false; });
+    }));
+    if (gruppi[0]) gruppi[0].open = !PHONE.matches;
     // Sul telefono Esc chiude il pannello dei livelli
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && !e.defaultPrevented && PHONE.matches && !panel.hidden) setOpen(false);

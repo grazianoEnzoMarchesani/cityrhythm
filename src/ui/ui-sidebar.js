@@ -12,7 +12,7 @@ import { getSpotMapperData, getCrowdedData } from '../data/data-loader.js';
 import { getCrowdednessColumnName, generateSyntheticCrowdedPointsGeoJson, getPresenceDots, redrawPresenceDots } from '../map/map-layers.js';
 import { exportArrayToCSV } from '../utils/utils.js';
 import { setPresenceColorSelection } from './ui-layer-controls.js';
-import { DEBUG_MODE } from '../data/config.js';
+import { DEBUG_MODE, PHONE_QUERY } from '../data/config.js';
 
 let sidebarContainerElement = null;
 let sidebarContentElement = null;
@@ -23,7 +23,7 @@ const kmlChartInstances = {};
 
 let selectedKmlFeature = null;
 let lastKmlTimelineHour = -1;
-const PHONE = window.matchMedia('(max-width: 719px)');
+const PHONE = window.matchMedia(PHONE_QUERY);
 let returnFocusEl = null; // dove si trovava il fuoco prima di aprire la scheda
 // Ruotando il telefono la scheda può passare da tutto schermo a laterale: lo sfondo inerte segue il cambio
 PHONE.addEventListener('change', () => setBackgroundInert(PHONE.matches && !!sidebarContainerElement && !sidebarContainerElement.hidden));

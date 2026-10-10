@@ -8,6 +8,7 @@ Quarto modo della musica (accanto a IA, classica e metronomi): musica **generata
 | Tema | Decisione |
 |---|---|
 | Nome | **Sottotraccia** (proposto dal consulente Opus, accettato). |
+| Modo di partenza | Alla prima accensione della Mappa sonora parte **Sottotraccia** (`musicMode` in `store.js`, 2026-10-10). L'utente può scegliere gli altri modi. |
 | Ingressi | **X** energia (−1..+1), **Y** piacevolezza (−1..+1), **H** calore con segno (−1 freddo, +1 caldo), **I** irregolarità (0..1, solo nelle clip di prova; 0 nell'app). |
 | Chi fa cosa | Ogni ingresso muove **un solo gruppo**: X → cassa, hi-hat, tempo, voci; Y → coppia stonata e brillantezza dell'hi-hat (solo Y < 0); H → registro; I → scostamento degli hi-hat. [S] |
 | Tempo | **120 + 60·X bpm** (60 con X = −1, 180 con X = +1). A 180 i sedicesimi stanno a 12 Hz, sotto la soglia di ruvidezza (~15 Hz) [F Fastl cap. 10–11]. |

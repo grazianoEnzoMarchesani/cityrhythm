@@ -2,15 +2,15 @@
 
 > Memoria condivisa del progetto. **Ogni agente legge questo indice prima di iniziare**, poi i file di argomento che servono al lavoro (elenco nella sezione 4). Si aggiorna a fine sessione col comando `/second-brain` (vedi `.claude/skills/second-brain/SKILL.md`). Sintetico: decisioni e stato, non cronaca.
 
-Ultimo aggiornamento: 2026-10-10 (ventunesima sessione)
+Ultimo aggiornamento: 2026-10-10 (ventiduesima sessione)
 
 ## 1. Progetto in breve
 - **CityRhythm**: dashboard geospaziale (**MapLibre GL 6.12** + PMTiles, ECharts 5.5, Turf 7, D3 + d3-cloud, PapaParse, Litepicker) su affollamento, demografia, POI, LCZ/UHI. 3 dimensioni spaziali + 1 temporale (timeline).
 - Codice: JavaScript vanilla, ES modules, **Vite 8** (`npm run dev` / `npm run build` → `dist/`). Librerie da `node_modules` con versioni esatte in `package.json`; **nessun CDN**. Dati in `public/data/` (23 MB) e audio in `public/audio/` (loop IA, classica, effetti).
-- **Store centrale** `src/state/store.js` (contratto Svelte: `subscribe`/`set`/`update`/`get`): `time`, `viewport`, `audioEnabled`, `musicMode` (`ia` · `classica` · `metronomi` · `sottotraccia`), **`mood`** (stato della bussola: `stato` confermato, `proposto`, `X` energia, `Y` piacevolezza, `T` UTCI, `C` comfort, **`H` calore con segno**, persone entro 50 m, cella), **`presence`** (puntini fuori casa: lo scrive solo `map-layers.js`), **`cellMap`** (UTCI, stato, `x`, `y` di tutte le celle: lo scrive solo `cell-map.js`, solo mentre una mappa oraria è visibile). `mood` lo scrive solo `src/compass/compass.js`; `audioEnabled` e `musicMode` solo `src/ui/ui-compass.js`. Log `[store]` solo in `npm run dev`.
+- **Store centrale** `src/state/store.js` (contratto Svelte: `subscribe`/`set`/`update`/`get`): `time`, `viewport`, `audioEnabled`, `musicMode` (parte da `sottotraccia`; poi `ia` · `classica` · `metronomi`), **`mood`** (stato della bussola: `stato` confermato, `proposto`, `X` energia, `Y` piacevolezza, `T` UTCI, `C` comfort, **`H` calore con segno**, persone entro 50 m, cella), **`presence`** (puntini fuori casa: lo scrive solo `map-layers.js`), **`cellMap`** (UTCI, stato, `x`, `y` di tutte le celle: lo scrive solo `cell-map.js`, solo mentre una mappa oraria è visibile). `mood` lo scrive solo `src/compass/compass.js`; `audioEnabled` e `musicMode` solo `src/ui/ui-compass.js`. Log `[store]` solo in `npm run dev`.
 - Grafici: ECharts si importa **solo** in `src/charts/charts.js`. d3 si importa da `'d3'` (dipendenza diretta), non dai sotto-pacchetti.
 - Mappa (`src/map/map-setup.js`): stile costruito in codice: base Protomaps da `ascoli_base.pmtiles` in **stile Toner** o **Nolli** (gruppo Mappa dei Livelli), edifici TUM `buildings-3d` (spenti all'avvio), **nessuna etichetta**, sorgente `terrain-dem`. Nessun token.
-- **Interfaccia** (ripinteggiata 2026-10-10, branch `ui-redesign`): mappa a tutto schermo, Livelli e Mappa sonora in colonna a sinistra, timeline in basso, scheda area solo con una selezione, tutto in italiano, telefono in fascia. Dettagli in `interfaccia.md`.
+- **Interfaccia** (ripinteggiata 2026-10-10, pubblicata su Pages da `main`): mappa a tutto schermo, Livelli in colonna a sinistra, Mappa sonora come quadrante nella timeline (un tocco accende), scheda area solo con una selezione, tutto in italiano, telefono con timeline di 138 px. Dettagli in `interfaccia.md`.
 - Trappole note col bundle: PapaParse **senza** `worker: true`; Litepicker come `{ Litepicker }`; MapLibre 6 come `import * as maplibregl`, worker `?worker&url` con `worker: { format: 'es' }`; URL di glyphs/sprite **assoluti**; dati GeoJSON con `getGeoJsonSourceData()`, mai `source._data.features`; per agire sulla mappa **mai `map.isStyleLoaded()` né `map.once('idle')`** (col brulichio non arrivano mai): si usa `isMapReady()` / `whenMapReady(fn)`; le persone si leggono con `getPresenceDots()` e dopo averle cambiate `redrawPresenceDots()`; `hash01` non è indipendente fra suffissi (usare il numero **prima** del suffisso); `import.meta.env` rende un file non importabile in Node: i dati puri vanno in file a parte (es. `src/data/sound-colors.js`).
 - Autore: Graziano Enzo Marchesani (Unicam). Non ha competenze musicali: spiegare le scelte sonore con analogie semplici; le decisioni tecnico-musicali le prende l'agente. Non sa scegliere i volumi a orecchio in percentuale: i mix vanno **calcolati**. Lavora su un **M3 con 8 GB** e uno schermo 5K: niente animazioni che ridisegnano senza bisogno.
 
@@ -40,7 +40,7 @@ Aggiungere una **dimensione sonora** attivabile ("mappa sonora") con quattro mod
 - **Intercambiabilità**: UI e grafici sostituibili; bussola e audio parlano solo tramite lo store.
 - **Microdati con licenza mai su GitHub** (`IPUMS/`, `UsoTempo_*/`, `Lcz_neurali 2/` in `.gitignore`); nel sito solo aggregati, con le citazioni (dettagli in `persone.md`).
 - **Interfaccia**: una lingua (italiano); Aree KML e affollamento solo in `DEBUG_MODE`; nessun framework; obiettivo Chrome 110+, Safari 16.4+, Firefox 115+ (`interfaccia.md`).
-- **Pubblicazione**: Pages pubblica solo da `main` (`deploy.yml`); i branch si vedono in locale con `npm run dev -- --host`.
+- **Pubblicazione**: Pages pubblica solo da `main` (`deploy.yml`). Unire su `main` vuol dire pubblicare: solo col sì dell'utente. I branch si vedono in locale con `npm run dev -- --host 0.0.0.0`.
 - **Mai i paper nel repository**: i PDF (copyright degli editori) stanno fuori dal progetto, in `~/Documents/CityRhythm-paper/`. Non si aggiungono mai al repository né si committano, neanche per sbaglio: prima di ogni commit si controlla che non ci siano PDF. Anche le clip generate (`sound-lab/*/clip/`) e `sound-lab/metronomi/` restano fuori da git: si rigenerano con gli script.
 
 ## 4. Dove trovare cosa
@@ -58,34 +58,34 @@ Aggiungere una **dimensione sonora** attivabile ("mappa sonora") con quattro mod
 | `presentazione.md` | presentazione del branch alla collega: deck, scaletta, aspetto, demo |
 
 ## 5. Prossimi passi
-0. **A mano (utente)**: eliminare **entrambi** i token Mapbox (il token pubblico resta nella cronologia del repository pubblico: va revocato).
-1. **Ascolto, prima di tutto**: Sottotraccia nell'app (modo "Sottotraccia") e le clip in `sound-lab/sottotraccia/clip/` (rampe incluse); i metronomi; la classica (Fatica 0–68 s da giudicare); le clip di disagio alla cieca (`sound-lab/disagio/clip/`, chiave in `chiave.json`). Scrivere cosa si sente, con analogie.
-2. **Decisioni aperte** (con l'utente): Notte come interruttore sopra la ruota o come stato; il calore nel registro e se entra nella Sound map; Festa e Afa danno lo stesso disagio nei metronomi; la sincope (non decisa); la matrice estesa a 17 punti (`sottotraccia.md`), solo dopo l'ascolto.
-3. **Verifiche tecniche**: livello di Sottotraccia nel browser contro −18 LUFS (`OfflineAudioContext`); `PeriodicWave` per le note (3 oscillatori → 1); presentazione: copertina e slide "mappe" mostrano ancora i nove colori, da aggiornare alla sfumatura.
-4. **Pubblicazione**: le 10 registrazioni classiche hanno la licenza **da verificare** su musopen.org (Public Domain Mark dichiarato da chi ha caricato). Dopo ogni modifica, `npm run build` e aggiornare Pages.
-5. **Presentazione alla collega**: ripartire dalla slide 16 (prompt in sezione 7).
-6. **Ancora aperti da prima**: stile Nolli all'avvio; puntini e gente in casa da verificare a schermo (`persone.md`); SOLWEIG per clima più preciso e alberi (facoltativo); suoni urbani dai dati (presenza da X e verde); ECharts 6 (`npm audit`); curva ISTAT (`MONTH`, smart working); domanda aperta sulle presenze "blimp"; bibliografia IPUMS e copia al CTUR quando si pubblica.
-7. **Interfaccia** (`interfaccia.md`, "Da decidere"): telefono con Mappa sonora accesa (la scheda copre il mirino: opzioni a–c). Unione di `ui-redesign` in `Music` solo con il sì dell'utente.
+0. **A mano (utente)**: eliminare **entrambi** i token Mapbox (il token pubblico resta nella cronologia del repository pubblico: va revocato). Bibliografia IPUMS e copia al CTUR (UCL) per il lavoro pubblicato.
+1. **Ascolto, prima di tutto**: Sottotraccia (ora il modo di partenza) nell'app e le clip; i metronomi; la classica (Fatica 0–68 s); le clip di disagio alla cieca (`sound-lab/disagio/clip/`). Scrivere cosa si sente, con analogie.
+2. **Licenza classica**: le 10 registrazioni sono pubblicate dal 2026-10-10 con la verifica per registrazione su musopen.org ancora da fare (`audio.md`).
+3. **Interfaccia** (`interfaccia.md`, "Da decidere", punti 1–6): scheda area sopra l'attribuzione, LCZ sul telefono, nuvola Interessi, numeri con il punto, frasi degli stati, Notte.
+4. **Music**: il branch è indietro rispetto a `main`. Decidere se unirlo, solo col sì dell'utente.
+5. **Decisioni aperte** (con l'utente): Notte come interruttore o stato; calore nel registro e nella Sound map; Festa e Afa nei metronomi; sincope; matrice estesa a 17 punti (`sottotraccia.md`).
+6. **Verifiche tecniche**: livello di Sottotraccia nel browser contro −18 LUFS; `PeriodicWave`; presentazione: copertina e slide mappe ai nove colori.
+7. **Presentazione alla collega**: ripartire dalla slide 16 (prompt in sezione 7).
+8. **Ancora aperti da prima**: stile Nolli all'avvio; puntini e gente in casa da verificare a schermo (`persone.md`); SOLWEIG e alberi (facoltativo); suoni urbani dai dati; ECharts 6 (`npm audit`); curva ISTAT; domanda aperta sulle presenze "blimp".
 
 ## 6. Diario delle sessioni
 - **2026-10-04 → 10-05 (1–12)**: strategia S2, bussola a 9 stati su UTCI per cella, MapLibre + PMTiles con edifici TUM, regola **solo Comune di Ascoli**, LCZ a 30 m, motore audio, puntini con identità stabili, Sound map, curva ISTAT in casa, licenze.
 - **2026-10-06 (13–19)**: presentazione del branch (deck, `presentazione.md`), stile **Nolli**, interni pubblici, edifici TUM aggiornati a OSM, deck in bianco e nero, video di energia e piacevolezza.
 - **2026-10-09 → 10-10 (20)**: modo **metronomi** e **classica** (10 loop Musopen) in app; clip di disagio A/B; lettura dei paper e consulti Opus; **Sottotraccia** (musica a regole, quarto modo) con rampe continue, fonte unica in JS, livello per evento, calore H in `compass-core`; **Sound map a colore continuo**; correzioni (modo che non partiva, NaN fuori cella, voci inudibili, rumore dell'hi-hat); prove nel browser.
 - **2026-10-10 (21)**: interfaccia ripinteggiata su `ui-redesign` (mappa a tutto schermo, Livelli e Mappa sonora in colonna, timeline e Periodo, scheda solo con selezione, tutto in italiano, telefono in fascia); correzioni dalla revisione Opus; prove Playwright Chromium e WebKit. Commit `7243afc`, push su `origin/ui-redesign`.
+- **2026-10-10 (22)**: quadrante della Mappa sonora con lancetta (un tocco accende), pannello con modi e dettagli; telefono ridisegnato (timeline di 138 px, Livelli dall'alto, orizzontale = telefono); mirino bianco; direzione tolta; **Sottotraccia** come modo di partenza. `ui-redesign` unito in `main` e pubblicato su Pages.
 
 ## 7. Prompt per la prossima sessione
 ```
-Riprendiamo CityRhythm, branch Music. Leggi second-brain/SECOND_BRAIN.md e
-second-brain/sottotraccia.md (musica a regole: prima l'ascolto, poi le decisioni
-aperte). Riassumimi in 3 righe dove siamo.
-
-Prima di tutto: l'utente ascolta Sottotraccia nell'app e le clip. Non cambiare
-parametri senza il suo ascolto. Ogni numero: [F], [S] o [H].
+Riprendiamo CityRhythm. Il sito è pubblicato su Pages da `main` (unito da `ui-redesign`
+il 2026-10-10). Leggi second-brain/SECOND_BRAIN.md e second-brain/interfaccia.md.
+Riassumimi in 3 righe dove siamo.
 
 Presentazione alla collega (deck: https://claude.ai/artifact/8wMEfrXxCtVTpSJe34nZ55,
 non crearne un altro): ripartire dalla slide 16 "Chi sta a casa", poi 15, 17, 18.
 Una slide alla volta, pubblica solo quella, aspetta il sì. Bianco e nero, testi con
 /no-ai-slop, niente numeri senza fonte, Simone non va citato.
 
-A fine sessione: aggiorna il second brain (/second-brain), commit e push sul branch di lavoro. Interfaccia: `ui-redesign` si unisce a `Music` solo con il sì (`interfaccia.md`, "Da decidere").
+A fine sessione: aggiorna il second brain (/second-brain). Commit e push solo su richiesta;
+unire su `main` o `Music` solo col sì dell'utente.
 ```

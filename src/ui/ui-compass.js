@@ -1,14 +1,18 @@
-// Mappa sonora: mirino al centro della mappa, contorno della cella inquadrata e la scheda "Mappa sonora"
-// in basso a sinistra (interruttore, stato in parole, tipo di musica, dettagli).
-// Legge `mood`, `audioEnabled` e `musicMode` dallo store; scrive `audioEnabled` e `musicMode`.
+// Mappa sonora: mirino al centro della mappa, contorno della cella inquadrata e, a sinistra della timeline,
+// un quadrante con la lancetta. Il tocco sul quadrante apre il pannello: interruttore, stato in parole,
+// tipo di musica, dettagli. Legge `mood`, `audioEnabled` e `musicMode` dallo store; scrive `audioEnabled` e `musicMode`.
 import { mood, audioEnabled, musicMode } from '../state/store.js';
 import { AUDIO_BASE } from '../data/config.js';
 import { METRO, discomfort } from '../audio/metronomi.js';
 import { regole } from '../audio/sottotraccia-regole.js';
+import { SOUND_STATE_COLORS } from '../data/sound-colors.js';
+import { POSIZIONE_STATI } from '../compass/sound-color.js';
+import { LCZ_NAMES } from '../map/map-layers.js';
 
 const FOCUS_SOURCE_ID = 'compass-focus-source';
 const FOCUS_LAYER_ID = 'compass-focus-layer';
 const EMPTY = { type: 'FeatureCollection', features: [] };
+const NOTTE_COLORE = SOUND_STATE_COLORS.notte;
 
 const NOMI = {
     rifugio: 'Rifugio', passeggiata: 'Passeggiata', festa: 'Festa',
@@ -29,23 +33,29 @@ const DESCRIZIONI = {
     notte: 'Buio e poca gente.'
 };
 const nome = s => NOMI[s] ?? '—';
-const MODI = [
-    ['ia', 'IA', 'Musica generata con un modello di IA'],
-    ['classica', 'Classica', 'Brani di musica classica'],
-    ['metronomi', 'Metronomi', 'Metronomi che battono insieme o no'],
-    ['sottotraccia', 'Sottotraccia', 'Musica generata da regole']
+const MODI = [['ia', 'IA'], ['classica', 'Classica'], ['metronomi', 'Metronomi'], ['sottotraccia', 'Sottotraccia']];
+// Fasce della temperatura percepita (UTCI), in parole semplici; soglia inferiore in °C
+const FASCE_TERMICHE = [
+    [46, 'caldo estremo'], [38, 'caldo molto forte'], [32, 'caldo forte'], [26, 'caldo moderato'],
+    [9, 'nessun disagio termico'], [0, 'freddo lieve'], [-13, 'freddo moderato'], [-27, 'freddo forte'],
+    [-40, 'freddo molto forte'], [-Infinity, 'freddo estremo']
 ];
-// Fasce ufficiali di stress termico UTCI (soglia inferiore in °C)
-const STRESS_UTCI = [
-    [46, 'stress da caldo estremo'], [38, 'stress da caldo molto forte'], [32, 'stress da caldo forte'],
-    [26, 'stress da caldo moderato'], [9, 'nessuno stress termico'], [0, 'leggero stress da freddo'],
-    [-13, 'stress da freddo moderato'], [-27, 'stress da freddo forte'], [-40, 'stress da freddo molto forte'],
-    [-Infinity, 'stress da freddo estremo']
-];
-const stress = u => STRESS_UTCI.find(([soglia]) => u >= soglia)[1];
-const numero = (v, segno = false) => v.toLocaleString('it-IT', {
-    minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: segno ? 'always' : 'auto'
-});
+const fascia = t => FASCE_TERMICHE.find(([soglia]) => t >= soglia)[1];
+
+// Numeri in formato italiano: virgola decimale, meno tipografico (−), spazio indivisibile prima dell'unità
+const MENO = '−', SPAZIO = ' ';
+const decimale = (v, conSegno = false) => v.toLocaleString('it-IT', {
+    minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: conSegno ? 'exceptZero' : 'auto'
+}).replace('-', MENO);
+const gradi = t => `≈${SPAZIO}${Math.round(t)}${SPAZIO}°C`;
+const dataLunga = iso => new Date(iso).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+const giornoSettimana = iso => new Date(iso).toLocaleDateString('it-IT', { weekday: 'long', timeZone: 'UTC' });
+const persone = (m) => {
+    const n = Math.round(m.people);
+    if (n === 0) return `nessuna entro ${m.raggio} m`;
+    if (n === 1) return `1 persona entro ${m.raggio} m`;
+    return `circa ${n} persone entro ${m.raggio} m`;
+};
 
 function el(tag, className, text) {
     const e = document.createElement(tag);
@@ -61,49 +71,99 @@ export function initCompassUI(map) {
     cross.hidden = true;
     container.appendChild(cross);
 
-    // --- La scheda ---
-    const panel = document.getElementById('compass-panel');
-    const head = el('div', 'card-head');
-    const titolo = el('span', 'card-title', 'Mappa sonora');
-    titolo.id = 'compass-title';
-    head.append(titolo);
-    const sw = el('button', 'switch');
-    sw.type = 'button';
-    sw.setAttribute('role', 'switch');
-    sw.setAttribute('aria-labelledby', 'compass-title');
-    sw.setAttribute('aria-checked', 'false');
-    sw.append(el('span', 'switch-track'), el('span', 'switch-label', 'Spenta'));
-    sw.onclick = () => audioEnabled.update(on => !on);
-    head.append(sw);
+    // --- Il quadrante, nel riquadro della timeline ---
+    // Il quadrante accende e spegne la musica con un tocco; il pulsante sotto apre il pannello dei modi e dei dettagli
+    const dial = document.getElementById('compass-button');
+    const square = dial.querySelector('.dial-square');
+    const apriBtn = document.getElementById('compass-open');
+    const etichetta = apriBtn.querySelector('.dial-label');
+    // Nove caselle con i colori degli stati, sulle loro posizioni: piacevolezza alta in alto, energia alta a destra
+    const celle = {};
+    for (const [stato, [X, Y]] of Object.entries(POSIZIONE_STATI)) {
+        const c = el('span', 'dial-cell');
+        c.style.gridColumn = String(X + 2);
+        c.style.gridRow = String(2 - Y);
+        square.append(c);
+        celle[stato] = c;
+    }
+    // Lancetta e punto stanno su un unico braccio che ruota dal centro: così si muovono insieme in ogni istante
+    // (se fossero animati ciascuno per conto suo, il punto si staccherebbe dalla punta durante il movimento)
+    const braccio = el('span', 'dial-arm');
+    const lancetta = el('span', 'dial-needle');
+    const punto = el('span', 'dial-dot');
+    braccio.append(lancetta, punto);
+    square.append(braccio);
+    // L'angolo si accumula invece di tornare fra -180 e 180: così la lancetta gira sempre per il tratto corto
+    let angolo = 0;
 
-    const off = el('p', 'card-off', 'Accendila e ascolta la città attorno al mirino, al centro della mappa.');
-    const stato = el('div', 'card-state');
+    // Braccio verso (X, Y), entrambi in -1..+1. Lo schermo ha l'asse verticale rivolto in giù: il segno si inverte.
+    const muoviLancetta = (X, Y) => {
+        const x = Math.max(-1, Math.min(1, X)), y = Math.max(-1, Math.min(1, Y));
+        const lunghezza = Math.hypot(x, y);
+        // Vicino al centro la direzione non si legge: la lancetta resta come era
+        if (lunghezza > 0.02) {
+            const bersaglio = Math.atan2(-y, x) * 180 / Math.PI;
+            angolo += ((bersaglio - angolo) % 360 + 540) % 360 - 180;
+        }
+        braccio.style.setProperty('--a', `${angolo}deg`);
+        braccio.style.setProperty('--k', String(lunghezza));
+    };
+
+    const aggiornaQuadrante = (on, m) => {
+        const misura = Boolean(on && m && !m.fuori && Number.isFinite(m.X) && Number.isFinite(m.Y));
+        const notte = misura && m.stato === 'notte';
+        square.classList.toggle('is-spento', !misura);
+        square.classList.toggle('is-notte', notte);
+        for (const [stato, c] of Object.entries(celle)) {
+            c.style.setProperty('--c', notte ? NOTTE_COLORE : SOUND_STATE_COLORS[stato]);
+            c.classList.toggle('on', misura && (notte || stato === m.stato));
+        }
+        if (misura) muoviLancetta(m.X, m.Y);
+        const testo = !on ? 'Spenta' : !m ? 'In caricamento…' : m.fuori ? 'Silenzio' : nome(m.stato);
+        etichetta.textContent = testo;
+        dial.setAttribute('aria-checked', String(on));
+        apriBtn.setAttribute('aria-label', `Modi e dettagli, ${testo.toLowerCase()}`);
+    };
+
+    // --- Il pannello: intestazione, stato, musica, dettagli ---
+    const panel = document.getElementById('compass-panel');
+
+    const titolo = el('h2', 'card-title', 'Mappa sonora');
+
     const nomeStato = el('span', 'state-name');
-    const descStato = el('span', 'state-desc');
+    const descStato = el('p', 'state-desc');
+    const stato = el('div', 'card-state');
     stato.append(nomeStato, descStato);
 
-    const modi = el('div', 'modes seg');
+    const etichettaMusica = el('p', 'card-label', 'Musica');
+    etichettaMusica.id = 'compass-music-label';
+    const modi = el('div', 'modes');
     modi.setAttribute('role', 'group');
-    modi.setAttribute('aria-label', 'Tipo di musica');
+    modi.setAttribute('aria-labelledby', 'compass-music-label');
     const bottoniModi = {};
-    for (const [valore, testo, titolo] of MODI) {
+    for (const [valore, testo] of MODI) {
         const b = el('button', null, testo);
         b.type = 'button';
-        b.title = titolo;
         b.setAttribute('aria-pressed', 'false');
         b.onclick = () => musicMode.set(valore);
         bottoniModi[valore] = b;
         modi.append(b);
     }
+    const lineaModo = el('p', 'mode-desc');
+    const musica = el('div', 'card-music');
+    musica.append(etichettaMusica, modi, lineaModo);
 
     const dettagli = el('details', 'details');
     dettagli.append(el('summary', null, 'Dettagli'));
     const corpo = el('div', 'details-body');
+    const elenco = el('dl', 'details-list');
+    const note = el('div');
+    corpo.append(elenco, note);
     dettagli.append(corpo);
 
-    panel.replaceChildren(head, off, stato, modi, dettagli);
+    panel.replaceChildren(titolo, stato, musica, dettagli);
 
-    // Titoli e autori dei brani classici (per la riga dei dettagli e per la citazione obbligatoria)
+    // Titoli e autori dei brani classici (per la riga del modo e per la citazione obbligatoria)
     let brani = null;
     fetch(AUDIO_BASE + 'classica/manifest.json').then(r => r.json()).then(j => { brani = j; render(); }).catch(() => {});
 
@@ -113,73 +173,95 @@ export function initCompassUI(map) {
         paint: { 'line-color': '#111', 'line-width': 2.5 }
     });
 
-    // Una riga di testo; i pezzi in grassetto sono scritti come { b: 'testo' }
-    const riga = (pezzi) => {
-        const p = el('p');
-        p.append(...pezzi.map(t => typeof t === 'string' ? document.createTextNode(t) : el('b', null, t.b)));
-        return p;
+    // Riga sotto la griglia: il modo scelto, con il brano o il ritmo di quest'ora quando c'è una misura
+    const descrizioneModo = (modo, m) => {
+        if (modo === 'classica') {
+            const b = m && brani?.[m.stato];
+            return b ? `Brano: ${b.titolo}, ${b.autore}. Registrazione Musopen, licenza dichiarata: pubblico dominio.` : 'Brani di musica classica, uno per stato.';
+        }
+        if (modo === 'sottotraccia') {
+            if (!m) return 'Musica generata da regole: ritmo e tono cambiano con la città.';
+            const r = regole({ X: m.X, Y: m.Y, H: Number.isFinite(m.H) ? m.H : 0, I: 0 });
+            return `${Math.round(r.bpm)} battiti al minuto, nota di base ${Math.round(r.radice_Hz)} Hz (più grave col caldo).`;
+        }
+        if (modo === 'metronomi') {
+            return m
+                ? `${METRO.N} metronomi. Disagio ${decimale(discomfort(m))} su 1: a 0 battono insieme, a 1 ognuno per conto suo.`
+                : `${METRO.N} metronomi: a 0 battono insieme, a 1 ognuno per conto suo.`;
+        }
+        return 'Un brano per stato, fatto con un modello di IA.';
+    };
+
+    // Dettagli di questa cella e di quest'ora, in parole semplici
+    const riempiDettagli = (m) => {
+        const quartiere = m.quartiere.replace(/^Ascoli - /, '');
+        const dove = m.distanzaQuartiere > 0 ? `a ${m.distanzaQuartiere} m da ${quartiere}` : quartiere;
+        const voci = [
+            ['Persone', persone(m)],
+            ...(m.T !== null ? [['Temperatura percepita', `${gradi(m.T)}, ${fascia(m.T)}`]] : []),
+            ['Zona', dove],
+            ['Tipo di zona', LCZ_NAMES[m.lcz] ?? 'non classificata'],
+            ['Gente', decimale(m.X, true)],
+            ['Benessere', decimale(m.Y, true)],
+            ...(m.giorni ? [['Meteo usato', dataLunga(m.giorni.scelto)]] : []),
+        ];
+        elenco.replaceChildren(...voci.flatMap(([etichetta, valore]) => [el('dt', null, etichetta), el('dd', null, valore)]));
+        const avvisi = [el('p', 'details-note', 'Gente e Benessere vanno da −1 a +1: è dove punta la lancetta.')];
+        if (m.giorni) {
+            avvisi.push(el('p', 'details-note', `Giornata calda scelta apposta: tra i ${m.giorni.totale} ${giornoSettimana(m.giorni.scelto)} del periodo, solo 1 su 10 è stato più caldo.`));
+        }
+        note.replaceChildren(...avvisi);
     };
 
     const render = () => {
         const on = audioEnabled.get(), m = mood.get(), modo = musicMode.get();
-        sw.setAttribute('aria-checked', String(on));
-        sw.querySelector('.switch-label').textContent = on ? 'Accesa' : 'Spenta';
+        const misura = Boolean(on && m && !m.fuori && Number.isFinite(m.X) && Number.isFinite(m.Y));
         cross.hidden = !on;
         for (const [valore, b] of Object.entries(bottoniModi)) b.setAttribute('aria-pressed', String(valore === modo));
         map.getSource(FOCUS_SOURCE_ID)?.setData(on && m?.geometry ? { type: 'Feature', geometry: m.geometry, properties: {} } : EMPTY);
+        aggiornaQuadrante(on, m);
 
-        off.hidden = on;
-        stato.hidden = modi.hidden = dettagli.hidden = !on;
-        if (!on) return;
-
-        corpo.replaceChildren();
-        if (!m) {
+        // Stato: nome e frase, a seconda di cosa c'è da dire
+        if (!on) {
+            nomeStato.hidden = true;
+            descStato.textContent = 'Tocca il quadrante per accenderla: si sente il punto al centro della mappa.';
+        } else if (!m) {
+            nomeStato.hidden = false;
             nomeStato.textContent = 'In caricamento…';
-            descStato.textContent = '';
-            return;
-        }
-        if (m.fuori) {
+            descStato.textContent = 'Un momento: arrivano i dati di quest\'ora.';
+        } else if (m.fuori) {
+            nomeStato.hidden = false;
             nomeStato.textContent = 'Silenzio';
-            descStato.textContent = 'Il centro della mappa è fuori dalle celle LCZ.';
-            return;
-        }
-        nomeStato.textContent = nome(m.stato);
-        descStato.textContent = DESCRIZIONI[m.stato] ?? '';
-        if (m.proposto) {
-            descStato.textContent += ` Sta per passare a ${nome(m.proposto)}.`;
+            descStato.textContent = 'Il centro della mappa è fuori dalla zona studiata: qui non suona niente.';
+        } else {
+            nomeStato.hidden = false;
+            nomeStato.textContent = nome(m.stato);
+            descStato.textContent = DESCRIZIONI[m.stato] ?? '';
         }
 
-        const quartiere = m.quartiere.replace(/^Ascoli - /, '');
-        const dove = m.distanzaQuartiere > 0 ? `a ${m.distanzaQuartiere} m da ${quartiere}` : quartiere;
-        corpo.append(riga(['Gente intorno: circa ', { b: `${Math.round(m.people)} persone` }, ` entro ${m.raggio} m.`]));
-        corpo.append(riga([`Energia ${numero(m.X, true)} · Piacevolezza ${numero(m.Y, true)}`]));
-        if (m.T !== null) {
-            corpo.append(riga(['Temperatura percepita (UTCI, stima): ', { b: `≈ ${Math.round(m.T)} °C` }, ` · ${stress(m.T)}.`]));
-        }
-        corpo.append(riga([`Cella ${m.cella} (LCZ ${m.lcz}) · ${dove}.`]));
-        if (m.giorni) {
-            const data = new Date(m.giorni.scelto).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
-            corpo.append(el('p', 'details-note', `Settimana tipo: meteo del ${data}, una giornata calda per questa cella (solo 1 giorno su 10, dei ${m.giorni.totale} del periodo, è stato più caldo).`));
-        }
-        const musicaRiga = musica(m, modo);
-        if (musicaRiga) corpo.append(musicaRiga);
+        musica.hidden = !on;
+        lineaModo.textContent = descrizioneModo(modo, misura ? m : null);
+        dettagli.hidden = !misura;
+        if (misura) riempiDettagli(m);
     };
 
-    // Riga della musica: il brano (con autore e citazione), la musica a regole o quanto disagio c'è.
-    const musica = (m, modo) => {
-        if (modo === 'classica') {
-            const b = brani?.[m.stato];
-            return b ? el('p', null, `Brano: ${b.titolo}, ${b.autore}. Registrazione Musopen, licenza dichiarata: pubblico dominio.`) : null;
-        }
-        if (modo === 'sottotraccia') {
-            const r = regole({ X: m.X, Y: m.Y, H: Number.isFinite(m.H) ? m.H : 0, I: 0 });
-            return el('p', null, `Sottotraccia: ${Math.round(r.bpm)} battiti al minuto, registro ${Math.round(r.radice_Hz)} Hz (più grave con il caldo).`);
-        }
-        if (modo === 'metronomi') {
-            return el('p', null, `Metronomi: disagio ${numero(discomfort(m))} su 1 (0 = battono insieme, 1 = ognuno per conto suo; ${METRO.N} metronomi).`);
-        }
-        return null;
+    // Il tocco sul quadrante accende e spegne; il pulsante sotto apre il pannello. Un solo pannello della timeline
+    // aperto alla volta. Toccare il quadrante con il pannello aperto non lo chiude: si può ascoltare mentre si scelgono i modi.
+    dial.addEventListener('click', () => audioEnabled.update(on => !on));
+    const apri = (aperto) => {
+        panel.hidden = !aperto;
+        apriBtn.setAttribute('aria-expanded', String(aperto));
+        if (aperto) document.dispatchEvent(new CustomEvent('timeline-popover', { detail: 'mappa-sonora' }));
     };
+    apriBtn.addEventListener('click', () => apri(panel.hidden));
+    document.addEventListener('timeline-popover', (e) => { if (e.detail !== 'mappa-sonora') apri(false); });
+    document.addEventListener('pointerdown', (e) => {
+        if (panel.hidden || panel.contains(e.target) || apriBtn.contains(e.target) || dial.contains(e.target) || e.target.closest?.('.litepicker')) return;
+        apri(false);
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !panel.hidden) { apri(false); apriBtn.focus(); }
+    });
 
     mood.subscribe(render);
     audioEnabled.subscribe(render);

@@ -1,6 +1,9 @@
 // Dati serviti dal sito stesso (public/data/), non da servizi esterni
 const DATA_BASE = import.meta.env.BASE_URL + 'data/';
 
+// Telefono: stretto (verticale) oppure basso e controllato col dito (orizzontale). Stessa condizione in style.css, sezione 11
+export const PHONE_QUERY = '(max-width: 719px), (max-height: 500px) and (pointer: coarse)';
+
 export const KML_URL = DATA_BASE + 'cityrhythm_blimp_areas.kml';
 export const POI_CSV_URL = DATA_BASE + 'cityrhythm_blimp.csv';
 export const CROWDED_CSV_URL = DATA_BASE + 'cityrhythm_crowded_data.csv';

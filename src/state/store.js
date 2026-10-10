@@ -18,8 +18,8 @@ export const time = writable({ index: 0, date: null });
 export const viewport = writable(null);
 export const audioEnabled = writable(false);
 // Da dove viene la musica della mappa sonora: 'ia' (brani finetuning.ai), 'classica' (Musopen), 'metronomi', 'sottotraccia' (regole).
-// La scrive solo il selettore in src/ui/ui-compass.js; la legge src/audio/audio-engine.js.
-export const musicMode = writable('ia');
+// Parte da 'sottotraccia': è la modalità con cui si avvia la musica. La scrive solo il selettore in src/ui/ui-compass.js; la legge src/audio/audio-engine.js.
+export const musicMode = writable('sottotraccia');
 // Bussola emotiva della cella al centro della mappa (src/compass/compass.js):
 // stato = confermato dopo l'isteresi (null fuori dalle celle), proposto = in attesa di conferma.
 export const mood = writable(null);
