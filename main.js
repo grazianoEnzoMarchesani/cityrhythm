@@ -15,6 +15,7 @@ import { fitMapToBounds, rangeDays, WEEK_TYPE_FROM_DAYS } from './src/utils/util
 import { updateStatusMessage, initializeSidebar } from './src/ui/ui-sidebar.js';
 import { setupTimelineControls, getCurrentHour, setHour } from './src/ui/ui-timeline.js';
 import { setupLayerControls, initializeSpotTypeFilter } from './src/ui/ui-layer-controls.js';
+import { setupMapTools } from './src/ui/ui-map-tools.js';
 import { startCompass } from './src/compass/compass.js';
 import { initCompassUI } from './src/ui/ui-compass.js';
 import { initAudioEngine } from './src/audio/audio-engine.js';
@@ -96,11 +97,11 @@ function setupPeriodPopover(min, max) {
     const setOpen = (open) => {
         popover.hidden = !open;
         button.setAttribute('aria-expanded', String(open));
-        if (open) document.dispatchEvent(new CustomEvent('timeline-popover', { detail: 'periodo' }));
+        if (open) document.dispatchEvent(new CustomEvent('pannello-aperto', { detail: 'periodo' }));
     };
     button.addEventListener('click', () => setOpen(popover.hidden));
-    // Un solo pannello della timeline aperto alla volta: quello della Mappa sonora chiude questo
-    document.addEventListener('timeline-popover', (e) => { if (e.detail !== 'periodo') setOpen(false); });
+    // Un solo pannello alla volta: quello della Mappa sonora, dei Livelli o dello stile chiude questo
+    document.addEventListener('pannello-aperto', (e) => { if (e.detail !== 'periodo') setOpen(false); });
     // Clic fuori chiude il pannello, ma non il calendario di Litepicker che sta fuori dal pannello
     document.addEventListener('pointerdown', (e) => {
         if (popover.hidden) return;
@@ -174,11 +175,11 @@ function setupLayersPanel() {
         toggle.setAttribute('aria-expanded', String(open));
         if (!open && document.activeElement === close) toggle.focus();
         // Sul telefono un solo pannello alla volta: aprire i livelli chiude la Mappa sonora e il Periodo
-        if (open && PHONE.matches) document.dispatchEvent(new CustomEvent('timeline-popover', { detail: 'livelli' }));
+        if (open && PHONE.matches) document.dispatchEvent(new CustomEvent('pannello-aperto', { detail: 'livelli' }));
     };
     toggle.addEventListener('click', () => setOpen(true));
     close?.addEventListener('click', () => setOpen(false));
-    document.addEventListener('timeline-popover', (e) => { if (PHONE.matches && e.detail !== 'livelli' && !panel.hidden) setOpen(false); });
+    document.addEventListener('pannello-aperto', (e) => { if (PHONE.matches && e.detail !== 'livelli' && !panel.hidden) setOpen(false); });
     setOpen(!PHONE.matches);
     // Sul telefono i gruppi partono chiusi e se ne apre uno alla volta. Sul desktop il primo (Persone) è aperto
     const gruppi = [...panel.querySelectorAll('details.group')];
@@ -201,7 +202,8 @@ async function startApp() {
 
     try {
         const map = initializeMap(mapContainerId);
-        setupLayerControls(); // dopo la mappa: gli interruttori 3D si applicano appena è pronta
+        setupLayerControls();
+        setupMapTools(); // stile e 3D in alto a destra
         setupLayersPanel();
 
         map.on('load', async () => {

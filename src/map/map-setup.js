@@ -18,7 +18,7 @@ const mapContainerEl = (id) => document.getElementById(id);
 const ITALIAN_LABELS = {
     'AttributionControl.ToggleAttribution': 'Crediti',
     'AttributionControl.MapFeedback': 'Segnala un problema',
-    'NavigationControl.ResetBearing': 'Trascina per ruotare, clic per riportare a nord',
+    'NavigationControl.ResetBearing': 'Trascina per ruotare e inclinare, clic per tornare a nord',
     'NavigationControl.ZoomIn': 'Avvicina',
     'NavigationControl.ZoomOut': 'Allontana',
     'Map.Title': 'Mappa di Ascoli Piceno',
@@ -28,6 +28,7 @@ const ITALIAN_LABELS = {
 // Aspetto "Toner" (Stamen / MapTiler, github.com/openmaptiles/maptiler-toner-gl-style) rifatto sullo
 // schema Protomaps: carta bianca, acqua e strade nere, verde a trama. Edifici bianchi, senza tratteggio.
 const BLACK = '#000000', WHITE = '#ffffff';
+const TONER_3D_GREY = '#cfcfcf';
 const TONER_FLAVOR = (() => {
     const light = namedFlavor('light');
     const flavor = Object.fromEntries(Object.entries(light).map(([key, value]) =>
@@ -64,11 +65,12 @@ function tonerLayers() {
         id: 'buildings-outline', type: 'line', source: 'buildings',
         paint: { 'line-color': BLACK, 'line-width': ['interpolate', ['linear'], ['zoom'], 13, 0.3, 17, 1.5] }
     }, {
-        // Spento all'avvio (interruttore "3D Buildings"): restano le impronte 2D col contorno.
+        // Spento all'avvio (tasto 3D, ui-map-tools.js): restano le impronte 2D col contorno.
+        // Grigio chiaro [S]: bianchi su fondo bianco non si vedevano in vista inclinata.
         id: 'buildings-3d', type: 'fill-extrusion', source: 'buildings',
         layout: { visibility: 'none' },
         paint: {
-            'fill-extrusion-color': WHITE,
+            'fill-extrusion-color': TONER_3D_GREY,
             'fill-extrusion-height': ['coalesce', ['get', 'height'], 0],
             'fill-extrusion-opacity': 1
         }
@@ -108,7 +110,15 @@ function nolliLayers() {
 }
 
 const BASE_STYLES = { toner: tonerLayers(), nolli: nolliLayers() };
-let baseStyle = 'toner';
+
+// Stile di partenza: Nolli. Resta quello scelto da chi guarda, se ne ha scelto un altro (ricordato nel browser).
+// Chiave nuova: la versione precedente scriveva 'toner' a ogni visita, anche senza una scelta, e lo avrebbe
+// mantenuto Toner per chi aveva già aperto il sito. Qui si salva solo dopo un clic.
+export const MAP_STYLE_KEY = 'cityrhythm.mapStyle.v2';
+export function getSavedMapStyle() {
+    try { return localStorage.getItem(MAP_STYLE_KEY) === 'toner' ? 'toner' : 'nolli'; } catch (e) { return 'nolli'; }
+}
+let baseStyle = getSavedMapStyle();
 
 export function getBaseStyle() {
     return baseStyle;
@@ -156,6 +166,13 @@ function buildMapStyle() {
     };
 }
 
+// Un elemento già nella pagina (index.html) messo fra i controlli di MapLibre: lo sposta lui nella colonna
+class ElementControl {
+    constructor(element) { this.element = element; }
+    onAdd() { return this.element; }
+    onRemove() { this.element.remove(); }
+}
+
 let mapInstance = null;
 let currentSelectedKmlFeatureId = null;
 let mapReady = false;
@@ -189,8 +206,11 @@ export function initializeMap(containerId) {
         });
         mapInstance.once('load', () => { mapReady = true; });
 
-        // In alto a destra: zoom, poi i crediti (chiusi). Il tasto "i" apre il testo completo.
-        mapInstance.addControl(new maplibregl.NavigationControl(), 'top-right');
+        // In alto a destra, in quest'ordine: zoom, comandi della mappa (stile, 3D), crediti (chiusi).
+        // Il tasto "i" apre il testo completo.
+        // La freccia del Nord si inclina con la mappa (visualizePitch): si vede se la vista è in 3D
+        mapInstance.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
+        mapInstance.addControl(new ElementControl(document.getElementById('map-tools')), 'top-right');
         mapInstance.addControl(new maplibregl.AttributionControl({ compact: true }), 'top-right');
         // Con la mappa caricata i crediti partono chiusi: li apre solo il tasto "i"
         mapInstance.once('load', () => {

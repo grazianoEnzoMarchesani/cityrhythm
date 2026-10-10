@@ -68,6 +68,8 @@ let animationFrameId = null;
 let currentLczVisualizationType = 'LCZ'; // 'LCZ' or 'UHI'
 let uhiDynamicVisibilityEnabled = false; // Flag per la visibilità dinamica UHI
 let currentLczOpacity = 0.7; // Opacità corrente del layer LCZ
+let lczOpacityBase = currentLczOpacity; // Opacità del riempimento senza evidenziazione: numero o rischio UHI dinamico
+let lczHighlight = null; // Voce scelta nella legenda ({ view, key | lo, hi }); null = tutte le celle
 
 // --- CAMPO DI FORZE STATICO (GRIGLIA) ---
 // Risoluzione della griglia in metri (es: 250 = 250m tra i punti della griglia)
@@ -1789,6 +1791,8 @@ export function addLczVitalityLayer(initialVisibility = true, visualizationType 
         placeCellLayers();
         syncCellMap(visualizationType);
         applyCellMap(lastCellMap); // il feature-state si perde quando la sorgente viene ricreata
+        lczOpacityBase = currentLczOpacity;
+        applyLczPaint(); // riparte dall'opacità normale, con l'eventuale voce evidenziata
 
         if (DEBUG_MODE) {
             console.log(`LCZ Vitality layer added with ${geoJsonData.features.length} features using ${visualizationType} visualization.`);
@@ -1838,7 +1842,6 @@ const LCZ_PARAMS = [
     ['pervious_frac', 'Superficie permeabile', '%'],
     ['z_h', 'Altezza media di edifici e alberi', 'm'],
     ['terrain_rough', 'Classe di rugosità (Davenport)', '1–8'],
-    ['z0_value', 'Lunghezza di rugosità z0', 'm'],
     ['admittance', 'Ammettenza termica', 'J m⁻² s⁻½ K⁻¹'],
     ['albedo', 'Albedo', '0–1'],
     ['anthro_heat', 'Calore antropico', 'W/m²'],
@@ -1873,14 +1876,19 @@ function getLczFillColor(type) {
 }
 
 /**
- * Legenda della vista: categorie (LCZ, UHI) o scala continua con unità e spiegazione.
+ * Legenda della vista. Tre forme: categorie (LCZ, UHI), scala a fasce (campi continui, UTCI), rosa degli stati (Sound map).
+ * Ogni voce porta il valore con cui si evidenzia sulla mappa (view + key, o lo/hi per le fasce).
  * @param {string} type
- * @returns {{kind: 'categories', items: Array<{color: string, label: string}>} | {kind: 'ramp', stops: Array, unit: string, note: string}}
+ * @returns {{kind: 'categories', view: string, items: Array<{key: string, color: string, code: string, name: string}>}
+ *   | {kind: 'ramp', view: string, stops: Array<{t: number, c: string, label: string|null}>, unit: string, note: string}
+ *   | {kind: 'compass', view: string, colors: object, note: string}}
  */
 export function getLczLegend(type) {
     if (type === 'utci') {
         return {
-            kind: 'ramp', stops: UTCI_RAMP.map(([t, c, label]) => [label, c]), unit: '',
+            kind: 'ramp', view: 'utci', unit: '°C',
+            // Le etichette vengono dai valori: null = nessuna etichetta (il punto verde pieno non apre una fascia)
+            stops: UTCI_RAMP.map(([t, c, label]) => ({ t, c, label: label === null ? null : String(t).replace('-', '−') })),
             note: 'Temperatura percepita stimata di una persona ferma in ogni cella, all’ora della timeline: '
                 + '9–26 °C nessuno stress termico, da 26 moderato, da 32 forte, da 38 molto forte. '
                 + 'Settimana tipo: una giornata calda (90° percentile).'
@@ -1888,21 +1896,75 @@ export function getLczLegend(type) {
     }
     if (type === 'stato') {
         return {
-            kind: 'compass', colors: SOUND_STATE_COLORS,
+            kind: 'compass', view: 'stato', colors: SOUND_STATE_COLORS,
             note: 'Cosa suona la mappa sonora in ogni cella, all’ora della timeline.'
         };
     }
     const view = LCZ_DATA_VIEWS[type];
-    if (view) return { kind: 'ramp', stops: view.stops, unit: view.unit, note: view.note };
+    if (view) {
+        return {
+            kind: 'ramp', view: type, unit: view.unit, note: view.note,
+            stops: view.stops.map(([t, c]) => ({ t, c, label: String(t) }))
+        };
+    }
     // Le espressioni 'case' hanno coppie [condizione, colore]: la condizione è ['==', ['get', campo], valore]
     const expr = type === 'LCZ' ? MAP_STYLES.LCZ_VITALITY.LCZ_COLORS : MAP_STYLES.LCZ_VITALITY.UHI_COLORS;
     const items = [];
     for (let i = 1; i + 1 < expr.length; i += 2) {
         const key = expr[i][2];
         if (key === 'UNKNOWN') continue;
-        items.push({ color: expr[i + 1], label: type === 'LCZ' ? `${key} ${LCZ_NAMES[key]}` : UHI_NAMES[key] ?? key });
+        const isLcz = type === 'LCZ';
+        items.push({
+            key, color: expr[i + 1],
+            code: isLcz ? key : '',
+            name: isLcz ? LCZ_NAMES[key] : UHI_NAMES[key] ?? key
+        });
     }
-    return { kind: 'categories', items };
+    return { kind: 'categories', view: type, items };
+}
+
+/**
+ * Condizione MapLibre (vera o falsa per cella) di una voce della legenda.
+ * Le scale continue guardano il valore: il feature-state per UTCI, la proprietà per i campi LCZ.
+ * Fuori dalla scala (lo/hi assenti) la fascia è aperta: come sulla mappa, i valori estremi prendono il colore del bordo.
+ */
+function lczHighlightCondition({ view, key, lo, hi }) {
+    if (view === 'LCZ') return ['==', ['get', 'LCZ'], key];
+    if (view === 'UHI') return ['==', ['get', 'UHI risk'], key];
+    if (view === 'stato') return ['==', ['feature-state', 'stato'], key];
+    const value = view === 'utci' ? ['feature-state', 'utci'] : ['get', view];
+    const range = [];
+    const missing = LCZ_DATA_VIEWS[view]?.missing;
+    if (missing !== undefined) range.push(['!=', value, missing]);
+    if (lo !== undefined) range.push(['>=', value, lo]);
+    if (hi !== undefined) range.push(['<', value, hi]);
+    // 'case' e non 'all' da solo: i confronti non si valutano su un valore che non è un numero
+    return ['case', ['==', ['typeof', value], 'number'], ['all', ...(range.length ? range : [true])], false];
+}
+
+/**
+ * Opacità di riempimento e contorno: la base (numero o rischio UHI dinamico), spenta fuori dalla voce evidenziata.
+ * Unico punto che scrive questi valori, così la base e la voce non si sovrascrivono.
+ */
+function applyLczPaint() {
+    const map = getMapInstance();
+    if (!map || !isMapReady() || !map.getLayer(LCZ_VITALITY_LAYER_ID)) return;
+    const on = lczHighlight ? lczHighlightCondition(lczHighlight) : null;
+    const strokeOpacity = MAP_STYLES.LCZ_VITALITY.STROKE_OPACITY;
+    // Le altre celle restano appena visibili [S]: si vede dove sta il gruppo nella città, e restano cliccabili
+    map.setPaintProperty(LCZ_VITALITY_LAYER_ID, 'fill-opacity', on ? ['case', on, lczOpacityBase, LCZ_HIGHLIGHT_DIM] : lczOpacityBase);
+    map.setPaintProperty(LCZ_VITALITY_LAYER_ID + '-stroke', 'line-opacity', on ? ['case', on, strokeOpacity, 0] : strokeOpacity);
+}
+// Opacità delle celle non scelte nella legenda: [S] scelta visiva, da rivedere all'ascolto a schermo
+const LCZ_HIGHLIGHT_DIM = 0.12;
+
+/**
+ * Evidenzia sulla mappa una voce della legenda: le altre celle si spengono. Con null tornano tutte.
+ * @param {{view: string, key?: string, lo?: number, hi?: number} | null} selection
+ */
+export function setLczHighlight(selection) {
+    lczHighlight = selection;
+    applyLczPaint();
 }
 
 let lczPopupBound = false;
@@ -1935,8 +1997,7 @@ function bindLczPopup(map) {
             .setLngLat(e.lngLat)
             .setHTML(`<div style="font-size:12px;line-height:1.4">
                 <div style="font-size:14px"><b>LCZ ${p.lcz_class} – ${LCZ_NAMES[p.lcz_class] ?? 'sconosciuta'}</b></div>
-                Rischio isola di calore: <b>${UHI_NAMES[p.lcz_vulnerability] ?? p.lcz_vulnerability}</b><br>
-                Parametri in accordo con la classe: <b>${p.lcz_matches} su 10</b> · scarto ${fmt(p.lcz_rmsep)}${fix}${now}
+                Rischio isola di calore: <b>${UHI_NAMES[p.lcz_vulnerability] ?? p.lcz_vulnerability}</b>${fix}${now}
                 <table style="margin-top:6px;border-collapse:collapse">${rows}</table>
                 <div style="color:#888;margin-top:4px">Cella ${p.id} · 30 × 30 m</div></div>`)
             .addTo(map);
@@ -2043,7 +2104,8 @@ export function setLczLayerOpacity(opacity) {
 
     try {
         currentLczOpacity = opacity;
-        map.setPaintProperty(LCZ_VITALITY_LAYER_ID, 'fill-opacity', opacity);
+        lczOpacityBase = opacity;
+        applyLczPaint();
         
         if (DEBUG_MODE) {
             console.log(`LCZ layer opacity set to: ${opacity}`);
@@ -2148,7 +2210,8 @@ export function updateUhiDynamicVisualization() {
         };
 
         map.getSource(LCZ_VITALITY_SOURCE_ID).setData(updatedGeoJson);
-        map.setPaintProperty(LCZ_VITALITY_LAYER_ID, 'fill-opacity', dynamicOpacityExpression);
+        lczOpacityBase = dynamicOpacityExpression;
+        applyLczPaint();
 
         if (DEBUG_MODE) {
             console.log('UHI dynamic visualization updated');

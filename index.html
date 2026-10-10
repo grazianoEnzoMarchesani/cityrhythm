@@ -14,6 +14,22 @@
     <!-- Mappa a tutto schermo: il resto sta sopra, ai bordi -->
     <div id="map" class="map"></div>
 
+    <!-- Comandi della mappa in alto a destra, sotto lo zoom e sopra i crediti. MapLibre li sposta nella sua colonna
+         (map-setup.js); li accende src/ui/ui-map-tools.js. All'avvio: stile Nolli, vista 3D spenta. -->
+    <div id="map-tools" class="maplibregl-ctrl maplibregl-ctrl-group map-tools">
+        <div class="map-tools-style">
+            <button id="style-button" class="map-tool" type="button" aria-label="Stile della mappa" aria-expanded="false" aria-controls="style-popover" data-label="Stile della mappa: Nolli">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5 3.5 7v12.5L9 17.5l6 2 5.5-2V5L15 7 9 5z"/><path d="M9 5v12.5M15 7v12"/></svg>
+            </button>
+            <div id="style-popover" class="map-popover" role="group" aria-labelledby="style-popover-title" hidden>
+                <p id="style-popover-title" class="popover-title">Stile della mappa</p>
+                <div id="map-style" class="seg"></div>
+            </div>
+        </div>
+        <!-- Vista 3D: inclina la mappa e accende edifici e rilievo (ui-map-tools.js) -->
+        <button id="toggle-3d" class="map-tool map-tool-text" type="button" aria-label="Vista 3D" aria-pressed="false" data-label="Vista 3D: spenta">3D</button>
+    </div>
+
     <!-- Colonna a sinistra: i livelli. Finisce sopra la timeline, così non si sovrappone a niente -->
     <div id="side-column" class="side-column">
         <section id="layer-controls" class="panel layers" aria-labelledby="layers-title">
@@ -60,48 +76,19 @@
                 </details>
 
                 <details class="group">
-                    <summary>Clima e celle</summary>
+                    <summary>Celle della città</summary>
                     <div class="group-body">
                         <label class="check">
                             <input type="checkbox" id="toggle-lcz-vitality" name="lcz-vitality">
-                            <span>Mostra le celle LCZ</span>
+                            <span>Mostra le celle</span>
                         </label>
                         <div id="lcz-visualization-selector" class="lcz-controls" hidden>
-                            <label class="field-label" for="lcz-visualization-select">Cosa mostrare</label>
-                            <select id="lcz-visualization-select" class="field">
-                                <optgroup label="Ora per ora (bussola sonora)">
-                                    <option value="utci">Stress termico UTCI (stima)</option>
-                                    <option value="stato">Mappa sonora</option>
-                                </optgroup>
-                                <optgroup label="Classificazione">
-                                    <option value="LCZ" selected>Tipi LCZ</option>
-                                    <option value="UHI">Rischio isola di calore</option>
-                                    <option value="lcz_matches">Accordo della classificazione</option>
-                                </optgroup>
-                                <optgroup label="Forma della città">
-                                    <option value="svf_mean">Cielo visibile (SVF)</option>
-                                    <option value="aspect_ratio">Canyon stradale (H/W)</option>
-                                    <option value="z_h">Altezza di edifici e alberi</option>
-                                </optgroup>
-                                <optgroup label="Superficie del suolo">
-                                    <option value="building_frac">Superficie edificata</option>
-                                    <option value="impervious_frac">Superficie impermeabile</option>
-                                    <option value="pervious_frac">Superficie permeabile</option>
-                                </optgroup>
-                                <optgroup label="Calore">
-                                    <option value="albedo">Albedo</option>
-                                    <option value="admittance">Ammettenza termica</option>
-                                    <option value="anthro_heat">Calore prodotto dalle persone</option>
-                                    <option value="industry_heat">Calore industriale</option>
-                                </optgroup>
-                                <optgroup label="Vento">
-                                    <option value="terrain_rough">Classe di rugosità</option>
-                                    <option value="z0_value">Lunghezza di rugosità z0</option>
-                                </optgroup>
-                            </select>
+                            <div class="field-label" id="lcz-view-title">Cosa mostrare</div>
+                            <!-- Griglia di pulsanti con sigla e campione dei colori: la riempie ui-layer-controls.js -->
+                            <div id="lcz-view-picker" class="view-picker" role="group" aria-labelledby="lcz-view-title"></div>
                             <div id="lcz-legend" class="legend"></div>
                             <div class="range-row">
-                                <label class="field-label" for="lcz-opacity-slider">Trasparenza dello strato</label>
+                                <label class="field-label" for="lcz-opacity-slider">Intensità dello strato</label>
                                 <div class="range-line">
                                     <input type="range" id="lcz-opacity-slider" min="0" max="100" value="70" aria-describedby="lcz-opacity-value">
                                     <output id="lcz-opacity-value" for="lcz-opacity-slider">70%</output>
@@ -114,24 +101,6 @@
                                 </label>
                             </div>
                         </div>
-                    </div>
-                </details>
-
-                <details class="group">
-                    <summary>Mappa</summary>
-                    <div class="group-body">
-                        <div class="sub">
-                            <div class="sub-title" id="map-style-title">Stile della mappa</div>
-                            <div id="map-style" class="seg" role="group" aria-labelledby="map-style-title"></div>
-                        </div>
-                        <label class="check">
-                            <input type="checkbox" id="toggle-3d-terrain" name="3d-terrain">
-                            <span>Rilievo in 3D</span>
-                        </label>
-                        <label class="check">
-                            <input type="checkbox" id="toggle-3d-buildings" name="3d-buildings">
-                            <span>Edifici in 3D</span>
-                        </label>
                     </div>
                 </details>
 

@@ -483,11 +483,6 @@ export const LCZ_DATA_VIEWS = {
     note: 'Classi di Davenport: quanto la cella frena il vento (8 = centro della città)',
     stops: [[2, '#e0f7fa'], [4, '#80deea'], [6, '#26c6da'], [7, '#00838f'], [8, '#004d57']]
   },
-  z0_value: {
-    label: 'Lunghezza di rugosità z0', unit: 'm',
-    note: 'Freno al vento usato dalla mappa sonora: scuro = riparato, chiaro = ventoso',
-    stops: [[0.005, '#e0f7fa'], [0.1, '#a5e8f1'], [0.5, '#26c6da'], [1, '#00838f'], [2, '#004d57']]
-  },
   admittance: {
     label: 'Ammettenza termica', unit: 'J m⁻² s⁻½ K⁻¹',
     note: 'Quanto calore accumulano i materiali di giorno e rilasciano di notte',
@@ -508,11 +503,6 @@ export const LCZ_DATA_VIEWS = {
     note: 'Solo le 48 celle industriali; il resto è trasparente',
     stops: [[0, '#f9e8f2'], [5, '#e6a0c8'], [30, '#c9479b'], [70, '#7d1d72'], [150, '#2c0b3f']]
   },
-  lcz_matches: {
-    label: 'Accordo della classificazione', unit: 'su 10',
-    note: 'Quanti dei 10 parametri concordano con la classe assegnata: scuro = affidabile',
-    stops: [[3, '#eceaf6'], [5, '#b8b3dc'], [7, '#7c74bd'], [9, '#4b3f99'], [10, '#1e1660']]
-  }
 };
 
 // Mappe orarie calcolate dalla bussola (src/compass/cell-map.js), lette dal feature-state delle celle.
