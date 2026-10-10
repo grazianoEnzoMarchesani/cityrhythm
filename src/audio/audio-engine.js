@@ -60,16 +60,25 @@ function liberaAltreSorgenti() {
     }, MASTER_FADE_S * 1000 + 200);
 }
 
+let pronti = null; // mix.json e manifest dei suoni urbani: caricati una volta sola
+
 async function start() {
     if (!ctx) {
+        // Su iPhone il Web Audio tace col silenzioso (WebKit bug 251532): si chiede una sessione «riproduzione», prima del contesto.
+        if ('audioSession' in navigator) navigator.audioSession.type = 'playback';
         ctx = new AudioContext(); // creato dopo il clic sull'interruttore (regola dei browser)
         master = ctx.createGain();
         master.gain.value = 0;
         master.connect(ctx.destination);
-        [mix, sfxManifest] = await Promise.all(['mix.json', 'sfx/manifest.json'].map(f => fetch(AUDIO_BASE + f).then(r => r.json())));
-        loadSfx();
     }
-    await ctx.resume();
+    // Safari su iPhone accetta resume() solo dentro il clic: va chiamato subito, prima di qualsiasi attesa.
+    // Non si aspetta la promise: se Safari non la risolve, il suono riparte alla ripresa successiva.
+    ctx.resume();
+    pronti ??= Promise.all(['mix.json', 'sfx/manifest.json'].map(f => fetch(AUDIO_BASE + f).then(r => r.json())))
+        .then(([m, s]) => { mix = m; sfxManifest = s; loadSfx(); })
+        .catch(err => { pronti = null; throw err; }); // errore di rete: al tocco successivo si riprova
+    await pronti;
+    if (!audioEnabled.get()) return; // spento durante il caricamento: niente da far partire
     ramp(master.gain, 1, MASTER_FADE_S);
     current = null;
     play(mood.get()?.stato ?? null);
