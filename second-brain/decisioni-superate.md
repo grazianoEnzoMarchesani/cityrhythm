@@ -65,3 +65,19 @@ Decisioni che non valgono più, barrate, con il perché e cosa le sostituisce. N
 - ~~Python con le sue regole (`genera.py` replicava la logica di Sottotraccia)~~ → **fonte unica** in JS (`sottotraccia-eventi.js`); Python fa solo la sintesi, con i dati di `eventi.mjs`. Il vecchio test di parità sulle formule è stato tolto.
 - ~~Afa con un tono puro acuto fermo~~ → **rumore a banda stretta**: un tono puro è tonale e quindi piacevole [F Fastl cap. 9].
 - ~~Pianificatore con anticipo di 0,15 s e controllo ogni 25 ms~~ → **0,5 s e 100 ms**, e 1,5 s con la scheda nascosta (i timer del browser rallentano).
+- ~~Colonna destra fissa di 350 px, sempre presente, con "Place Information" e i messaggi di caricamento~~ → scheda area a destra **solo con una selezione** (2026-10-10): la colonna restringeva la mappa anche senza nulla da mostrare, e i messaggi tecnici finivano nel titolo (`interfaccia.md`).
+- ~~Timeline centrata sulla finestra, min 500 px~~ → centrata sulla mappa a tutto schermo, massimo 640 px: a 1440 px il mirino (centro della mappa) e la timeline distavano 175 px.
+- ~~Riquadro della bussola in basso a sinistra, assoluto, z 2, sotto il pannello dei livelli (z 500)~~ → colonna con i Livelli sopra e la Mappa sonora sotto: le sovrapposizioni non si producono per costruzione.
+- ~~Pannello dei livelli senza altezza massima, sette gruppi più legende iniettate~~ → quattro gruppi a fisarmonica che scorrono dentro la colonna (sul portatile il pannello copriva la mappa e i comandi in fondo erano irraggiungibili).
+- ~~Nomi inglesi dei livelli (Map Layers, Presence Density, POI Spots, Synthetic Crowded Points, LCZ Vitality, Show, 3D Terrain)~~ → nomi italiani (tabella in `interfaccia.md`).
+- ~~Mappa sonora come pulsante "Attiva mappa sonora" e menu a tendina "Musica IA"~~ → scheda con interruttore a levetta e quattro pulsanti per i modi (la select non si leggeva come scelta).
+- ~~Calendario del periodo dentro la timeline, Reset sempre visibile~~ → pannello "Periodo" con l'intervallo scritto sul pulsante.
+- ~~Timeline che cambia modo senza dirlo~~ → l'etichetta dichiara "Settimana tipo" o la data vera.
+- ~~Soglia dei 7 giorni in tre punti: la timeline contava i giorni estremi compresi, scheda e colori dei puntini facevano max − min (a 7 giorni esatti non coincidevano)~~ → una sola funzione `rangeDays` in `utils.js`.
+- ~~Padding della mappa con la larghezza della colonna destra in `fitMapToBounds`~~ → padding simmetrico: il rientro spostava la prima inquadratura, quindi la cella che suona (`compass.js` legge il centro).
+- ~~Crediti MapLibre aperti all'avvio, con il testo degli edifici per esteso~~ → controllo compatto in alto a destra, chiuso all'avvio.
+- ~~Interfaccia in inglese con la bussola in italiano~~ → tutta in italiano, date `it-IT` con fuso UTC (il browser le mostrava all'americana e a ovest di UTC il giorno prima).
+- ~~Messaggi di caricamento ("Loading POI data…", "Map ready.") nella colonna~~ → barra di stato in alto, che sparisce a fine caricamento.
+- ~~Stili inline e `cssText` nel JS, un `<style>` incorporato nella scheda~~ → classi in `style.css`.
+- ~~Play con `aria-pressed` e con l'etichetta che cambia insieme ("Ferma la timeline, premuto")~~ → solo l'etichetta.
+- ~~Ultimo valore dello slider perso durante un aggiornamento in corso~~ → il valore in attesa si applica alla fine (cursore ed etichetta coincidono).
