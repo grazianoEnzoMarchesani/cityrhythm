@@ -97,3 +97,29 @@ Decisioni che non valgono più, barrate, con il perché e cosa le sostituisce. N
 - ~~Riga della settimana tipo con «dei 35 del periodo»~~ → «35 lunedì del periodo»: il totale conta solo i giorni dello stesso giorno della settimana.
 - ~~Pulsante «Periodo» con l'anno ripetuto («8 giu 2025 – 14 giu 2025»)~~ → nello stesso anno l'anno una volta sola («8 giu – 14 giu 2025»); a cavallo dell'anno resta per esteso.
 - ~~Pubblicazione: `ui-redesign` da unire a `Music` e poi a `main` solo con un sì~~ → sì dell'utente il 2026-10-10 per Pages: `ui-redesign` unito in `main`. `Music` resta da decidere.
+- ~~Gruppo **Mappa** nei Livelli con lo stile e i due interruttori 3D~~ → comandi in alto a destra, sotto lo zoom: nel pannello Livelli il gruppo stava in fondo alla colonna e nessuno lo trovava (2026-10-10, sessione 23).
+- ~~Due interruttori 3D separati, "Rilievo in 3D" e "Edifici in 3D", senza inclinare la camera~~ → un tasto **3D** che inclina a 55° e accende rilievo ed edifici: dall'alto il rilievo non si vede e gli edifici bianchi su bianco non si leggono (2026-10-10).
+- ~~Icona a cubo per il 3D~~ → scritta "3D": il cubo CAD serve a orientare un oggetto, sulla mappa per il pubblico non dice nulla (proposta dell'agente, poi cambiata).
+- ~~Stato del 3D legato alle caselle che il browser ricorda~~ → spento all'avvio e non ricordato; lo stato segue l'inclinazione reale della mappa.
+- ~~Toner come stile di partenza~~ → **Nolli** di partenza, scelta dell'utente ("Nolli deve diventare di default", 2026-10-10). Toner resta selezionabile e ricordato.
+- ~~Chiave `cityrhythm.mapStyle` per lo stile~~ → `cityrhythm.mapStyle.v2`: la versione precedente scriveva `'toner'` a ogni visita, anche senza una scelta, e avrebbe tenuto Toner per chi aveva già aperto il sito (revisione Opus, 2026-10-10).
+- ~~Edifici 3D bianchi in Toner, con contorno nero a terra~~ → grigio chiaro `#cfcfcf` in vista 3D; dall'alto restano bianchi. Il contorno nero sui tetti non si può: MapLibre disegna i bordi solo a terra (limite noto).
+- ~~Bussola con freccia fissa, che torna solo a Nord~~ → freccia che si inclina con la vista (`visualizePitch`); il clic torna a Nord e dall'alto (2026-10-10).
+- ~~Scheda area a destra, con `right: var(--gutter)`, sopra i crediti OSM~~ → spostata a sinistra della colonna dei comandi (`--tools-w`, 44 px) (2026-10-10).
+- ~~Evento `timeline-popover` per tutti i pannelli~~ → `pannello-aperto`: il popover dello stile non sta nella timeline (codice, 2026-10-10).
+- ~~Tasto dello stile con `aria-haspopup="true"`~~ → senza: il pannello è un gruppo di pulsanti, non un menu (VoiceOver lo annunciava come menu).
+- ~~Tasto 3D che decideva il clic leggendo `aria-pressed`~~ → si legge la destinazione dell'ultimo clic: due clic rapidi di fila venivano persi (revisione Opus, 2026-10-10).
+- ~~`ctx.resume()` dopo i fetch di `mix.json` e del manifest, nel `start()` del motore audio~~ → `resume()` è la prima chiamata, dentro il clic: Safari accetta la ripresa solo durante il gesto, e dopo i fetch il gesto è scaduto (sessione 25, `audio.md`).
+- ~~Web Audio con la sessione predefinita di iOS (che tace col silenzioso)~~ → `navigator.audioSession.type = 'playback'` prima del contesto, se il browser lo supporta: il suono esce anche col silenzioso e ferma le altre app. Scelta dell'utente (2026-10-10), non verificata su iPhone.
+- ~~Ipotesi: il link della prova si apre nel browser interno di WhatsApp~~ → probabilmente Safari: la freccia «◀ WhatsApp» in alto a sinistra è quella di Safari aperto da un'app (parere Opus, circa 70%, 2026-10-10).
+- ~~Avviso per iPhone che riconosce il browser dallo user agent (mai fatto)~~ → non affidabile: SFSafariViewController e le web app hanno lo stesso user agent di Safari (parere Opus, 2026-10-10). Si chiede agli utenti di provare, senza avviso.
+- ~~"Clima e celle" come titolo del gruppo~~ → **"Celle della città"** (2026-10-10): «clima» non descriveva il gruppo, dove la maggior parte delle voci parla di forma e materiali; l'utente lo trovava brutto. Il parere Opus proponeva «La città cella per cella»: non adottato, resta da decidere (`interfaccia.md`).
+- ~~Menu a tendina «Cosa mostrare» con sei gruppi (`<select>`)~~ → **griglia di pulsanti** con sigla, nome breve e campione di colore (richiesta dell'utente: il menu era poco intuitivo).
+- ~~«Trasparenza dello strato» (slider 0–100)~~ → **«Intensità dello strato»**: 70% vuol dire opacità 70%, non trasparenza.
+- ~~Legenda LCZ a fila che va a capo (flex-wrap), righe non allineate~~ → **colonna con il codice a larghezza fissa**, gruppi «Zone costruite (1–10)» e «Suolo, verde e acqua (A–G)».
+- ~~Unità scritta sull'ultima etichetta della scala (UTCI: «46 °C» sovrapposta a «38»)~~ → **unità nel titolo** della legenda; le etichette restano sui confini dei tratti.
+- ~~Legenda solo informativa~~ → **un clic su una voce** evidenzia sulla mappa quella voce e spegne le altre (2026-10-10).
+- ~~«Affidabilità» (accordo della classificazione) come vista e riga della scheda della cella~~ → **tolta** (richiesta dell'utente). Il campo `lcz_matches` resta nel file e non si usa.
+- ~~z0 come vista e riga della scheda della cella~~ → **tolta dalla vista e dalla scheda**; il campo `z0_value` resta nei dati perché il vento della Mappa sonora lo legge (`compass-core.js`).
+- ~~Gruppo «Vento» (Rugosità e z0)~~ → gruppo tolto: **Rugosità** in «Forma della città».
+- ~~Riquadri e contorni neri su pulsanti, voci della legenda, scala e stati (anche per la scelta)~~ → **niente riquadri né contorni**: la voce scelta è in grassetto con fondo grigio chiaro (richiesta dell'utente, 2026-10-10).

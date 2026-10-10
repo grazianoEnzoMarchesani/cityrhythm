@@ -1,7 +1,7 @@
 // ui-layer-controls.js
-import { refreshPresencePoints, setLayerVisibility, addSyntheticCrowdedPointsLayer, removeSyntheticCrowdedPointsLayer, updateAllPresencePoints, addLczVitalityLayer, removeLczVitalityLayer, updateLczVitalityVisualization, setLczLayerOpacity, setUhiDynamicVisibility, getLczLegend, applyBaseStyleToOverlays } from '../map/map-layers.js';
+import { refreshPresencePoints, setLayerVisibility, addSyntheticCrowdedPointsLayer, removeSyntheticCrowdedPointsLayer, updateAllPresencePoints, addLczVitalityLayer, removeLczVitalityLayer, updateLczVitalityVisualization, setLczLayerOpacity, setUhiDynamicVisibility, getLczLegend, setLczHighlight } from '../map/map-layers.js';
 import { KML_LAYER_ID, CROWDED_LAYER_ID, PRESENCE_POINTS_LAYER_ID, SPOTS_LAYER_ID, LCZ_VITALITY_LAYER_ID, DEBUG_MODE } from '../data/config.js';
-import { getMapInstance, whenMapReady, setBaseStyle } from '../map/map-setup.js';
+import { getMapInstance } from '../map/map-setup.js';
 import { getSpotMapperData } from '../data/data-loader.js';
 import { PRESENCE_COLOR_VARIABLES, setPresenceColorBy } from '../map/presence-colors.js';
 import { coloreSuono, POSIZIONE_STATI } from '../compass/sound-color.js';
@@ -15,10 +15,41 @@ let spotTypeFilter = null;
 let syntheticCrowdedToggle = null;
 let lczVitalityToggle = null;
 let lczVisualizationSelector = null;
-let lczVisualizationSelect = null;
 let lczOpacitySlider = null;
 let lczOpacityValue = null;
 let uhiDynamicVisibilityToggle = null;
+let lczView = 'LCZ';   // vista scelta in "Cosa mostrare"
+let legendPick = null; // voce della legenda evidenziata sulla mappa: { id, label }; null = tutte le celle
+
+// Cosa mostrare: gruppi come un tempo nel menu, poi [vista, sigla, nome breve, titolo della legenda].
+// I colori dei campioni e le legende vengono da getLczLegend (map-layers.js).
+const VISTE_CELLE = [
+    ['Cambiano con l’ora', [
+        ['utci', 'UTCI', 'caldo percepito', 'Caldo percepito (UTCI)'],
+        ['stato', 'Mappa sonora', 'come suona la città', 'Mappa sonora'],
+    ]],
+    ['Tipo di zona', [
+        ['LCZ', 'LCZ', 'tipo di zona', 'Tipo di zona (LCZ)'],
+        ['UHI', 'UHI', 'rischio di isola di calore', 'Rischio di isola di calore (UHI)'],
+    ]],
+    ['Forma della città', [
+        ['svf_mean', 'SVF', 'cielo visibile', 'Cielo visibile (SVF)'],
+        ['aspect_ratio', 'H/W', 'strade a canyon', 'Canyon stradale (H/W)'],
+        ['z_h', 'Altezza', 'di edifici e alberi', 'Altezza di edifici e alberi'],
+        ['terrain_rough', 'Rugosità', 'quanto frena il vento', 'Classe di rugosità'],
+    ]],
+    ['Superficie del suolo', [
+        ['building_frac', 'Edificato', 'suolo coperto da edifici', 'Superficie edificata'],
+        ['impervious_frac', 'Impermeabile', 'asfalto e pavimenti', 'Superficie impermeabile'],
+        ['pervious_frac', 'Permeabile', 'terra, prato e alberi', 'Superficie permeabile'],
+    ]],
+    ['Calore', [
+        ['albedo', 'Albedo', 'luce solare riflessa', 'Albedo'],
+        ['admittance', 'Ammettenza', 'calore accumulato dai materiali', 'Ammettenza termica'],
+        ['anthro_heat', 'Calore umano', 'traffico e climatizzazione', 'Calore prodotto dalle persone'],
+        ['industry_heat', 'Calore industriale', 'solo le fabbriche', 'Calore industriale'],
+    ]],
+];
 
 // --- FUNZIONI ESPORTATE ---
 export function setupLayerControls() {
@@ -30,7 +61,6 @@ export function setupLayerControls() {
     syntheticCrowdedToggle = document.getElementById('toggle-synthetic-crowded');
     lczVitalityToggle = document.getElementById('toggle-lcz-vitality');
     lczVisualizationSelector = document.getElementById('lcz-visualization-selector');
-    lczVisualizationSelect = document.getElementById('lcz-visualization-select');
     lczOpacitySlider = document.getElementById('lcz-opacity-slider');
     lczOpacityValue = document.getElementById('lcz-opacity-value');
     uhiDynamicVisibilityToggle = document.getElementById('uhi-dynamic-visibility');
@@ -62,27 +92,19 @@ export function setupLayerControls() {
         syntheticCrowdedToggle.addEventListener('change', (event) => handleToggleChange(event, 'synthetic-crowded'));
     }
 
-    // Celle LCZ: interruttore, scelta della mappa, trasparenza, rischio UHI dinamico
+    // Celle: interruttore, vista (griglia di pulsanti), trasparenza, rischio UHI dinamico
+    setupLczViewPicker();
     if (lczVitalityToggle) {
         lczVitalityToggle.checked = false;
         lczVitalityToggle.addEventListener('change', (event) => {
             const isChecked = event.target.checked;
             if (isChecked) {
-                const selectedType = lczVisualizationSelect?.value ?? 'LCZ';
-                addLczVitalityLayer(true, selectedType);
-                renderLczLegend(selectedType);
+                addLczVitalityLayer(true, lczView);
+                renderLczLegend(lczView);
                 if (lczVisualizationSelector) lczVisualizationSelector.hidden = false;
             } else {
                 removeLczVitalityLayer();
                 if (lczVisualizationSelector) lczVisualizationSelector.hidden = true;
-            }
-        });
-    }
-    if (lczVisualizationSelect) {
-        lczVisualizationSelect.addEventListener('change', (event) => {
-            renderLczLegend(event.target.value);
-            if (lczVitalityToggle && lczVitalityToggle.checked) {
-                updateLczVitalityVisualization(event.target.value);
             }
         });
     }
@@ -102,55 +124,6 @@ export function setupLayerControls() {
             }
         });
     }
-
-    // Terreno e edifici 3D: spenti all'avvio. Applicati anche al caricamento:
-    // il browser può ricordare com'erano le caselle.
-    const terrainToggle = document.getElementById('toggle-3d-terrain');
-    if (terrainToggle) {
-        const applyTerrain = () => whenMapReady(() => {
-            getMapInstance().setTerrain(terrainToggle.checked
-                ? { source: 'terrain-dem', exaggeration: 1.2 } // sorgente definita in map-setup.js
-                : null);
-        });
-        terrainToggle.addEventListener('change', applyTerrain);
-        applyTerrain();
-    }
-    const buildingsToggle = document.getElementById('toggle-3d-buildings');
-    if (buildingsToggle) {
-        const applyBuildings = () => whenMapReady(() => {
-            getMapInstance().setLayoutProperty('buildings-3d', 'visibility', buildingsToggle.checked ? 'visible' : 'none');
-        });
-        buildingsToggle.addEventListener('change', applyBuildings);
-        applyBuildings();
-    }
-    setupMapStyleSelector();
-}
-
-// --- STILE DELLA MAPPA DI BASE: Toner o Nolli (la scelta resta nel browser di chi guarda) ---
-const MAP_STYLE_KEY = 'cityrhythm.mapStyle';
-function setupMapStyleSelector() {
-    const group = document.getElementById('map-style');
-    if (!group) return;
-    const select = (name) => {
-        group.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.style === name)));
-        try { localStorage.setItem(MAP_STYLE_KEY, name); } catch (e) { /* archivio del browser non disponibile */ }
-        whenMapReady(() => {
-            setBaseStyle(name);
-            applyBaseStyleToOverlays();
-        });
-    };
-    [['toner', 'Toner'], ['nolli', 'Nolli']].forEach(([name, label]) => {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.dataset.style = name;
-        button.textContent = label;
-        button.setAttribute('aria-pressed', 'false');
-        button.addEventListener('click', () => select(name));
-        group.appendChild(button);
-    });
-    let saved = null;
-    try { saved = localStorage.getItem(MAP_STYLE_KEY); } catch (e) { /* idem */ }
-    select(saved === 'nolli' ? 'nolli' : 'toner');
 }
 
 export function initializeSpotTypeFilter() {
@@ -222,57 +195,162 @@ export function setPresenceColorSelection(key, refresh = true) {
     if (refresh) refreshPresencePoints(presenceToggle ? presenceToggle.checked : undefined);
 }
 
-/** Legenda della mappa LCZ scelta; il controllo di rischio dinamico compare solo con UHI. */
-function renderLczLegend(type) {
-    const uhiControl = document.getElementById('uhi-dynamic-control');
-    if (uhiControl) uhiControl.hidden = type !== 'UHI';
-    const legend = document.getElementById('lcz-legend');
-    if (!legend) return;
-    legend.replaceChildren();
-    const info = getLczLegend(type);
-    if (info.kind === 'categories') {
-        const list = document.createElement('div');
-        list.className = 'lcz-legend-categories';
-        info.items.forEach(({ color, label }) => {
-            const item = document.createElement('span');
-            item.textContent = label;
-            item.style.setProperty('--swatch', color);
-            list.appendChild(item);
-        });
-        legend.appendChild(list);
-        appendLegendNote(legend, info.note);
-        return;
-    }
-    if (info.kind === 'compass') {
-        // Sfumatura continua (src/compass/sound-color.js): i nomi degli stati stanno sulle loro posizioni,
-        // il colore fra un nome e l'altro si mescola come sulla mappa.
-        legend.append(soundGradientLegend(), notteLegendRow(info.colors.notte));
-        appendLegendNote(legend, info.note);
-        return;
-    }
-    // Soglie a passo regolare: la scala è lineare a tratti fra una soglia e l'altra
-    const pos = i => (i / (info.stops.length - 1) * 100).toFixed(1);
-    const bar = document.createElement('div');
-    bar.className = 'lcz-legend-ramp';
-    bar.style.background = `linear-gradient(to right, ${info.stops
-        .map(([, c], i) => `${c} ${pos(i)}%`).join(', ')})`;
-    const ticks = document.createElement('div');
-    ticks.className = 'lcz-legend-ticks';
-    info.stops.forEach(([v], i) => {
-        if (v === null) return; // soglia senza etichetta
-        const tick = document.createElement('span');
-        tick.textContent = i === info.stops.length - 1 && info.unit && !info.unit.includes('–') ? `${v} ${info.unit}` : v;
-        tick.style.left = `${pos(i)}%`;
-        ticks.appendChild(tick);
+// --- COSA MOSTRARE: una griglia di pulsanti, ognuno con la sigla, un nome breve e un campione dei colori ---
+function setupLczViewPicker() {
+    const picker = document.getElementById('lcz-view-picker');
+    if (!picker) return;
+    VISTE_CELLE.forEach(([titolo, viste]) => {
+        const gruppo = document.createElement('div');
+        gruppo.className = 'view-group';
+        const griglia = document.createElement('div');
+        griglia.className = 'view-grid';
+        viste.forEach(([view, sigla, nome, titoloVista]) => griglia.append(viewTile(view, sigla, nome, titoloVista)));
+        gruppo.append(span('view-group-title', titolo), griglia);
+        picker.append(gruppo);
     });
-    const note = document.createElement('div');
-    note.className = 'lcz-legend-note';
-    note.textContent = info.unit.includes('–') ? `${info.note} (${info.unit})` : info.note;
-    legend.append(bar, ticks, note);
 }
 
-// Legenda della Mappa sonora: un quadrato con la sfumatura, nomi degli stati sulle loro posizioni.
+function viewTile(view, sigla, nome, titoloVista) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'view-tile';
+    button.dataset.view = view;
+    button.title = titoloVista;
+    button.setAttribute('aria-pressed', String(view === lczView));
+    const testo = document.createElement('span');
+    testo.className = 'view-text';
+    testo.append(span('view-head', sigla), span('view-sub', nome));
+    button.append(viewIcon(getLczLegend(view)), testo);
+    button.addEventListener('click', () => chooseLczView(view));
+    return button;
+}
+
+// Campione della vista: sfumato per le scale, quadretti per le classi, la rosa dei nove stati per la Mappa sonora
+function viewIcon(info) {
+    const icon = document.createElement('span');
+    icon.className = 'view-icon';
+    if (info.kind === 'ramp') {
+        const last = info.stops.length - 1;
+        icon.style.background = `linear-gradient(to right, ${info.stops
+            .map((s, i) => `${s.c} ${(i / last * 100).toFixed(1)}%`).join(', ')})`;
+    } else if (info.kind === 'categories') {
+        // Quattro colori distribuiti lungo la lista: bastano a riconoscere la vista
+        const n = info.items.length;
+        icon.classList.add('view-icon-grid');
+        icon.style.setProperty('--cols', 2);
+        [0, 1, 2, 3].forEach(k => icon.append(colorCell(info.items[Math.round(k * (n - 1) / 3)].color)));
+    } else {
+        // Stessa disposizione del quadrante: piacevolezza dall'alto in basso, energia da sinistra a destra
+        icon.classList.add('view-icon-grid');
+        icon.style.setProperty('--cols', 3);
+        [1, 0, -1].forEach(Y => [-1, 0, 1].forEach(X => {
+            const stato = Object.keys(POSIZIONE_STATI).find(k => POSIZIONE_STATI[k][0] === X && POSIZIONE_STATI[k][1] === Y);
+            icon.append(colorCell(info.colors[stato]));
+        }));
+    }
+    return icon;
+}
+
+function chooseLczView(view) {
+    lczView = view;
+    document.querySelectorAll('#lcz-view-picker .view-tile').forEach(b => {
+        b.setAttribute('aria-pressed', String(b.dataset.view === view));
+    });
+    renderLczLegend(view); // cambiare vista riporta la legenda a "tutte le celle"
+    if (lczVitalityToggle?.checked) updateLczVitalityVisualization(view);
+}
+
+/** Legenda della vista scelta; il controllo di rischio dinamico compare solo con UHI. */
+function renderLczLegend(view) {
+    const uhiControl = document.getElementById('uhi-dynamic-control');
+    if (uhiControl) uhiControl.hidden = view !== 'UHI';
+    const legend = document.getElementById('lcz-legend');
+    if (!legend) return;
+    legendPick = null;
+    setLczHighlight(null);
+    legend.replaceChildren();
+    const info = getLczLegend(view);
+    // Le scale mettono l'unità nel titolo: sulle etichette farebbe spazio che non c'è (la scala UTCI si sovrapponeva)
+    const voce = VISTE_CELLE.flatMap(([, viste]) => viste).find(v => v[0] === view);
+    const unita = info.kind === 'ramp' && info.unit ? ` · ${info.unit}` : '';
+    legend.append(span('legend-title', (voce ? voce[3] : view) + unita));
+    if (info.kind === 'categories') legend.append(categoriesLegend(info));
+    else if (info.kind === 'ramp') legend.append(rampLegend(info));
+    else legend.append(soundGradientLegend(), notteLegendItem(info.colors.notte));
+    appendLegendNote(legend, info.note);
+    const hint = span('legend-hint', '');
+    hint.id = 'lcz-legend-hint';
+    legend.append(hint);
+    updateLegendHint();
+}
+
+// Categorie: una colonna allineata. Per le LCZ, prima le zone costruite (1–10), poi suolo, verde e acqua (A–G)
+function categoriesLegend(info) {
+    const list = document.createElement('div');
+    list.className = 'legend-list';
+    const gruppi = info.view === 'LCZ'
+        ? [['Zone costruite (1–10)', voce => /^\d+$/.test(voce.key)], ['Suolo, verde e acqua (A–G)', voce => !/^\d+$/.test(voce.key)]]
+        : [[null, () => true]];
+    gruppi.forEach(([titolo, tiene]) => {
+        if (titolo) list.append(span('legend-group-title', titolo));
+        info.items.filter(tiene).forEach(voce => {
+            const content = [legendSwatch(voce.color)];
+            if (voce.code) content.push(span('legend-code', voce.code));
+            content.push(span('legend-name', voce.name));
+            const label = voce.code ? `${voce.code} ${voce.name}` : voce.name;
+            list.append(legendItem(`${info.view}-${voce.key}`, label, { view: info.view, key: voce.key },
+                content, voce.code ? 'legend-item has-code' : 'legend-item'));
+        });
+    });
+    return list;
+}
+
+/**
+ * Scala a fasce: ogni tratto va da un'etichetta alla successiva (per l'UTCI sono le fasce ufficiali).
+ * Le fasce agli estremi sono aperte: i valori fuori scala prendono il colore del bordo, come sulla mappa.
+ */
+function rampLegend(info) {
+    const wrap = document.createElement('div');
+    wrap.className = 'lcz-legend-ramp-wrap';
+    const { stops } = info;
+    const last = stops.length - 1;
+    const unita = info.unit && !info.unit.includes('–') ? ` ${info.unit}` : '';
+    const numero = t => String(t).replace('-', '−');
+    // Solo gli stop con etichetta fanno da confine: quello senza etichetta resta dentro la sua fascia
+    const etichettate = stops.flatMap((s, i) => (s.label === null ? [] : [i]));
+    const bar = document.createElement('div');
+    bar.className = 'lcz-legend-ramp';
+    etichettate.slice(0, -1).forEach((a, k) => {
+        const b = etichettate[k + 1];
+        const primo = k === 0;
+        const ultimo = k === etichettate.length - 2;
+        const testo = primo ? `sotto ${numero(stops[b].t)}${unita}`
+            : ultimo ? `da ${numero(stops[a].t)}${unita} in su`
+            : `da ${numero(stops[a].t)} a ${numero(stops[b].t)}${unita}`;
+        const seg = legendItem(`ramp-${k}`, testo, { view: info.view, lo: primo ? undefined : stops[a].t, hi: ultimo ? undefined : stops[b].t },
+            [], 'ramp-seg');
+        seg.style.flex = `0 0 ${((b - a) / last * 100).toFixed(2)}%`;
+        seg.style.background = `linear-gradient(to right, ${stops.slice(a, b + 1)
+            .map((s, j) => `${s.c} ${(j / (b - a) * 100).toFixed(1)}%`).join(', ')})`;
+        seg.title = testo;
+        seg.setAttribute('aria-label', testo);
+        bar.append(seg);
+    });
+    const ticks = document.createElement('div');
+    ticks.className = 'lcz-legend-ticks';
+    etichettate.forEach(i => {
+        const tick = document.createElement('span');
+        tick.textContent = stops[i].label;
+        tick.style.left = `${(i / last * 100).toFixed(2)}%`;
+        ticks.append(tick);
+    });
+    wrap.append(bar, ticks);
+    return wrap;
+}
+
+// Sound map: un quadrato con la sfumatura e i nomi degli stati sulle loro posizioni.
 // Asse verticale = piacevolezza (sereno in alto), orizzontale = energia (poca gente → tanta gente).
+// Ogni nome è un pulsante: evidenzia le celle di quello stato.
 function soundGradientLegend() {
     const wrap = document.createElement('div');
     wrap.className = 'lcz-legend-compass';
@@ -287,14 +365,13 @@ function soundGradientLegend() {
     }
     wrap.appendChild(canvas);
     for (const [stato, [X, Y]] of Object.entries(POSIZIONE_STATI)) {
-        const nome = document.createElement('span');
-        nome.className = 'state-tag';
-        nome.textContent = stato[0].toUpperCase() + stato.slice(1);
+        const nome = capitalizza(stato);
+        const tag = legendItem(`stato-${stato}`, nome, { view: 'stato', key: stato }, [document.createTextNode(nome)], 'state-tag');
         // Alone bianco: il nome si legge sia sul colore della sfumatura sia sul fondo del pannello
-        nome.style.left = `${(X + 1) / 2 * 100}%`;
-        nome.style.top = `${(1 - Y) / 2 * 100}%`;
-        nome.style.textShadow = '0 0 3px #fff, 0 0 3px #fff, 0 0 2px #fff';
-        wrap.appendChild(nome);
+        tag.style.left = `${(X + 1) / 2 * 100}%`;
+        tag.style.top = `${(1 - Y) / 2 * 100}%`;
+        tag.style.textShadow = '0 0 3px #fff, 0 0 3px #fff, 0 0 2px #fff';
+        wrap.appendChild(tag);
     }
     const asse = document.createElement('span');
     asse.className = 'axis';
@@ -303,24 +380,67 @@ function soundGradientLegend() {
     return wrap;
 }
 
-function notteLegendRow(color) {
-    const night = document.createElement('div');
-    night.className = 'lcz-legend-night';
-    night.appendChild(compassCell('notte', color));
-    night.append('buio e poca gente');
-    return night;
+function notteLegendItem(color) {
+    return legendItem('stato-notte', 'Notte', { view: 'stato', key: 'notte' },
+        [legendSwatch(color), span('legend-name', 'Notte: buio e poca gente')]);
 }
 
-function compassCell(state, color) {
-    const cell = document.createElement('span');
-    cell.className = 'lcz-legend-compass-cell';
-    cell.textContent = state[0].toUpperCase() + state.slice(1);
-    cell.style.background = color;
-    // testo chiaro sui colori scuri
-    const [r, g, b] = [1, 3, 5].map(i => parseInt(color.slice(i, i + 2), 16));
-    cell.style.color = 0.299 * r + 0.587 * g + 0.114 * b < 140 ? '#fff' : '#222';
-    return cell;
+/**
+ * Voce cliccabile della legenda: evidenzia sulla mappa solo le celle di quella voce.
+ * Un altro clic sulla stessa voce le mostra di nuovo tutte.
+ */
+function legendItem(id, label, selection, content, className = 'legend-item') {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = className;
+    button.dataset.pick = id;
+    button.setAttribute('aria-pressed', 'false');
+    button.append(...content);
+    button.addEventListener('click', () => {
+        const spenta = legendPick?.id === id;
+        legendPick = spenta ? null : { id, label };
+        setLczHighlight(spenta ? null : selection);
+        updateLegendHint();
+    });
+    return button;
 }
+
+/** Stato della legenda: la voce evidenziata (aria-pressed) e la riga che dice come tornare a tutte. */
+function updateLegendHint() {
+    const legend = document.getElementById('lcz-legend');
+    if (!legend) return;
+    legend.classList.toggle('has-pick', !!legendPick);
+    legend.querySelectorAll('[data-pick]').forEach(b => {
+        b.setAttribute('aria-pressed', String(b.dataset.pick === legendPick?.id));
+    });
+    const hint = document.getElementById('lcz-legend-hint');
+    if (hint) {
+        hint.textContent = legendPick
+            ? `Sulla mappa solo: ${legendPick.label}. Un altro clic le mostra tutte.`
+            : 'Clicca una voce per vedere solo lei sulla mappa.';
+    }
+}
+
+function span(className, text) {
+    const el = document.createElement('span');
+    el.className = className;
+    el.textContent = text;
+    return el;
+}
+
+function legendSwatch(color) {
+    const el = span('legend-swatch', '');
+    el.style.setProperty('--swatch', color);
+    return el;
+}
+
+function colorCell(color) {
+    const el = document.createElement('span');
+    el.style.background = color;
+    return el;
+}
+
+const capitalizza = s => s[0].toUpperCase() + s.slice(1);
 
 function appendLegendNote(legend, text) {
     if (!text) return;

@@ -7,16 +7,18 @@ Ripinteggiatura del 2026-10-10 sul branch `ui-redesign` (da `Music`). Motivo: pa
 ## Decisioni valide
 | Tema | Decisione |
 |---|---|
-| Layout desktop | **Mappa a tutto schermo.** Colonna a sinistra (296 px): **Livelli** in quattro gruppi a fisarmonica (Persone, Luoghi, Clima e celle, Mappa), che scorrono dentro la colonna. La colonna finisce sopra la timeline: le sovrapposizioni non si producono. La **Mappa sonora** sta nella timeline, a sinistra. |
+| Layout desktop | **Mappa a tutto schermo.** Colonna a sinistra (296 px): **Livelli** in tre gruppi a fisarmonica (Persone, Luoghi, Celle della città); dal 2026-10-10 il gruppo Mappa è uscito: stile, 3D e crediti stanno nei comandi in alto a destra, che scorrono dentro la colonna. La colonna finisce sopra la timeline: le sovrapposizioni non si producono. La **Mappa sonora** sta nella timeline, a sinistra. |
+| Comandi della mappa (2026-10-10, sessione 23) | **Colonna in alto a destra**, sotto lo zoom di MapLibre e sopra i crediti, come un gruppo bianco unico. Dall'alto in basso: **zoom** (+, −); **bussola** (la freccia si inclina con la vista; clic: torna a Nord e dall'alto); **Stile della mappa** (icona a mappa piegata: popover a sinistra con Toner e Nolli, Nolli di partenza); **3D** (tasto con la scritta "3D": inclina la mappa e accende rilievo ed edifici, vedi `mappa.md`); **crediti** ("i", chiusi all'avvio). Desktop: tasti di 32 px con una nota a comparsa con il nome al passaggio del mouse o da tastiera. Telefono: tasti di 40 px, solo icona (il nome si legge nel pannello aperto e per lo schermo lettore). Un solo pannello alla volta: aprire lo stile chiude Periodo e Mappa sonora (sul telefono anche i Livelli). Crediti aperti: testo largo al massimo 340 px. Fuoco da tastiera: contorno del sito, mai l'alone azzurro di MapLibre. |
 | Timeline | In basso al centro della mappa, massimo 640 px. Riga 1: a sinistra il **quadrante** della Mappa sonora, poi Play, **etichetta del tempo**, pulsante **Periodo**. Riga 2: cursore. Il pulsante di direzione (avanti/indietro) è stato tolto da tutte le versioni (2026-10-10): il Play va sempre avanti. |
 | Etichetta del tempo | Dichiara sempre il modo: "Settimana tipo · Lun 14:00" oppure la data vera ("sab 08/06 14:00"). |
 | Periodo | Pannello con il calendario (Litepicker, `lang: 'it-IT'`), Reset "Tutto il periodo", frase su cosa cambia sotto 7 giorni. Il pulsante si attiva solo a dati caricati. |
 | Soglia 7 giorni | **Una sola funzione**: `rangeDays` in `utils.js` (giorni estremi compresi), con `WEEK_TYPE_FROM_DAYS = 7`. Usata da timeline, scheda e colori dei puntini. |
-| Scheda area | A destra (400 px), **solo con un'area selezionata**. × ed Esc la chiudono e deselezionano; il fuoco torna dove era. La mappa non si restringe. Titolo = nome dell'area. |
+| Scheda area | A destra (400 px), **solo con un'area selezionata**. Sul desktop sta a sinistra della colonna dei comandi della mappa (`--tools-w`, 44 px): non copre più i crediti. × ed Esc la chiudono e deselezionano; il fuoco torna dove era. La mappa non si restringe. Titolo = nome dell'area. |
 | Mirino | Al centro della mappa (`.crosshair`), visibile solo con la mappa sonora accesa (`audio.md`). Bianco con effetto differenza (`mix-blend-mode`): si vede sia sui puntini neri sia sul fondo chiaro. |
 | Mappa sonora | **Quadrante** a sinistra della timeline: nove caselle con i colori degli stati e una **lancetta** che va dal centro al punto (energia a destra, piacevolezza in alto). Lancetta e punto stanno su un unico braccio che ruota in 600 ms, così il punto resta sulla punta. **Un tocco** (anche col dito) accende e spegne la musica. Il **pulsante sotto** (nome dello stato e freccia; sul telefono solo «Modi») apre il pannello: titolo, stato con una frase, «Musica» con i quattro modi in griglia 2×2 e una riga sul modo scelto, «Dettagli» come lista etichetta-valore (Persone, Temperatura percepita, Zona, Tipo di zona, Gente, Benessere, Meteo usato). Il tocco sul quadrante non chiude il pannello; Esc riporta il fuoco sul pulsante. Le frasi degli stati (`DESCRIZIONI` in `ui-compass.js`) restano da rileggere con l'utente (punto 5). |
+| Celle della città (2026-10-10, sessione 24) | Gruppo **Celle della città** nei Livelli: interruttore **Mostra le celle**, poi **Cosa mostrare**: griglia di **15 pulsanti** in 5 gruppi (Cambiano con l'ora: UTCI, Mappa sonora · Tipo di zona: LCZ, UHI · Forma della città: SVF, H/W, Altezza, Rugosità · Superficie del suolo: Edificato, Impermeabile, Permeabile · Calore: Albedo, Ammettenza, Calore umano, Calore industriale). Ogni pulsante ha un **campione di colore** (strisce per le classi, sfumato per le scale, quadretti 2×2 per le classi, rosa 3×3 per la Mappa sonora), la **sigla** in grassetto e un nome breve. Il pulsante scelto è in **grassetto con fondo grigio chiaro**: **niente riquadri né contorni neri** (richiesta dell'utente). **Legenda**: il titolo dice l'unità («Cielo visibile (SVF) · 0–1»); le classi LCZ in colonna con codice a larghezza fissa, divise in «Zone costruite (1–10)» e «Suolo, verde e acqua (A–G)»; le scale a **tratti fra due etichette** (per l'UTCI sono le fasce ufficiali: sotto 0, 0–9, 9–26 nessuno stress, 26–32, 32–38, sopra 38); le fasce agli estremi sono aperte, come sulla mappa. **Clic su una voce** (classe, fascia, stato della Mappa sonora): sulla mappa resta solo quella, le altre celle scendono a **12% di opacità senza contorno** [S, da rivedere a schermo]; un secondo clic torna a tutte, cambiare vista azzera. Una riga sotto la legenda dice come fare. Lo slider si chiama **Intensità dello strato** (era «Trasparenza»: 70% vuol dire opacità 70%). Scheda della cella: tolte le righe «accordo» e z0. Tolte «Affidabilità» e z0 dalla vista: il campo `z0_value` resta nei dati perché il vento della Mappa sonora lo legge. |
 | Centro della mappa | Padding **simmetrico** in `fitMapToBounds`: la prima inquadratura non sposta il centro. Nessun padding persistente, nessun movimento di camera al clic: la cella letta dalla musica è quella sotto il mirino (`compass.js` legge `viewport.center`). |
-| Crediti | Controllo MapLibre compatto in alto a destra (tasto "i"), **chiuso all'avvio**, con il testo completo (OSM, Protomaps, TUM, Meta, Mapterhorn, ISTAT/IPUMS/UCL: citazione obbligatoria). |
+| Crediti | Controllo MapLibre compatto in fondo alla colonna dei comandi in alto a destra (tasto "i"), **chiuso all'avvio**, con il testo completo (OSM, Protomaps, TUM, Meta, Mapterhorn, ISTAT/IPUMS/UCL: citazione obbligatoria). |
 | Caricamento ed errori | Barra di stato in alto con il passo corrente; sparisce a fine caricamento. Errori in un messaggio `role="alert"`. Il sito segnala `document.documentElement.dataset.ready = '1'` a fine caricamento (lo usano le prove). |
 | Telefono | Condizione unica `PHONE_QUERY` (`config.js`): larghezza sotto 720 px **oppure** altezza sotto 500 px con puntatore grossolano (telefono in orizzontale). Timeline di 138 px: quadrante a sinistra con sotto «Modi», a destra Play, ora e Periodo su una riga, cursore sotto. Livelli scendono dall'alto (pulsante **Livelli** in alto a sinistra), chiusi all'avvio, gruppi chiusi, un gruppo alla volta. Un solo pannello della timeline alla volta. Pannello Mappa sonora sopra la timeline e per quanto possibile sotto il mirino (minimo 160 px: sui telefoni più bassi, 320×568, copre ancora un po' il centro; scelta dell'utente, 2026-10-10). Scheda area a tutto schermo con il resto della pagina `inert`. Campi a 16 px (iOS non ingrandisce). |
 | Lingua | **Solo italiano**: interfaccia, popup, legende, date `it-IT` con fuso UTC, etichette MapLibre. Le sigle dei dati (UTCI, LCZ, SVF) restano, con una frase in italiano. |
@@ -28,18 +30,23 @@ Ripinteggiatura del 2026-10-10 sul branch `ui-redesign` (da `Music`). Motivo: pa
 | Pubblicazione | Il sito Pages si pubblica **solo da `main`** (`deploy.yml`). Dal 2026-10-10 `main` contiene `ui-redesign`, pubblicato su https://grazianoenzomarchesani.github.io/cityrhythm/. Per vedere le modifiche in locale dal telefono: `npm run dev -- --host 0.0.0.0` sulla stessa rete Wi-Fi. |
 
 ## Stato (2026-10-10)
+- **Sessioni 23 e 24 (2026-10-10), non committate** su `ui-redesign`. Sessione 24: pannello «Celle della città» (griglia Cosa mostrare, legenda in colonna, scale a fasce, clic che evidenzia una voce sulla mappa, grafica senza riquadri). Prova Playwright in Chromium: 15 pulsanti, 5 gruppi, clic su classi, fasce e stati senza errori in console; telefono 390×844 senza scroll orizzontale. Sessione 23: comandi della mappa in alto a destra, tasto 3D unico, Nolli di partenza, edifici grigi in Toner, bussola con inclinazione, correzioni della revisione Opus. Verifiche: build; Playwright Chromium e WebKit (iPhone 13 emulato) 21/21 sul 3D e sullo stile di partenza, 14/14 sulle correzioni, nessun errore in console; nessuna sovrapposizione dei comandi con Livelli, Mappa sonora e timeline a 1366×768, 1024×768, 320×568, 360×740, 390×844 e 844×390 (Chromium).
 - **Pubblicato su Pages**: `ui-redesign` unito in `main` (fast-forward) e pubblicato da `deploy.yml`. Non unito a `Music`, che è indietro.
 - **Verifiche**: build passa. Prove Playwright su Chromium e WebKit: 388 controlli su 388 (desktop 1440×900 e 1366×768; telefono 390×844, 360×740 e in orizzontale 844×390). Nessun errore in console. Lancetta e punto restano uniti durante il movimento (scarto zero). Pannelli sul telefono: 24/24.
 - **Non verificati**: Firefox (il suo eseguibile non si avvia nell'ambiente di prova), Safari reale, iPhone reale. Le prove sono fuori dal repository, nella cartella di lavoro della sessione.
 
 ## Da decidere con l'utente
-1. Desktop: la scheda area copre l'attribuzione OSM e, fra 1100 e 1400 px, il lato destro del pannello Periodo.
+1. Desktop: l'attribuzione non è più coperta dalla scheda (sessione 23). Resta da verificare, fra 1100 e 1400 px, il lato destro del pannello Periodo.
 2. Telefono: un tocco su un quartiere con una cella LCZ sotto apre la scheda invece del popup della cella.
 3. La nuvola degli "Interessi" si disegna in un riquadro troppo piccolo.
 4. Numeri nella scheda con il punto ("2717.0"): formato italiano su tutti i `toFixed`.
 5. Frasi degli stati della Mappa sonora (`DESCRIZIONI` in `ui-compass.js`): da rileggere con l'utente.
 6. "Notte" come interruttore nella Mappa sonora (decisione aperta, `sottotraccia.md`).
 7. Unione di `ui-redesign` in `Music`: solo con il sì dell'utente. `Music` è indietro rispetto a `main`.
+8. Titolo del gruppo «Celle della città»: scelta dell'agente. Il parere Opus propone «La città cella per cella»; decide l'utente.
+9. Legenda UHI: «Basso-medio» e «Medio-basso» stanno vicini e si confondono (nomi in `UHI_NAMES`, `map-layers.js`).
+10. Lo slider «Intensità dello strato» annulla il rischio UHI «solo dove ci sono persone» finché non si ricalcola. Era così anche prima: letto nel codice, non provato a schermo.
+11. Campioni delle classi chiare (9, F, G, scale pallide) senza contorno: da guardare a schermo. Il 12% delle celle non scelte: da confermare.
 
 ## Nomi vecchi → nuovi
 | Prima | Ora |
@@ -49,10 +56,16 @@ Ripinteggiatura del 2026-10-10 sul branch `ui-redesign` (da `Music`). Motivo: pa
 | Color dots by (Off, Gender, Age, Nationality, Visits) | Colora i puntini per (Nessuno, Genere, Età, Nazionalità, Visite) |
 | POI Spots | Luoghi della città (spot) |
 | Synthetic Crowded Points | Punti di affollamento simulati |
-| LCZ Vitality / Show | Mostra le celle LCZ / Cosa mostrare |
+| LCZ Vitality / Show | Mostra le celle / Cosa mostrare (griglia, 2026-10-10) |
+| Clima e celle | Celle della città (2026-10-10) |
+| Ora per ora (bussola sonora) | Cambiano con l'ora (gruppo di Cosa mostrare) |
+| Trasparenza dello strato | Intensità dello strato (2026-10-10) |
+| Gruppo Vento (Rugosità, z0) | tolto: Rugosità in Forma della città, z0 tolto dalla vista |
+| Affidabilità (accordo della classificazione) | tolta dalla vista e dalla scheda della cella |
 | UHI Dynamic Visibility | Mostra il rischio solo dove ci sono persone |
-| 3D Terrain / 3D Buildings | Rilievo in 3D / Edifici in 3D |
-| Map style: Toner · Nolli | Stile della mappa (gruppo Mappa) |
+| 3D Terrain / 3D Buildings | Rilievo in 3D / Edifici in 3D, poi un solo tasto **3D** (2026-10-10) |
+| Map style: Toner · Nolli | Stile della mappa (popover in alto a destra, 2026-10-10) |
+| Gruppo Mappa dei Livelli (stile, 3D) | Comandi della mappa in alto a destra (2026-10-10) |
 | "Attiva mappa sonora" + menu "Musica IA" | Mappa sonora: interruttore + quattro modi |
 | Place Information | Scheda "Area", solo con una selezione |
 | Direzione avanti/indietro (⇄) | tolta da tutte le versioni: il Play va sempre avanti (2026-10-10) |
@@ -62,11 +75,11 @@ Ripinteggiatura del 2026-10-10 sul branch `ui-redesign` (da `Music`). Motivo: pa
 ## Verifica (per la prossima volta)
 - Build: `npm run build`.
 - Prova automatica con Playwright (pacchetto fuori dal repository): `reducedMotion: 'reduce'` (i puntini restano fermi), formati 1440×900, 1366×768 e 390×844 (anche WebKit con viewport di iPhone). Aspettare `document.documentElement.dataset.ready === '1'`.
-- Regressione: mappa sonora on/off e i quattro modi; Play, direzione, cursore, frecce; calendario sotto/a/sopra 7 giorni e Reset; 3D spenti all'avvio; stile Toner/Nolli ricordato; le 17 voci di "Cosa mostrare"; "Colora i puntini per"; filtro spot; clic su un'area (scheda, grafici che cambiano con l'ora); popup della cella; errore di caricamento visibile.
+- Regressione: mappa sonora on/off e i quattro modi; Play, direzione, cursore, frecce; calendario sotto/a/sopra 7 giorni e Reset; 3D (un tasto): spento all'avvio, inclina a 55°, doppio clic, inclinazione a mano; stile Nolli di partenza, Toner ricordato (chiave `cityrhythm.mapStyle.v2`); le 15 voci di "Cosa mostrare" (5 gruppi), la legenda cliccabile (un clic evidenzia, un secondo torna a tutte), la scheda della cella senza accordo né z0; "Colora i puntini per"; filtro spot; clic su un'area (scheda, grafici che cambiano con l'ora); popup della cella; errore di caricamento visibile.
 
 ## Prompt per la prossima sessione (interfaccia)
 ```
-Riprendiamo CityRhythm, branch ui-redesign (pubblicato su Pages da `main`). Leggi
+Riprendiamo CityRhythm, branch ui-redesign (Pages pubblica `main`; le sessioni 23–24 non sono committate: chiedi prima di tutto). Leggi
 second-brain/SECOND_BRAIN.md e second-brain/interfaccia.md. Riassumimi in 3 righe dove siamo.
 
 Regole di lavoro: italiano, spiegazioni semplici. Commit e push solo su richiesta. Unire su

@@ -245,16 +245,16 @@ export function initCompassUI(map) {
         if (misura) riempiDettagli(m);
     };
 
-    // Il tocco sul quadrante accende e spegne; il pulsante sotto apre il pannello. Un solo pannello della timeline
-    // aperto alla volta. Toccare il quadrante con il pannello aperto non lo chiude: si può ascoltare mentre si scelgono i modi.
+    // Il tocco sul quadrante accende e spegne; il pulsante sotto apre il pannello. Un solo pannello alla volta.
+    // Toccare il quadrante con il pannello aperto non lo chiude: si può ascoltare mentre si scelgono i modi.
     dial.addEventListener('click', () => audioEnabled.update(on => !on));
     const apri = (aperto) => {
         panel.hidden = !aperto;
         apriBtn.setAttribute('aria-expanded', String(aperto));
-        if (aperto) document.dispatchEvent(new CustomEvent('timeline-popover', { detail: 'mappa-sonora' }));
+        if (aperto) document.dispatchEvent(new CustomEvent('pannello-aperto', { detail: 'mappa-sonora' }));
     };
     apriBtn.addEventListener('click', () => apri(panel.hidden));
-    document.addEventListener('timeline-popover', (e) => { if (e.detail !== 'mappa-sonora') apri(false); });
+    document.addEventListener('pannello-aperto', (e) => { if (e.detail !== 'mappa-sonora') apri(false); });
     document.addEventListener('pointerdown', (e) => {
         if (panel.hidden || panel.contains(e.target) || apriBtn.contains(e.target) || dial.contains(e.target) || e.target.closest?.('.litepicker')) return;
         apri(false);

@@ -26,6 +26,7 @@
 
     --gutter: 12px;
     --col-w: 296px;
+    --tools-w: 44px;         /* spazio a destra della scheda area: margine di MapLibre (10 px) più la colonna dei comandi (32 px) */
     --timeline-h: 120px;     /* altezza della timeline sul desktop (quadrante, pulsante e cursore) */
     --target: 32px;          /* altezza minima dei controlli (44px sul telefono) */
 
@@ -88,6 +89,108 @@ svg { display: block; }
     pointer-events: none;    /* la colonna lascia passare i clic sulla mappa */
 }
 .side-column > * { pointer-events: auto; }
+
+/* Comandi della mappa in alto a destra: zoom di MapLibre, poi stile e 3D, poi crediti. Un gruppo bianco come lo zoom.
+   Il selettore #map tiene la regola sopra quelle di MapLibre, qualunque sia l'ordine dei fogli di stile. */
+#map .maplibregl-ctrl-top-right { z-index: 45; }   /* sopra la scheda area (desktop): i crediti aperti si leggono */
+/* Il contenitore dei tasti è dentro .maplibregl-map, che imposta il suo carattere (Helvetica Neue 12 px): qui torna quello del sito */
+.map-tools { position: relative; font-family: var(--font); line-height: 1.45; }
+.map-tools-style { position: relative; }
+.map-tools .map-tool {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;             /* come i tasti dello zoom (min-width di MapLibre, sezione 10) */
+    height: 32px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    cursor: pointer;
+}
+/* Filetto fra un tasto e il successivo, come nel gruppo dello zoom */
+.map-tools .map-tools-style + .map-tool,
+.map-tools .map-tool + .map-tool { border-top: 1px solid var(--line); }
+.map-tools .map-tool svg { width: 18px; height: 18px; flex: none; }
+.map-tools .map-tool-text { font-size: 0.8rem; font-weight: 700; line-height: 1; letter-spacing: 0.02em; }
+.map-tools .map-tool svg path {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+/* MapLibre toglie il contorno a tutti i tasti del suo gruppo (outline: none) e mette un alone azzurro sul fuoco
+   (.maplibregl-ctrl-group button:focus:focus-visible, specificità 0,3,1): il prefisso #map lo batte.
+   Resta solo il contorno del sito */
+#map .map-tools .map-tool:focus,
+#map .map-popover .seg button:focus { box-shadow: none; }
+.map-tools .map-tool:focus-visible,
+.map-popover .seg button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* Il prefisso #map batte la regola di MapLibre per il passaggio del mouse (.maplibregl-ctrl button:not(:disabled):hover).
+   L'ordine conta: acceso per ultimo, così resta scuro anche col mouse sopra. */
+@media (hover: hover) { #map .map-tools .map-tool:hover { background: var(--paper-2); } }
+#map .map-tools .map-tool[aria-expanded="true"] { background: var(--paper-2); }
+#map .map-tools .map-tool[aria-pressed="true"] { background: var(--ink); color: var(--paper); }   /* acceso: fondo scuro e icona chiara */
+
+/* Nome del tasto a comparsa a sinistra, sul desktop (con il mouse o da tastiera). Sul telefono c'è solo l'icona. */
+@media (hover: hover) {
+    .map-tools .map-tool:hover::after,
+    .map-tools .map-tool:focus-visible::after {
+        content: attr(data-label);
+        position: absolute;
+        top: 50%;
+        right: calc(100% + 8px);
+        transform: translateY(-50%);
+        padding: 4px 8px;
+        border-radius: var(--radius-sm);
+        background: var(--ink);
+        color: var(--paper);
+        font-size: 0.8rem;
+        font-weight: 500;
+        line-height: 1.3;
+        white-space: nowrap;
+        pointer-events: none;
+    }
+    .map-tools .map-tool[aria-expanded="true"]::after { content: none; }
+}
+
+/* Stile della mappa: il popover si apre a sinistra del suo tasto */
+.map-popover {
+    position: absolute;
+    top: 0;
+    right: calc(100% + 8px);
+    width: 220px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: var(--panel-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+/* I due stili sono pulsanti di testo come quelli del pannello (.seg): MapLibre li farebbe tondi da 29 px.
+   Il prefisso #map batte le regole di MapLibre per il gruppo (dimensioni, angoli di primo e ultimo figlio, passaggio del mouse) */
+#map .map-popover .seg button {
+    display: inline-flex;
+    align-items: center;
+    width: auto;
+    height: auto;
+    min-width: 0;
+    min-height: 30px;
+    padding: 4px 11px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 0.85rem;
+    line-height: 1.2;
+}
+#map .map-popover .seg button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+
+/* Crediti aperti: il testo va a capo entro una larghezza fissa, senza coprire tutta la parte alta della mappa */
+#map .maplibregl-ctrl-attrib-inner { max-width: 340px; }
 
 /* Il crosshair del mirino sta al centro del contenitore della mappa */
 .crosshair {
@@ -291,22 +394,89 @@ svg { display: block; }
 }
 .lcz-controls[hidden] { display: none; }
 
+/* Cosa mostrare: niente riquadri né contorni. Il pulsante scelto si vede dal grassetto e dal fondo grigio chiaro */
+.view-picker { display: flex; flex-direction: column; gap: 12px; }
+.view-group-title { display: block; margin-bottom: 4px; font-size: 0.8rem; font-weight: 600; color: var(--ink-2); }
+.view-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 6px; }
+.view-tile {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    min-width: 0;
+    min-height: 44px;
+    padding: 6px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--ink);
+    text-align: left;
+    cursor: pointer;
+}
+.view-tile:hover,
+.view-tile[aria-pressed="true"] { background: var(--paper-2); }
+.view-tile[aria-pressed="true"] .view-head { font-weight: 700; }
+.view-icon {
+    display: block;
+    flex: none;
+    width: 18px;
+    height: 18px;
+    margin-top: 1px;
+    border-radius: 4px;
+    overflow: hidden;
+}
+/* Campione a quadretti: --cols colonne, i figli sono i colori */
+.view-icon-grid { display: grid; grid-template-columns: repeat(var(--cols, 1), 1fr); }
+.view-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+.view-head { font-size: 0.84rem; font-weight: 600; }
+.view-sub { margin-top: 2px; font-size: 0.72rem; color: var(--ink-3); }
+
 .legend { display: flex; flex-direction: column; gap: 6px; }
-.lcz-legend-categories { display: flex; flex-wrap: wrap; gap: 4px 10px; }
-.lcz-legend-categories span { display: inline-flex; align-items: center; gap: 5px; }
-.lcz-legend-categories span::before {
-    content: "";
-    width: 10px;
-    height: 10px;
-    border: 1px solid rgba(0, 0, 0, 0.25);
+.legend-title { font-size: 0.86rem; font-weight: 600; color: var(--ink); }
+.legend-hint { margin-top: 2px; font-size: 0.78rem; color: var(--ink-3); }
+
+/* Legenda a colonna: il codice ha una larghezza fissa, così le righe si allineano */
+.legend-list { display: flex; flex-direction: column; gap: 1px; margin: 0 -6px; }
+.legend-group-title { margin: 8px 6px 2px; font-size: 0.76rem; font-weight: 600; color: var(--ink-3); }
+.legend-item {
+    display: grid;
+    grid-template-columns: 14px 1fr;
+    align-items: center;
+    column-gap: 8px;
+    min-height: 26px;
+    padding: 2px 6px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    font-size: 0.82rem;
+    text-align: left;
+    cursor: pointer;
+}
+.legend-item.has-code { grid-template-columns: 14px 2.4em 1fr; }
+.legend-item:hover { background: var(--paper-2); }
+.legend-item[aria-pressed="true"] { background: var(--paper-2); font-weight: 700; }
+.legend-code { font-weight: 600; font-variant-numeric: tabular-nums; }
+.legend-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
     background: var(--swatch);
 }
+/* Con una voce evidenziata sulla mappa, le altre voci della legenda si attenuano */
+.legend.has-pick .legend-item:not([aria-pressed="true"]),
+.legend.has-pick .ramp-seg:not([aria-pressed="true"]),
+.legend.has-pick .state-tag:not([aria-pressed="true"]) { opacity: 0.4; }
+
+/* Scala a fasce: un tratto per fascia, ognuno cliccabile; le etichette stanno sui confini */
 .lcz-legend-ramp {
-    height: 10px;
-    border: 1px solid rgba(0, 0, 0, 0.25);
-    border-radius: 2px;
+    display: flex;
+    height: 16px;
+    border-radius: 3px;
+    overflow: hidden;
 }
-.lcz-legend-ticks { position: relative; height: 14px; margin: 0 0 0; }
+.ramp-seg { min-width: 0; height: 100%; padding: 0; border: 0; cursor: pointer; }
+/* Filetto bianco fra una fascia e l'altra: sta dentro la larghezza, così i confini restano dove sono le etichette */
+.ramp-seg:not(:last-child) { box-shadow: inset -2px 0 0 var(--paper); }
+.lcz-legend-ticks { position: relative; height: 14px; margin: 2px 0 0; }
 .lcz-legend-ticks span {
     position: absolute;
     transform: translateX(-50%);
@@ -328,10 +498,16 @@ svg { display: block; }
 .lcz-legend-compass .state-tag {
     position: absolute;
     transform: translate(-50%, -50%);
+    padding: 1px 4px;
+    border: 0;
+    border-radius: 3px;
+    background: transparent;
     font-size: 0.72rem;
     white-space: nowrap;
     color: var(--ink);
+    cursor: pointer;
 }
+.lcz-legend-compass .state-tag[aria-pressed="true"] { font-weight: 700; }
 .lcz-legend-compass .axis {
     position: absolute;
     left: 0;
@@ -340,14 +516,6 @@ svg { display: block; }
     font-size: 0.75rem;
     color: var(--ink-2);
     white-space: nowrap;
-}
-.lcz-legend-night { display: flex; align-items: center; gap: 6px; margin-top: -4px; color: var(--ink-2); font-size: 0.8rem; }
-.lcz-legend-night .swatch {
-    display: inline-block;
-    width: 14px;
-    height: 14px;
-    border: 1px solid rgba(0, 0, 0, 0.25);
-    border-radius: 3px;
 }
 
 .range-row { display: flex; flex-direction: column; gap: 4px; }
@@ -607,7 +775,7 @@ svg { display: block; }
 .drawer {
     position: fixed;
     top: var(--gutter);
-    right: var(--gutter);
+    right: calc(var(--gutter) + var(--tools-w));   /* a sinistra dei comandi della mappa, che restano liberi */
     bottom: calc(var(--timeline-h) + var(--gutter) * 2);
     width: min(400px, calc(100vw - var(--gutter) * 2));
     display: flex;
@@ -788,6 +956,15 @@ div[id$="-chart"] p { padding: 16px; text-align: center; font-style: normal; col
     .panel-body { min-height: 0; overflow-y: auto; }
     .layers-toggle { top: calc(var(--gutter) + env(safe-area-inset-top)); left: var(--gutter); }
 
+    /* Comandi della mappa: tasti da 40 px (zoom compreso) e sotto la scheda a tutto schermo, che li copre */
+    #map .maplibregl-ctrl-top-right { z-index: 2; }
+    #map .maplibregl-ctrl-group > button,
+    .map-tools > .map-tool,
+    .map-tools-style > .map-tool { width: 40px; height: 40px; }
+    .map-tools .map-tool svg { width: 20px; height: 20px; }
+    #map .map-popover .seg button { min-height: 36px; padding: 6px 13px; font-size: 0.95rem; }
+    #map .maplibregl-ctrl-attrib-inner { max-width: calc(100vw - 96px); }
+
     /* La Mappa sonora sta sopra la timeline, e per quanto possibile sotto il mirino */
     .popover { left: 0; right: 0; }
     .compass-popover {
@@ -857,6 +1034,8 @@ div[id$="-chart"] p { padding: 16px; text-align: center; font-style: normal; col
     .seg button { min-height: 36px; padding: 6px 13px; font-size: 0.95rem; }
     .icon-btn { width: 44px; height: 44px; }
     .group > summary, .check { min-height: 44px; }
+    .view-tile { min-height: 48px; }
+    .legend-item { min-height: 36px; }
 }
 
 /* 12. Movimento ridotto e stampa ------------------------------------------- */
@@ -869,5 +1048,5 @@ div[id$="-chart"] p { padding: 16px; text-align: center; font-style: normal; col
 }
 
 @media print {
-    .side-column, .timeline, .drawer, .layers-toggle, .status-bar { display: none !important; }
+    .side-column, .timeline, .drawer, .layers-toggle, .status-bar, .map-tools { display: none !important; }
 }
