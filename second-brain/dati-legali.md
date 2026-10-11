@@ -140,7 +140,7 @@ Tolti su questo branch (restano nella storia di `main` e `ui-redesign`): `cityrh
 3. **Gruppo Luoghi**: resta nascosto o si riattiva con i luoghi OSM (il livello è pronto, colorato per categoria)?
 4. **`cityrhythm1.0.zip`** (backup del 2025, nel repository): dentro il vecchio codice compresso ci sono i nomi dei due CSV e 6 indirizzi di gist. Tenerlo, toglierlo da questo branch o chiarire i gist?
 5. **Open-Meteo** mancava nei crediti di `main`: aggiunto qui; va portato anche su `main`?
-6. **`IPUMS/DDI.md`** sul disco contiene un testo su un calendario Google, non il codebook dell'estratto: il DDI originale (XML) va riscaricato da IPUMS se serve.
+6. **`IPUMS/DDI.md`** sul disco non contiene più il codebook dell'estratto (c'è un altro testo): il DDI originale (XML) va riscaricato da IPUMS se serve.
 
 ## Come si rigenera
 ```bash
