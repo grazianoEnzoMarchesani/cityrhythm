@@ -3,3 +3,4 @@ pyloudnorm
 soundfile
 pandas
 shapely
+opening-hours-py==2.1.4
