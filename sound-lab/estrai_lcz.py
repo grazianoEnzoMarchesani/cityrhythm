@@ -2,7 +2,7 @@
 `Lcz_neurali 2` e le ritaglia sull'area dei quartieri di Ascoli.
 
 Fonte: FETCH+simoneAP/unified/lcz_grid_30m_lcz_params.gpkg (EPSG:3004).
-Area: rettangolo che contiene i quartieri KML e i punti (spot, luoghi affollati)
+Area: rettangolo che contiene i quartieri KML e i punti dei luoghi della prima versione (RETTANGOLO)
 + 150 m di margine, intersecato col confine del Comune (regola: solo Ascoli).
 Si tengono le celle intere col centro dentro l'area; nessun raggruppamento.
 Uscita: GeoJSON in WGS84 con il quartiere di ogni cella (o il piu' vicino); campi vuoti (lcz_score, lcz_confidence, dist_*) e
@@ -12,7 +12,6 @@ Uso:  .venv/bin/python estrai_lcz.py "../Lcz_neurali 2" ../public/data/lcz_ascol
 Serve QGIS (usa ogr2ogr e proj.db del pacchetto; percorso in QGIS sotto).
 """
 import json, math, os, re, sqlite3, subprocess, sys, tempfile
-import pandas as pd
 from shapely.geometry import Polygon, box, shape
 from shapely.ops import transform, unary_union
 
@@ -22,6 +21,10 @@ ENV = {**os.environ, "PROJ_DATA": os.path.join(QGIS, "Resources", "qgis", "proj"
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(HERE, "..", "public", "data")
 MARGINE_M = 150
+# [S] Rettangolo dei quartieri KML e dei punti dei luoghi usati quando le celle sono state estratte (2026-10):
+# fissato qui perché le celle restino le stesse senza i file di quei luoghi (tolti nel branch dati-legali).
+# Solo il lato est supera i quartieri, di circa 35 m.
+RETTANGOLO = (13.55465567673138, 42.84580721526164, 13.6026795, 42.86640280233501)  # ovest, sud, est, nord (WGS84)
 
 # campi pieni e significativi per spiegare come nasce la LCZ (arrotondati)
 CAMPI = [
@@ -45,17 +48,16 @@ def in_3004(geojson, tmp):
 def main(progetto, uscita):
     gpkg = os.path.join(progetto, "FETCH+simoneAP", "unified", "lcz_grid_30m_lcz_params.gpkg")
     with tempfile.TemporaryDirectory() as tmp:
-        # rettangolo: quartieri KML + spot + luoghi affollati
+        # rettangolo: quartieri KML + punti dei luoghi della prima versione (RETTANGOLO, fissato)
         kml = open(os.path.join(DATA, "cityrhythm_blimp_areas.kml")).read()
         pts = [tuple(map(float, p.split(",")[:2]))
                for c in re.findall(r"<coordinates>(.*?)</coordinates>", kml, re.S) for p in c.split()]
-        spot = pd.read_csv(os.path.join(DATA, "cityrhythm_spotMapper.csv"))
-        folla = pd.read_csv(os.path.join(DATA, "cityrhythm_crowded_data.csv"))
-        pts += list(zip(spot.Longitudine, spot.Latitudine)) + list(zip(folla.longitude, folla.latitude))
         xs, ys = zip(*pts)
+        ovest, sud, est, nord = RETTANGOLO
+        assert ovest <= min(xs) and sud <= min(ys) and est >= max(xs) and nord >= max(ys), "i quartieri escono dal rettangolo"
         r = os.path.join(tmp, "rett.geojson")
         json.dump({"type": "Feature", "properties": {},
-                   "geometry": box(min(xs), min(ys), max(xs), max(ys)).__geo_interface__}, open(r, "w"))
+                   "geometry": box(ovest, sud, est, nord).__geo_interface__}, open(r, "w"))
         rett = in_3004(r, tmp).envelope.buffer(MARGINE_M, join_style=2)
         comune = in_3004(os.path.join(HERE, "data", "comune_ascoli.geojson"), tmp)
         area = rett.intersection(comune)
