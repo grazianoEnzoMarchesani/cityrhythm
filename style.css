@@ -878,9 +878,6 @@ svg { display: block; }
 .note-gap { margin-top: 24px; }
 .small { font-size: 0.9em; }
 .error-text { color: var(--ink); font-weight: 600; }
-.export-pct { font-weight: 600; color: var(--ink); }
-.export-status { margin-bottom: 6px; font-size: 0.9em; color: var(--ink-2); min-height: 18px; text-align: left; }
-.export-btn { margin: 10px 0; width: 95%; padding: 10px; cursor: pointer; }
 
 /* Scheda area (src/ui/area-panel.js): niente riquadri né fili intorno alle sezioni, solo spazi, titoli e testo.
    Ogni selettore parte da `.ap` per battere le regole generiche della scheda (`.drawer-body p`). */
@@ -933,9 +930,6 @@ button.ap-riga:hover .ap-riga-nome { text-decoration: underline; text-underline-
 
 .ap .ap-det { margin-top: 18px; }
 .ap .ap-mm { font-size: 0.82rem; color: var(--ink-2); line-height: 1.55; margin: 6px 0 0; }
-
-.export-btn { margin-top: 12px; }
-.export-status { font-size: 0.85rem; color: var(--ink-2); margin-top: 6px; }
 
 /* 9. Messaggi di caricamento ed errori ------------------------------------- */
 .status-bar {
