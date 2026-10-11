@@ -29,6 +29,11 @@ export const cellMap = writable(null);
 // Persone dei puntini nell'ora della timeline (src/map/map-layers.js): solo chi è fuori casa,
 // ognuno col peso di quante persone vere rappresenta. { index, lon, lat, w: Float64Array } o null.
 export const presence = writable(null);
+// Interruttore «Mostra le celle» (src/ui/ui-layer-controls.js): il tasto di ispezione compare solo quando è acceso.
+export const celleAccese = writable(false);
+// Ispezione delle celle (src/ui/ui-map-tools.js): acceso, un clic mostra la cella e le aree non si aprono
+// (la legge src/map/map-interaction.js). Si spegne da solo quando le celle si spengono.
+export const ispezioneCelle = writable(false);
 
 if (import.meta.env.DEV) {
     time.subscribe(t => console.log('[store] ora', t.index, t.date ? t.date.toISOString().slice(0, 16) : 'settimana tipo'));

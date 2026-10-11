@@ -228,6 +228,7 @@ svg { display: block; }
 
 /* Pannello dei livelli: occupa lo spazio che resta, scorre al suo interno */
 .layers {
+    position: relative;
     flex: 0 1 auto;
     min-height: 0;
     display: flex;
@@ -235,6 +236,17 @@ svg { display: block; }
     overflow: hidden;
 }
 .layers[hidden] { display: none; }
+/* Sfumatura in fondo quando sotto il contenuto c'è altro da scorrere: la classe `ha-altro` la mette main.js */
+.layers.ha-altro::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 40px;
+    background: linear-gradient(rgba(255, 255, 255, 0), var(--panel-bg));
+    pointer-events: none;
+}
 .panel-body {
     min-height: 0;
     overflow-y: auto;
@@ -294,6 +306,56 @@ svg { display: block; }
     font-weight: 500;
 }
 .note { font-size: 0.82rem; color: var(--ink-3); }
+
+/* Dettagli dentro il gruppo Persone: come i gruppi dei Livelli, chiuso all'avvio */
+.dettagli > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: var(--target);
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--ink-2);
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+}
+.dettagli > summary::-webkit-details-marker { display: none; }
+.dettagli > summary::after { content: "+"; font-size: 1.2rem; font-weight: 400; line-height: 1; }
+.dettagli[open] > summary::after { content: "−"; }
+.dettagli > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+.dettagli > .casa { padding-top: 6px; }
+
+/* Chi sta a casa (gruppo Persone): legenda dei puntini e curva ISTAT, senza riquadri né fili intorno */
+.dot-key { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; font-size: 0.85rem; color: var(--ink-2); }
+.dot-key li { display: flex; align-items: flex-start; gap: 8px; line-height: 1.3; }
+.dot-key-glyph {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    margin-top: 1px;
+    border-radius: 3px;
+}
+.dot-key-fuori { background: var(--paper); }
+.dot-key-fuori::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: #000; }
+.dot-key-casa { background: #414141; }                  /* l'edificio scuro dello stile Nolli */
+.dot-key-casa::before { content: ""; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid #fff; box-sizing: border-box; }
+.dot-key.stile-toner .dot-key-casa { background: var(--paper); }                      /* Toner: in casa un punto nero sbiadito */
+.dot-key.stile-toner .dot-key-casa::before { width: 9px; height: 9px; border: 0; background: rgba(0, 0, 0, 0.45); }
+.casa-lettura { margin: 0; font-size: 0.9rem; font-weight: 600; color: var(--ink); }
+.casa-figura { margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.casa-figura figcaption { margin: 0; }
+.casa-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.casa-area { fill: #e6e6e6; }
+.casa-base { stroke: var(--line-strong); stroke-width: 1; }
+.casa-curva { fill: none; stroke: var(--ink); stroke-width: 2; stroke-linejoin: round; }
+.casa-ora { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 2 2; }
+.casa-punto { fill: var(--ink); stroke: var(--paper); stroke-width: 1.5; }
+.casa-valore { fill: var(--ink); font: 650 11px var(--font); }
+.casa-asse { fill: var(--ink-3); font: 400 9.5px var(--font); }
 
 /* Scelta fra poche opzioni: pulsanti a pillola con stato premuto */
 .seg { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -531,8 +593,6 @@ svg { display: block; }
 .dev-only { padding: 0 16px 12px; display: flex; flex-direction: column; gap: 6px; }
 
 /* Testo grigio di servizio nel pannello (prima era opacity 0,5 e sotto il contrasto minimo) */
-.spot-type-selector { display: flex; flex-direction: column; gap: 6px; padding-left: 28px; }
-
 /* 6. Mappa sonora: il pannello sopra il quadrante (il quadrante sta nella timeline, sezione 7) ---- */
 .compass-popover {
     right: auto;
@@ -796,6 +856,8 @@ svg { display: block; }
     border-bottom: 1px solid var(--line);
 }
 .drawer-title { font-size: 1.05rem; font-weight: 650; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+/* Il titolo riceve il fuoco dallo script per chi usa lo schermo lettore: non è un controllo, niente anello */
+.drawer-title:focus { outline: none; }
 .drawer-body {
     flex: 1 1 auto;
     min-height: 0;
@@ -807,77 +869,70 @@ svg { display: block; }
     color: var(--ink);
 }
 .drawer-body > h3 { display: none; } /* il nome dell'area sta già nel titolo della scheda */
-.drawer-body h4 { font-size: 0.98rem; font-weight: 600; margin: 22px 0 6px; }
 .drawer-body p { margin-bottom: 10px; color: var(--ink-2); line-height: 1.5; }
 .drawer-body .note-center { text-align: center; }
-.drawer-body .chart-description { font-size: 0.84rem; color: var(--ink-3); margin: 0 0 10px; }
 .drawer-body strong { font-weight: 600; color: var(--ink); }
 
 /* Classi della scheda (prima stili inline in ui-sidebar.js) */
 .note-center { text-align: center; }
 .note-gap { margin-top: 24px; }
 .small { font-size: 0.9em; }
-.h-180 { height: 180px; margin-bottom: 22px; }
-.h-200 { height: 200px; margin-bottom: 20px; }
-.h-280 { height: 280px; margin-bottom: 22px; }
-.chart-msg { padding: 16px; }
-.timeline-info {
-    font-size: 0.9em;
-    text-align: center;
-    margin-bottom: 18px;
-    padding-bottom: 14px;
-    border-bottom: 1px solid var(--line);
-    color: var(--ink-2);
-}
 .error-text { color: var(--ink); font-weight: 600; }
 .export-pct { font-weight: 600; color: var(--ink); }
 .export-status { margin-bottom: 6px; font-size: 0.9em; color: var(--ink-2); min-height: 18px; text-align: left; }
 .export-btn { margin: 10px 0; width: 95%; padding: 10px; cursor: pointer; }
 
-.chart-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; }
-.chart-row > div[id$="-chart"] { flex: 1 1 calc(50% - 6px); min-width: 180px; }
+/* Scheda area (src/ui/area-panel.js): niente riquadri né fili intorno alle sezioni, solo spazi, titoli e testo.
+   Ogni selettore parte da `.ap` per battere le regole generiche della scheda (`.drawer-body p`). */
+.ap { font-variant-numeric: tabular-nums; }
+.ap .ap-quando { font-size: 0.86rem; color: var(--ink-3); margin: 0 0 6px; }
+.ap .ap-numero { font-size: 2.6rem; font-weight: 300; letter-spacing: -0.02em; line-height: 1.1; color: var(--ink); margin: 0; }
+.ap .ap-numero-nota { font-size: 0.92rem; color: var(--ink-2); margin: 2px 0 0; }
+.ap .ap-periodo { font-size: 0.84rem; color: var(--ink-3); line-height: 1.45; margin: 12px 0 0; }
+.ap .ap-sez { margin-top: 30px; }
+.ap .ap-sez h4 { font-size: 1rem; font-weight: 600; color: var(--ink); margin: 0 0 2px; }
+.ap .ap-nota { font-size: 0.8rem; color: var(--ink-3); line-height: 1.4; margin: 0 0 12px; }
+.ap .ap-sub { font-size: 0.84rem; font-weight: 600; color: var(--ink); margin: 0 0 6px; }
+.ap .ap-vuoto { font-size: 0.84rem; color: var(--ink-3); text-align: center; padding: 20px 0; margin: 0; }
 
-div[id$="-chart"] {
-    width: 100%;
-    min-height: 220px;
-    margin-bottom: 14px;
-    background: var(--paper);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-sm);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--ink-2);
+.ap .ap-chart { width: 100%; height: 200px; }
+.ap .ap-chart-giorno { height: 210px; }
+.ap .ap-chart-interessi { height: 230px; }
+.ap .ap-chart-tutti { height: 540px; }
+.ap .ap-chart-piccolo { height: 150px; }
+
+.ap .ap-altri { margin-top: 10px; }
+.ap .ap-altri > summary { cursor: pointer; font-size: 0.84rem; color: var(--ink-2); min-height: 32px; display: flex; align-items: center; }
+.ap .ap-altri > summary:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+
+.ap .ap-quota { margin-bottom: 18px; }
+.ap .ap-barra { display: flex; gap: 2px; height: 10px; border-radius: 5px; overflow: hidden; margin-bottom: 8px; }
+.ap .ap-barra span { height: 100%; min-width: 2px; }
+.ap .ap-legenda { display: flex; flex-wrap: wrap; gap: 2px 14px; }
+.ap .ap-voce {
+    display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 0;
+    background: none; border: 0; font: inherit; font-size: 0.84rem; color: var(--ink-2); cursor: pointer;
 }
-div[id$="-chart"] p { padding: 16px; text-align: center; font-style: normal; color: var(--ink-2); }
+.ap .ap-voce b { font-weight: 600; color: var(--ink); }
+.ap .ap-voce:hover { text-decoration: underline; text-underline-offset: 3px; }
+.ap .ap-voce[aria-pressed="true"] { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+.ap .ap-punto { width: 9px; height: 9px; border-radius: 50%; flex: none; }
 
-#presenze-value {
-    font-size: 2.4rem;
-    font-weight: 300;
-    text-align: center;
-    margin: 10px 0 22px;
-    color: var(--ink);
+.ap .ap-gruppo { margin-bottom: 16px; }
+.ap .ap-riga {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(56px, 1.1fr) auto; align-items: center; gap: 10px;
+    width: 100%; min-height: 28px; margin: 0; padding: 0;
+    background: none; border: 0; font: inherit; font-size: 0.84rem; color: var(--ink-2); text-align: left;
 }
-#presenze-value strong { font-weight: 300; }
+button.ap-riga { cursor: pointer; }
+button.ap-riga:hover .ap-riga-nome { text-decoration: underline; text-underline-offset: 3px; }
+.ap .ap-riga-nome { color: var(--ink); overflow-wrap: anywhere; }
+.ap .ap-traccia { display: block; height: 6px; border-radius: 3px; background: #efefef; overflow: hidden; }
+.ap .ap-traccia span { display: block; height: 100%; }
+.ap .ap-riga-val { font-weight: 600; color: var(--ink); white-space: nowrap; }
 
-.stat-details { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.84rem; color: var(--ink-2); margin-bottom: 10px; }
-.stat-details > div > div { margin-bottom: 3px; }
-.stat-value { font-weight: 600; color: var(--ink); }
-.stat-date { font-size: 0.78rem; color: var(--ink-3); }
-
-.tag-cloud-container {
-    width: 100%;
-    min-height: 180px;
-    margin: 8px 0;
-    padding: 10px;
-    border-radius: var(--radius-sm);
-    background: var(--paper-2);
-    overflow: hidden;
-}
-.tag-cloud-container h4 { text-align: center; margin: 0 0 8px; font-size: 0.95rem; }
-.tag-cloud-container svg { display: block; margin: 0 auto; }
-.tag-cloud-container text { transition: opacity 150ms ease-out; }
-.tag-cloud-container text:hover { font-weight: bold; }
+.ap .ap-det { margin-top: 18px; }
+.ap .ap-mm { font-size: 0.82rem; color: var(--ink-2); line-height: 1.55; margin: 6px 0 0; }
 
 .export-btn { margin-top: 12px; }
 .export-status { font-size: 0.85rem; color: var(--ink-2); margin-top: 6px; }
@@ -1024,8 +1079,7 @@ div[id$="-chart"] p { padding: 16px; text-align: center; font-style: normal; col
         padding-top: env(safe-area-inset-top);
     }
     .drawer-body { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
-    .chart-row > div[id$="-chart"] { flex-basis: 100%; }
-    .stat-details { grid-template-columns: 1fr; }
+    .ap .ap-voce, .ap .ap-riga { min-height: 40px; }
 
     .status-bar { top: 64px; max-width: calc(100vw - 24px); }
 
@@ -1036,6 +1090,14 @@ div[id$="-chart"] p { padding: 16px; text-align: center; font-style: normal; col
     .group > summary, .check { min-height: 44px; }
     .view-tile { min-height: 48px; }
     .legend-item { min-height: 36px; }
+}
+
+/* Telefono in orizzontale e largo (es. 844×390): il pannello può scendere fino alla timeline. Il mirino (centro della
+   mappa) sta a destra del pannello, quindi non viene coperto. Sotto i 720 px resta il tetto della regola sopra. */
+@media (min-width: 720px) and (max-height: 500px) and (pointer: coarse) {
+    .side-column {
+        max-height: calc(100dvh - var(--timeline-h) - var(--gutter) * 3 - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    }
 }
 
 /* 12. Movimento ridotto e stampa ------------------------------------------- */

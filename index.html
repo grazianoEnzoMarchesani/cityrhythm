@@ -28,6 +28,10 @@
         </div>
         <!-- Vista 3D: inclina la mappa e accende edifici e rilievo (ui-map-tools.js) -->
         <button id="toggle-3d" class="map-tool map-tool-text" type="button" aria-label="Vista 3D" aria-pressed="false" data-label="Vista 3D: spenta">3D</button>
+        <!-- Solo celle: compare solo con «Mostra le celle» accese (ui-map-tools.js) -->
+        <button id="toggle-ispezione" class="map-tool" type="button" aria-label="Solo celle" aria-pressed="false" data-label="Solo celle: spento, il clic apre il quartiere" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 4.75 18.5 12.25l-5.6 1.4-2.3 5.6z"/></svg>
+        </button>
     </div>
 
     <!-- Colonna a sinistra: i livelli. Finisce sopra la timeline, così non si sovrappone a niente -->
@@ -52,26 +56,26 @@
                             <div id="presence-color-legend" class="legend-inline"></div>
                             <p class="note">Percentuali reali di ogni quartiere.</p>
                         </div>
-                    </div>
-                </details>
-
-                <details class="group">
-                    <summary>Luoghi</summary>
-                    <div class="group-body">
-                        <label class="check">
-                            <input type="checkbox" id="toggle-spots" name="spots">
-                            <span>Luoghi della città (spot)</span>
-                        </label>
-                        <div class="spot-type-selector">
-                            <label class="field-label" for="spot-type-filter">Tipo di luogo</label>
-                            <select id="spot-type-filter" class="field">
-                                <option value="all">Tutti i tipi</option>
-                            </select>
-                        </div>
-                        <label class="check">
-                            <input type="checkbox" id="toggle-synthetic-crowded" name="synthetic-crowded">
-                            <span>Punti di affollamento simulati</span>
-                        </label>
+                        <!-- Dettagli: chi sta a casa, con legenda dei puntini e curva ISTAT dell'ora e del giorno della timeline (src/ui/ui-casa.js) -->
+                        <details class="dettagli">
+                            <summary>Dettagli</summary>
+                            <div class="sub casa">
+                                <div class="sub-title">Chi sta a casa</div>
+                                <!-- Le frasi della legenda le scrive src/ui/ui-casa.js, secondo lo stile di base della mappa (Nolli o Toner) -->
+                                <ul class="dot-key" id="dot-key">
+                                    <li><span class="dot-key-glyph dot-key-fuori" aria-hidden="true"></span><span id="dot-key-fuori">Nero pieno: in giro, fuori casa.</span></li>
+                                    <li><span class="dot-key-glyph dot-key-casa" aria-hidden="true"></span><span id="dot-key-casa">Vuoto, con solo il bordo bianco: in casa. Si vede sugli edifici scuri.</span></li>
+                                </ul>
+                                <p class="note">Di notte, fra le 2 e le 4, i dati vedono una parte di chi abita nel quartiere: da lì si stima quanti sono i residenti. Secondo i diari ISTAT, a ogni ora una parte di loro è in casa propria: quella stessa parte resta a casa sulla mappa. Tutti gli altri puntini, anche quelli venuti da fuori, sono in giro.</p>
+                                <p class="casa-lettura" id="casa-lettura"></p>
+                                <figure class="casa-figura">
+                                    <div id="casa-chart" class="casa-chart"></div>
+                                    <figcaption class="note" id="casa-minmax"></figcaption>
+                                </figure>
+                                <p class="note">La curva riguarda chi abita nel quartiere, non chi passa. Sulla mappa la quota di puntini in casa può essere più bassa: dove di giorno arriva gente da fuori, i puntini in casa non superano mai i presenti.</p>
+                                <p class="note">Stima, non conteggio. La curva viene dai diari degli italiani del 2008-09 (ISTAT, Uso del tempo, via <a href="https://doi.org/10.18128/D062.V1.5">IPUMS MTUS</a>): non dipende dal Periodo né da Ascoli. Ogni diario parte alle 4:00, quindi le ore 0–3 vengono dal diario del giorno prima. Citazioni complete nei crediti (i).</p>
+                            </div>
+                        </details>
                     </div>
                 </details>
 
@@ -83,6 +87,7 @@
                             <span>Mostra le celle</span>
                         </label>
                         <div id="lcz-visualization-selector" class="lcz-controls" hidden>
+                            <p class="note">Con la freccia in alto a destra, un clic mostra solo la cella.</p>
                             <div class="field-label" id="lcz-view-title">Cosa mostrare</div>
                             <!-- Griglia di pulsanti con sigla e campione dei colori: la riempie ui-layer-controls.js -->
                             <div id="lcz-view-picker" class="view-picker" role="group" aria-labelledby="lcz-view-title"></div>
@@ -90,10 +95,15 @@
                             <div class="range-row">
                                 <label class="field-label" for="lcz-opacity-slider">Intensità dello strato</label>
                                 <div class="range-line">
-                                    <input type="range" id="lcz-opacity-slider" min="0" max="100" value="70" aria-describedby="lcz-opacity-value">
-                                    <output id="lcz-opacity-value" for="lcz-opacity-slider">70%</output>
+                                    <input type="range" id="lcz-opacity-slider" min="0" max="100" value="100" aria-describedby="lcz-opacity-value">
+                                    <output id="lcz-opacity-value" for="lcz-opacity-slider">100%</output>
                                 </div>
                             </div>
+                            <label class="check">
+                                <input type="checkbox" id="toggle-cells-on-top" name="cells-on-top">
+                                <span>Celle sopra edifici e strade</span>
+                            </label>
+                            <p class="note">Spenta: le celle stanno sotto edifici, verde, fiume e strade. I puntini restano sempre sopra.</p>
                             <div id="uhi-dynamic-control" class="uhi-control" hidden>
                                 <label class="check">
                                     <input type="checkbox" id="uhi-dynamic-visibility" name="uhi-dynamic">

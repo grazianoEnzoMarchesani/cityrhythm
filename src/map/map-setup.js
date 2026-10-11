@@ -43,18 +43,23 @@ const TONER_FLAVOR = (() => {
     flavor.landcover = Object.fromEntries(Object.keys(light.landcover).map(k => [k, WHITE]));
     return flavor;
 })();
-// Trame del Toner (sprite "toner"): boschi a puntini, cimiteri a crocette, il resto del verde a trattini.
+// Trame del Toner (sprite "tinta", da toner.png con sound-lab/tinta_sprite.py): solo i puntini neri, il bianco
+// è trasparente. Boschi a puntini, cimiteri a crocette, il resto del verde a trattini.
 const GREEN_PATTERN = ['match', ['get', 'kind'],
-    ['forest', 'wood', 'nature_reserve', 'national_park', 'protected_area'], 'toner:dots-t',
-    'cemetery', 'toner:cross-t',
-    'toner:dash-t'];
+    ['forest', 'wood', 'nature_reserve', 'national_park', 'protected_area'], 'tinta:dots-t',
+    'cemetery', 'tinta:cross-t',
+    'tinta:dash-t'];
 
 // Livelli in stile Toner: mappa di base Protomaps (OSM) senza etichette né icone + edifici TUM (2D e 3D).
 function tonerLayers() {
     const base = layers('protomaps', TONER_FLAVOR, { lang: 'it' }).filter(l => l.type !== 'symbol');
+    // Il verde è solo il puntinato: il riempimento nero sotto è spento. L'opacità del puntinato è quella che aveva
+    // il nero (0,3 a zoom 10, 1 a zoom 16), così su bianco il risultato è uguale a prima.
     const park = base.findIndex(l => l.id === 'landuse_park');
-    base[park].paint = { 'fill-color': BLACK, 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 10, 0.3, 16, 1] };
-    base.splice(park + 1, 0, { ...base[park], id: 'landuse_park_pattern', paint: { 'fill-pattern': GREEN_PATTERN } });
+    base[park].paint = { 'fill-color': BLACK };
+    base[park].layout = { visibility: 'none' };
+    base.splice(park + 1, 0, { ...base[park], id: 'landuse_park_pattern', layout: {},
+        paint: { 'fill-pattern': GREEN_PATTERN, 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 10, 0.3, 16, 1] } });
     base.push({
         // Pieni dello stile Nolli (spenti nel Toner)
         id: 'buildings-fill', type: 'fill', source: 'buildings',
@@ -92,8 +97,8 @@ function nolliLayers() {
         const n = { ...l, layout: { ...l.layout }, paint: { ...l.paint } };
         if (l.id === 'water') n.paint['fill-color'] = nearZoom(BLACK, NOLLI_COLORS.ACQUA);
         else if (l.id.startsWith('water_')) n.paint['line-color'] = nearZoom(BLACK, NOLLI_COLORS.ACQUA);
-        // Le trame del Toner sono bianche coi buchi: sotto, nero pieno a ogni zoom (puntini e trattini sempre neri)
-        else if (l.id === 'landuse_park') n.paint['fill-opacity'] = 1;
+        // Puntini sempre neri a ogni zoom (in Nolli il nero del parco era pieno: opacità 1)
+        else if (l.id === 'landuse_park_pattern') n.paint['fill-opacity'] = 1;
         else if (l.id === 'landuse_urban_green') n.paint['fill-opacity'] = 0;
         else if (MAIN_ROADS.test(l.id)) Object.assign(n.paint, { 'line-color': BLACK, 'line-opacity': nearZoom(1, 0) });
         else if (MAIN_BRIDGES.test(l.id)) n.paint['line-color'] = nearZoom(BLACK, WHITE);
@@ -140,11 +145,36 @@ export function setBaseStyle(name) {
     baseStyle = name;
 }
 
+// Le celle stanno subito sopra lo sfondo bianco e sotto il verde, l'acqua, le strade e gli edifici: il bianco
+// che viene prima (sfondo, terra, landcover) sta sotto le celle e non le copre.
+export const CELLS_UNDER_ID = 'landuse_park';
+
+// Bianchi che, con le celle sotto il verde, finirebbero sopra le celle: piazze, molo, edifici OSM, casing bianchi
+// delle strade. Restano fuori i ponti (bianchi sopra il fiume). Si scelgono dal colore, non dall'id.
+// Si cambia l'opacità, non la visibilità: cambiare la visibilità di un livello ricarica le tessere di tutta la sorgente.
+const paintColors = (l) => JSON.stringify(l.paint?.[l.type === 'line' ? 'line-color' : 'fill-color'] ?? '').match(/#[0-9a-f]{6}/gi) ?? [];
+const UNDER_INDEX = BASE_STYLES.toner.findIndex(l => l.id === CELLS_UNDER_ID);
+const WHITE_OVER_CELLS = BASE_STYLES.toner
+    .slice(UNDER_INDEX)
+    .filter(l => (l.type === 'fill' || l.type === 'line') && !/bridges/.test(l.id))
+    .filter(l => { const c = paintColors(l); return c.length > 0 && c.every(h => h.toLowerCase() === WHITE); })
+    .map(l => ({ id: l.id, prop: l.type === 'line' ? 'line-opacity' : 'fill-opacity' }));
+
+/** Con le celle sotto acqua e strade, i bianchi sopra si spengono (true); con false tornano come nello stile scelto. */
+export function setWhiteOverCellsHidden(hidden) {
+    if (!mapInstance || !mapReady) return;
+    const def = new Map(BASE_STYLES[baseStyle].map(l => [l.id, l]));
+    WHITE_OVER_CELLS.forEach(({ id, prop }) => {
+        if (!mapInstance.getLayer(id)) return;
+        mapInstance.setPaintProperty(id, prop, hidden ? 0 : (def.get(id)?.paint?.[prop] ?? 1));
+    });
+}
+
 function buildMapStyle() {
     return {
         version: 8,
         glyphs: mapDataUrl('fonts/') + '{fontstack}/{range}.pbf', // URL() codificherebbe le graffe
-        sprite: [{ id: 'toner', url: mapDataUrl('sprites/toner') }],
+        sprite: [{ id: 'tinta', url: mapDataUrl('sprites/tinta') }],
         sources: {
             protomaps: {
                 type: 'vector', url: 'pmtiles://' + mapDataUrl('ascoli_base.pmtiles'),

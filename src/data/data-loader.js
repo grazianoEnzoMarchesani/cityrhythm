@@ -1,13 +1,15 @@
 import Papa from 'papaparse';
 import { kml } from '@tmcw/togeojson';
 // data-loader.js
-import { POI_CSV_URL, KML_URL, CROWDED_CSV_URL, SPOTS_CSV_URL, LCZ_GEOJSON_URL, DEBUG_MODE } from './config.js';
+import { POI_CSV_URL, KML_URL, CROWDED_CSV_URL, SPOTS_CSV_URL, LCZ_GEOJSON_URL, QUARTIERI_DISEGNO_URL, DEBUG_MODE } from './config.js';
 import { updateStatusMessage } from '../ui/ui-sidebar.js';
 
 // Data structure for POIs: { "poi_name_normalized": [record1, record2, ...], ... }
 let poiDataStore = {};
 // Stores the original complete KML GeoJSON
 let fullKmlGeoJson = null;
+// Confini di disegno per nome di quartiere: solo per la mappa; i calcoli leggono fullKmlGeoJson (il KML originale)
+let displayGeometries = new Map();
 // Data store for crowded points - Array of records initially
 let crowdedDataStore = [];
 // Data store for spot mapper points
@@ -298,6 +300,7 @@ export function loadKMLLayer() {
             }
 
             updateStatusMessage("KML areas loaded and processed.", false);
+            await caricaConfiniDisegno();
             // Resolve with the enriched GeoJSON to add it to the map
             resolve(geoJson);
 
@@ -309,6 +312,29 @@ export function loadKMLLayer() {
             reject(error);
         }
     });
+}
+
+/** Carica i confini di disegno. Se il file manca o non si legge, la mappa usa il disegno del KML. */
+async function caricaConfiniDisegno() {
+    try {
+        const response = await fetch(QUARTIERI_DISEGNO_URL);
+        if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+        const data = await response.json();
+        // Nomi senza spazi finali: nel KML qualche nome ne ha uno (es. «Porta Cartara »)
+        displayGeometries = new Map(data.features.map(f => [f.properties.name.trim(), f.geometry]));
+    } catch (error) {
+        if (DEBUG_MODE) console.warn("Confini di disegno non caricati, resta il KML:", error);
+        displayGeometries = new Map();
+    }
+}
+
+/**
+ * Confine da disegnare per un quartiere, per nome. Null se non c'è: si usa il confine del KML.
+ * @param {string} name - Nome del quartiere (properties.name del KML).
+ * @returns {object|null} Geometria GeoJSON o null.
+ */
+export function getDisplayGeometry(name) {
+    return displayGeometries.get(name?.trim()) ?? null;
 }
 
 /**

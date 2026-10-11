@@ -8,12 +8,22 @@ import { displayKmlFeatureInfoAndCalculateAverages } from '../ui/ui-sidebar.js';
 import { getCurrentHour } from '../ui/ui-timeline.js';
 import { fullSyntheticCrowdedGeoJson } from './map-layers.js'; // IMPORTANTE: aggiungi export a fullSyntheticCrowdedGeoJson in map-layers.js
 import { DEBUG_MODE } from '../data/config.js';
+import { ispezioneCelle } from '../state/store.js';
+import { getFullKmlGeoJson } from '../data/data-loader.js';
 
 
 // Variabile per tenere traccia dell'ID della feature correntemente in hover
 let hoveredFeatureId = null;
 // Variabile per tenere traccia delle animazioni attive per featureId
 const hoverAnimations = {};
+
+// Accendere l'ispezione delle celle (ui-map-tools.js) toglie l'evidenziazione dell'area sotto il mouse
+ispezioneCelle.subscribe((on) => {
+    if (on && hoveredFeatureId !== null) {
+        setHoveredFeatureState(null);
+        changeCursor(getMapInstance(), '');
+    }
+});
 
 /**
  * Anima il valore di hoverAmount per una feature KML.
@@ -79,6 +89,8 @@ function removeAllListeners(map) {
  * @param {MapLayerMouseEvent} e - The map event object from Mapbox.
  */
 function handleKmlClick(e) {
+    // Ispezione delle celle accesa: l'area non si apre, il clic va alla cella (popup in map-layers.js)
+    if (ispezioneCelle.get()) return;
     if (e.features && e.features.length > 0) {
         const kmlFeature = e.features[0];
         // Verifica la validità della feature prima di processarla
@@ -90,8 +102,10 @@ function handleKmlClick(e) {
                 displayKmlFeatureInfoAndCalculateAverages(kmlFeature, getCurrentHour());
                 // --- LOG SYNTHETIC CROWDED POINTS ATTRACTIVENESS ---
                 if (fullSyntheticCrowdedGeoJson && fullSyntheticCrowdedGeoJson.features?.length) {
+                    // Conteggio sul confine dei dati (KML originale), non su quello disegnato
+                    const confineDati = getFullKmlGeoJson()?.features.find(k => k.id === featureId)?.geometry ?? kmlFeature.geometry;
                     const inside = fullSyntheticCrowdedGeoJson.features.filter(f => {
-                        return turf.booleanPointInPolygon(f, kmlFeature.geometry);
+                        return turf.booleanPointInPolygon(f, confineDati);
                     });
                     const values = inside.map(f => f.properties?.synthetic_crowdedness ?? null).filter(v => v !== null);
                     if (DEBUG_MODE) console.log(`Synthetic crowded points in area ${featureId}:`, values);
@@ -186,7 +200,7 @@ function setHoveredFeatureState(featureId) {
  */
 function handleKmlMouseEnter(e) {
     const map = getMapInstance();
-    if (!map) return;
+    if (!map || ispezioneCelle.get()) return;
 
     changeCursor(map, 'pointer');
 
@@ -242,7 +256,7 @@ function handleKmlMouseEnter(e) {
  */
 function handleKmlMouseLeave() {
     const map = getMapInstance();
-    if (!map) return;
+    if (!map || ispezioneCelle.get()) return;
     // console.log("Mouse leave da layer KML, clearing hover state.");
     changeCursor(map, '');
     // Rimuovi lo stato hover solo se c'era uno stato hover attivo
@@ -316,11 +330,12 @@ function handleMouseMove(e) {
 
     try {
         // MODIFICATO: Interroga solo i layer KML *esistenti*
+        // Con l'ispezione delle celle accesa non ci sono aree da evidenziare: la lista è vuota
         const existingKmlLayers = [
             KML_LAYER_ID,
             KML_LAYER_ID + '-outline',
             KML_LAYER_ID + '-base-outline'
-        ].filter(id => map.getLayer(id));
+        ].filter(id => map.getLayer(id) && !ispezioneCelle.get());
 
         // Se non ci sono layer KML, esci e assicurati che l'hover sia resettato
         if (existingKmlLayers.length === 0) {

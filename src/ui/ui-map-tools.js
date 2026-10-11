@@ -3,6 +3,8 @@
 // I tasti stanno in index.html (#map-tools); MapLibre li sposta nella sua colonna (map-setup.js).
 import { getMapInstance, whenMapReady, setBaseStyle, getBaseStyle, MAP_STYLE_KEY } from '../map/map-setup.js';
 import { applyBaseStyleToOverlays } from '../map/map-layers.js';
+import { celleAccese, ispezioneCelle } from '../state/store.js';
+import { resetSidebar } from './ui-sidebar.js';
 
 const STILI = [['toner', 'Toner'], ['nolli', 'Nolli']];
 
@@ -17,6 +19,7 @@ const SOGLIA_SPENTA = 5;
 export function setupMapTools() {
     setupStyle();
     setupMode3D();
+    setupCellInspect();
 }
 
 // Stile di base: il tasto apre un popover a sinistra con Toner e Nolli
@@ -38,6 +41,8 @@ function setupStyle() {
         whenMapReady(() => {
             setBaseStyle(name);
             applyBaseStyleToOverlays();
+            // La legenda di «Chi sta a casa» (ui-casa.js) segue lo stile dei puntini
+            document.dispatchEvent(new CustomEvent('stile-mappa', { detail: name }));
         });
     };
     STILI.forEach(([name, label]) => {
@@ -118,5 +123,26 @@ function setupMode3D() {
         map.on('pitch', sincronizza);
         map.on('moveend', () => { obiettivo = null; mostra(); });
         sincronizza();
+    });
+}
+
+// Solo celle: il tasto compare solo con «Mostra le celle» accese. Acceso, un clic su una cella mostra
+// il suo popup e le aree non si aprono (map-interaction.js). Spento all'avvio e ogni volta che si accendono le celle.
+function setupCellInspect() {
+    const bottone = document.getElementById('toggle-ispezione');
+    if (!bottone) return;
+    ispezioneCelle.subscribe((on) => {
+        bottone.setAttribute('aria-pressed', String(on));
+        bottone.dataset.label = `Solo celle: ${on ? 'acceso, il clic apre solo la cella' : 'spento, il clic apre il quartiere'}`;
+    });
+    celleAccese.subscribe((accese) => {
+        bottone.hidden = !accese;
+        if (!accese) ispezioneCelle.set(false);
+    });
+    bottone.addEventListener('click', () => {
+        const on = !ispezioneCelle.get();
+        ispezioneCelle.set(on);
+        // Una scheda d'area già aperta si chiude. resetSidebar non sposta il fuoco: resta sul tasto
+        if (on) resetSidebar();
     });
 }
