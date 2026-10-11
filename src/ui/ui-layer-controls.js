@@ -1,22 +1,18 @@
 // ui-layer-controls.js
-import { refreshPresencePoints, setLayerVisibility, addSyntheticCrowdedPointsLayer, removeSyntheticCrowdedPointsLayer, updateAllPresencePoints, addLczVitalityLayer, removeLczVitalityLayer, updateLczVitalityVisualization, setLczLayerOpacity, setUhiDynamicVisibility, getLczLegend, setLczHighlight } from '../map/map-layers.js';
-import { KML_LAYER_ID, CROWDED_LAYER_ID, PRESENCE_POINTS_LAYER_ID, SPOTS_LAYER_ID, LCZ_VITALITY_LAYER_ID, DEBUG_MODE } from '../data/config.js';
-import { getMapInstance } from '../map/map-setup.js';
-import { getSpotMapperData } from '../data/data-loader.js';
+import { refreshPresencePoints, setLayerVisibility, updateAllPresencePoints, addLczVitalityLayer, removeLczVitalityLayer, updateLczVitalityVisualization, setLczLayerOpacity, setUhiDynamicVisibility, getLczLegend, setLczHighlight, setCellsOnTop } from '../map/map-layers.js';
+import { KML_LAYER_ID, CROWDED_LAYER_ID, PRESENCE_POINTS_LAYER_ID, DEBUG_MODE, MAP_STYLES } from '../data/config.js';
 import { PRESENCE_COLOR_VARIABLES, setPresenceColorBy } from '../map/presence-colors.js';
 import { coloreSuono, POSIZIONE_STATI } from '../compass/sound-color.js';
-import { time } from '../state/store.js';
+import { celleAccese } from '../state/store.js';
 
 let kmlToggle = null;
 let crowdedToggle = null;
 let presenceToggle = null;
-let spotsToggle = null;
-let spotTypeFilter = null;
-let syntheticCrowdedToggle = null;
 let lczVitalityToggle = null;
 let lczVisualizationSelector = null;
 let lczOpacitySlider = null;
 let lczOpacityValue = null;
+let cellsOnTopToggle = null;
 let uhiDynamicVisibilityToggle = null;
 let lczView = 'LCZ';   // vista scelta in "Cosa mostrare"
 let legendPick = null; // voce della legenda evidenziata sulla mappa: { id, label }; null = tutte le celle
@@ -52,17 +48,22 @@ const VISTE_CELLE = [
 ];
 
 // --- FUNZIONI ESPORTATE ---
+// Intensità dello strato in percentuale: la scrive lo slider o l'interruttore "sopra", e la applica se le celle ci sono
+function setIntensity(percent) {
+    if (lczOpacitySlider) lczOpacitySlider.value = percent;
+    if (lczOpacityValue) lczOpacityValue.textContent = percent + '%';
+    if (lczVitalityToggle && lczVitalityToggle.checked) setLczLayerOpacity(percent / 100);
+}
+
 export function setupLayerControls() {
     kmlToggle = document.getElementById('toggle-kml');
     crowdedToggle = document.getElementById('toggle-crowded');
     presenceToggle = document.getElementById('toggle-presence');
-    spotsToggle = document.getElementById('toggle-spots');
-    spotTypeFilter = document.getElementById('spot-type-filter');
-    syntheticCrowdedToggle = document.getElementById('toggle-synthetic-crowded');
     lczVitalityToggle = document.getElementById('toggle-lcz-vitality');
     lczVisualizationSelector = document.getElementById('lcz-visualization-selector');
     lczOpacitySlider = document.getElementById('lcz-opacity-slider');
     lczOpacityValue = document.getElementById('lcz-opacity-value');
+    cellsOnTopToggle = document.getElementById('toggle-cells-on-top');
     uhiDynamicVisibilityToggle = document.getElementById('uhi-dynamic-visibility');
 
     // Aree KML e punti di affollamento: visibili solo in modalità sviluppatore (DEBUG_MODE in config.js)
@@ -79,18 +80,6 @@ export function setupLayerControls() {
         presenceToggle.addEventListener('change', (event) => handleToggleChange(event, PRESENCE_POINTS_LAYER_ID));
     }
     setupPresenceColorSelector();
-    if (spotsToggle) {
-        spotsToggle.checked = false;
-        spotsToggle.addEventListener('change', (event) => handleToggleChange(event, SPOTS_LAYER_ID));
-    }
-    if (spotTypeFilter) {
-        spotTypeFilter.addEventListener('change', (event) => filterSpotsByType(event.target.value));
-        if (getSpotMapperData()?.length > 0) populateSpotTypeSelector();
-    }
-    if (syntheticCrowdedToggle) {
-        syntheticCrowdedToggle.checked = false;
-        syntheticCrowdedToggle.addEventListener('change', (event) => handleToggleChange(event, 'synthetic-crowded'));
-    }
 
     // Celle: interruttore, vista (griglia di pulsanti), trasparenza, rischio UHI dinamico
     setupLczViewPicker();
@@ -98,6 +87,7 @@ export function setupLayerControls() {
         lczVitalityToggle.checked = false;
         lczVitalityToggle.addEventListener('change', (event) => {
             const isChecked = event.target.checked;
+            celleAccese.set(isChecked);
             if (isChecked) {
                 addLczVitalityLayer(true, lczView);
                 renderLczLegend(lczView);
@@ -109,12 +99,15 @@ export function setupLayerControls() {
         });
     }
     if (lczOpacitySlider && lczOpacityValue) {
-        lczOpacitySlider.addEventListener('input', (event) => {
-            const opacity = parseInt(event.target.value, 10);
-            lczOpacityValue.textContent = opacity + '%';
-            if (lczVitalityToggle && lczVitalityToggle.checked) {
-                setLczLayerOpacity(opacity / 100);
-            }
+        lczOpacitySlider.addEventListener('input', (event) => setIntensity(parseInt(event.target.value, 10)));
+    }
+    if (cellsOnTopToggle) {
+        cellsOnTopToggle.checked = false;
+        cellsOnTopToggle.addEventListener('change', (event) => {
+            const onTop = event.target.checked;
+            setCellsOnTop(onTop);
+            // Sopra edifici e strade l'intensità scende da sola; spenta torna sempre al 100%
+            setIntensity(Math.round((onTop ? MAP_STYLES.LCZ_VITALITY.FILL_OPACITY_ON_TOP : MAP_STYLES.LCZ_VITALITY.FILL_OPACITY) * 100));
         });
     }
     if (uhiDynamicVisibilityToggle) {
@@ -124,10 +117,6 @@ export function setupLayerControls() {
             }
         });
     }
-}
-
-export function initializeSpotTypeFilter() {
-    populateSpotTypeSelector();
 }
 
 export function getLayerToggleState(layerName) {
@@ -141,12 +130,6 @@ export function getLayerToggleState(layerName) {
             break;
         case 'presence':
             toggleElement = presenceToggle || document.getElementById('toggle-presence');
-            break;
-        case 'spots':
-            toggleElement = spotsToggle || document.getElementById('toggle-spots');
-            break;
-        case 'synthetic-crowded':
-            toggleElement = syntheticCrowdedToggle || document.getElementById('toggle-synthetic-crowded');
             break;
         case 'lcz-vitality':
             toggleElement = lczVitalityToggle || document.getElementById('toggle-lcz-vitality');
@@ -452,55 +435,9 @@ function appendLegendNote(legend, text) {
 
 function handleToggleChange(event, layerId) {
     const isChecked = event.target.checked;
-    if (layerId === 'synthetic-crowded') {
-        if (isChecked) {
-            // Usa l'ora corrente della timeline (dallo store)
-            addSyntheticCrowdedPointsLayer(time.get()?.index ?? 0, true);
-        } else {
-            removeSyntheticCrowdedPointsLayer();
-        }
-        return;
-    }
     if (layerId === KML_LAYER_ID) {
         setLayerVisibility(KML_LAYER_ID + '-outline', isChecked);
         setLayerVisibility(KML_LAYER_ID + '-base-outline', isChecked);
-    } else if (layerId === SPOTS_LAYER_ID) {
-        setLayerVisibility(SPOTS_LAYER_ID + '-labels', isChecked);
-    } else if (layerId === LCZ_VITALITY_LAYER_ID) {
-        setLayerVisibility(LCZ_VITALITY_LAYER_ID + '-stroke', isChecked);
     }
     setLayerVisibility(layerId, isChecked);
-}
-
-function filterSpotsByType(selectedType) {
-    const map = getMapInstance();
-    if (!map) return;
-    if (selectedType === 'all') {
-        map.setFilter(SPOTS_LAYER_ID, null);
-        map.setFilter(SPOTS_LAYER_ID + '-labels', null);
-    } else {
-        const filter = ['==', ['get', 'tipo'], selectedType];
-        map.setFilter(SPOTS_LAYER_ID, filter);
-        map.setFilter(SPOTS_LAYER_ID + '-labels', filter);
-    }
-}
-
-function populateSpotTypeSelector() {
-    if (!spotTypeFilter) return;
-    const spotsData = getSpotMapperData();
-    if (!spotsData || !spotsData.length) return;
-    const types = new Set();
-    spotsData.forEach(spot => {
-        if (spot.Tipo) types.add(spot.Tipo);
-    });
-    const sortedTypes = Array.from(types).sort();
-    while (spotTypeFilter.options.length > 1) {
-        spotTypeFilter.remove(1);
-    }
-    sortedTypes.forEach(type => {
-        const option = document.createElement('option');
-        option.value = type;
-        option.textContent = type;
-        spotTypeFilter.appendChild(option);
-    });
 }

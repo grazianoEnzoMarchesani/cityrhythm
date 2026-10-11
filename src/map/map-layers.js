@@ -1,9 +1,9 @@
 import * as turf from '@turf/turf';
 import { Popup } from 'maplibre-gl';
 // src/map/map-layers.js
-import { getMapInstance, isMapReady, whenMapReady, getBaseStyle } from './map-setup.js';
+import { getMapInstance, isMapReady, whenMapReady, getBaseStyle, setWhiteOverCellsHidden, CELLS_UNDER_ID } from './map-setup.js';
 import {
-    KML_SOURCE_ID, KML_LAYER_ID,
+    KML_SOURCE_ID, KML_LAYER_ID, QUARTIERI_CREDITO,
     PRESENCE_POINTS_SOURCE_ID, PRESENCE_POINTS_LAYER_ID,
     CROWDED_SOURCE_ID, CROWDED_LAYER_ID,
     SPOTS_SOURCE_ID, SPOTS_LAYER_ID,
@@ -53,9 +53,9 @@ function presencePaint(colored) {
 import { calculateAveragePresenceForFeature, generatePointsForFeature, perlin2d, hash01, getWeekIndex, getDateTimeFromIndex } from '../utils/utils.js';
 import { residentsSeenAtNight, homeShareFor } from './home-share.js';
 import { applyPresenceColors, getPreviousPersonColor } from './presence-colors.js';
-import { getFullKmlGeoJson, getPoiData, getCrowdedData, getSpotMapperData, getLczVitalityData } from '../data/data-loader.js';
+import { getFullKmlGeoJson, getPoiData, getCrowdedData, getSpotMapperData, getLczVitalityData, getDisplayGeometry } from '../data/data-loader.js';
 import { addMapInteraction } from './map-interaction.js';
-import { cellMap, presence } from '../state/store.js';
+import { cellMap, presence, ispezioneCelle } from '../state/store.js';
 import { setCellMapActive } from '../compass/cell-map.js';
 import { coloreSuono } from '../compass/sound-color.js';
 
@@ -67,9 +67,10 @@ let currentPresencePoints = null; // GeoJSON dei punti generati (con seed)
 let animationFrameId = null;
 let currentLczVisualizationType = 'LCZ'; // 'LCZ' or 'UHI'
 let uhiDynamicVisibilityEnabled = false; // Flag per la visibilità dinamica UHI
-let currentLczOpacity = 0.7; // Opacità corrente del layer LCZ
+let currentLczOpacity = 1; // Opacità corrente del layer LCZ (Intensità dello strato, 100% di default)
 let lczOpacityBase = currentLczOpacity; // Opacità del riempimento senza evidenziazione: numero o rischio UHI dinamico
 let lczHighlight = null; // Voce scelta nella legenda ({ view, key | lo, hi }); null = tutte le celle
+let cellsOnTop = false; // "Sopra tutta la mappa": spento = le celle stanno sotto edifici, fiume, strade e verde
 
 // --- CAMPO DI FORZE STATICO (GRIGLIA) ---
 // Risoluzione della griglia in metri (es: 250 = 250m tra i punti della griglia)
@@ -216,6 +217,9 @@ export function setLayerVisibility(layerId, isVisible) {
     }
 }
 
+// Stato globale dello stile: le celle LCZ sono visibili? Lo scrive addLczVitalityLayer / removeLczVitalityLayer
+const CELLE_VISIBILI = 'celleVisibili';
+
 /**
  * Aggiunge i layer KML (base-outline, fill, outline) alla mappa.
  * @param {object} geoJson - GeoJSON FeatureCollection per le aree KML.
@@ -252,6 +256,10 @@ export function addKmlLayer(geoJson, initialVisibility = true) {
     let missingIdCount = 0;
     geoJsonForDisplay.features.forEach((feature, index) => {
         if (!feature.properties) feature.properties = {};
+        // Solo il disegno: il confine mostrato e cliccato può essere quello ricavato dalle sezioni ISTAT.
+        // I calcoli (presenze, celle, case, Spot) leggono il KML originale con getFullKmlGeoJson()
+        const confineDisegno = getDisplayGeometry(feature.properties.name);
+        if (confineDisegno) feature.geometry = confineDisegno;
         // Assicura stato hover default
         feature.properties.hovered = false;
         // Verifica e assegna ID se manca (promoteId richiede che l'ID sia nel campo 'id' principale)
@@ -279,7 +287,8 @@ export function addKmlLayer(geoJson, initialVisibility = true) {
         map.addSource(KML_SOURCE_ID, {
             type: 'geojson',
             data: geoJsonForDisplay,
-            promoteId: 'id' // Usa il campo 'id' della feature come ID univoco
+            promoteId: 'id', // Usa il campo 'id' della feature come ID univoco
+            attribution: QUARTIERI_CREDITO
         });
 
         // Inizializza hoverAmount a 0 per tutte le feature KML
@@ -321,6 +330,8 @@ export function addKmlLayer(geoJson, initialVisibility = true) {
             paint: {
                 'fill-color': [
                     'case',
+                    // Con le celle accese l'area non si colora: resta solo il contorno, i colori delle celle non cambiano
+                    ['==', ['global-state', CELLE_VISIBILI], true], MAP_STYLES.KML_LAYER.FILL.DEFAULT,
                     ['boolean', ['feature-state', 'selected'], false], MAP_STYLES.KML_LAYER.FILL.SELECTED,
                     // Interpolazione sfumata su hoverAmount
                     ['interpolate', ['linear'], ['feature-state', 'hoverAmount'], 0, MAP_STYLES.KML_LAYER.FILL.DEFAULT, 1, MAP_STYLES.KML_LAYER.FILL.HOVER],
@@ -1677,19 +1688,21 @@ export function addSpotsLayer(initialVisibility = true) {
 /**
  * Rimuove il layer LCZ Vitality dalla mappa.
  */
-// Livello sotto cui vanno le celle: il primo livello di punti presente (in cima se non ce ne sono)
+// Livello sotto cui vanno le celle quando stanno "sopra edifici e strade": il primo livello di dati presente.
+// Il KML (quartiere selezionato) e i puntini (sottolivelli -color e -zoom) restano sopra anche con le celle al 100%.
 function overlayBeforeId(map) {
-    return [PRESENCE_POINTS_LAYER_ID, CROWDED_LAYER_ID, SPOTS_LAYER_ID, SYNTHETIC_CROWDED_LAYER_ID].find(id => map.getLayer(id));
+    return [KML_LAYER_ID, PRESENCE_POINTS_LAYER_ID + '-color', PRESENCE_POINTS_LAYER_ID + '-zoom', CROWDED_LAYER_ID, SPOTS_LAYER_ID, SYNTHETIC_CROWDED_LAYER_ID].find(id => map.getLayer(id));
 }
 
 export function removeLczVitalityLayer() {
     const map = getMapInstance();
     if (!map) return;
     
-    try { if (map.getLayer(LCZ_VITALITY_LAYER_ID + '-stroke')) map.removeLayer(LCZ_VITALITY_LAYER_ID + '-stroke'); } catch (e) { /* ignore */ }
     try { if (map.getLayer(LCZ_VITALITY_LAYER_ID)) map.removeLayer(LCZ_VITALITY_LAYER_ID); } catch (e) { /* ignore */ }
     try { if (map.getSource(LCZ_VITALITY_SOURCE_ID)) map.removeSource(LCZ_VITALITY_SOURCE_ID); } catch (e) { /* ignore */ }
     setCellMapActive(false);
+    setWhiteOverCellsHidden(false); // senza celle il bianco torna com'era
+    if (isMapReady()) map.setGlobalStateProperty(CELLE_VISIBILI, false); // lo stato globale esiste solo a stile caricato
 }
 
 /**
@@ -1767,22 +1780,11 @@ export function addLczVitalityLayer(initialVisibility = true, visualizationType 
             layout: { 'visibility': initialVisibility ? 'visible' : 'none' },
             paint: {
                 'fill-color': fillColor,
-                'fill-opacity': currentLczOpacity
+                'fill-opacity': currentLczOpacity,
+                'fill-antialias': MAP_STYLES.LCZ_VITALITY.FILL_ANTIALIAS
             }
         }, beforeLayerId);
-
-        // Aggiungi il layer stroke
-        map.addLayer({
-            id: LCZ_VITALITY_LAYER_ID + '-stroke',
-            type: 'line',
-            source: LCZ_VITALITY_SOURCE_ID,
-            layout: { 'visibility': initialVisibility ? 'visible' : 'none' },
-            paint: {
-                'line-color': MAP_STYLES.LCZ_VITALITY.STROKE_COLOR,
-                'line-width': MAP_STYLES.LCZ_VITALITY.STROKE_WIDTH,
-                'line-opacity': MAP_STYLES.LCZ_VITALITY.STROKE_OPACITY
-            }
-        }, beforeLayerId);
+        map.setGlobalStateProperty(CELLE_VISIBILI, initialVisibility);
 
         bindLczPopup(map);
 
@@ -1943,17 +1945,15 @@ function lczHighlightCondition({ view, key, lo, hi }) {
 }
 
 /**
- * Opacità di riempimento e contorno: la base (numero o rischio UHI dinamico), spenta fuori dalla voce evidenziata.
- * Unico punto che scrive questi valori, così la base e la voce non si sovrascrivono.
+ * Opacità di riempimento: la base (numero o rischio UHI dinamico), spenta fuori dalla voce evidenziata.
+ * Unico punto che scrive questo valore, così la base e la voce non si sovrascrivono.
  */
 function applyLczPaint() {
     const map = getMapInstance();
     if (!map || !isMapReady() || !map.getLayer(LCZ_VITALITY_LAYER_ID)) return;
     const on = lczHighlight ? lczHighlightCondition(lczHighlight) : null;
-    const strokeOpacity = MAP_STYLES.LCZ_VITALITY.STROKE_OPACITY;
     // Le altre celle restano appena visibili [S]: si vede dove sta il gruppo nella città, e restano cliccabili
     map.setPaintProperty(LCZ_VITALITY_LAYER_ID, 'fill-opacity', on ? ['case', on, lczOpacityBase, LCZ_HIGHLIGHT_DIM] : lczOpacityBase);
-    map.setPaintProperty(LCZ_VITALITY_LAYER_ID + '-stroke', 'line-opacity', on ? ['case', on, strokeOpacity, 0] : strokeOpacity);
 }
 // Opacità delle celle non scelte nella legenda: [S] scelta visiva, da rivedere all'ascolto a schermo
 const LCZ_HIGHLIGHT_DIM = 0.12;
@@ -1973,9 +1973,11 @@ let lczPopupBound = false;
 function bindLczPopup(map) {
     if (lczPopupBound) return;
     lczPopupBound = true;
-    map.on('mouseenter', LCZ_VITALITY_LAYER_ID, () => { map.getCanvas().style.cursor = 'pointer'; });
-    map.on('mouseleave', LCZ_VITALITY_LAYER_ID, () => { map.getCanvas().style.cursor = ''; });
+    // Solo celle (tasto in ui-map-tools.js): con il tasto spento il clic va al quartiere e la cella non risponde
+    map.on('mouseenter', LCZ_VITALITY_LAYER_ID, () => { if (ispezioneCelle.get()) map.getCanvas().style.cursor = 'pointer'; });
+    map.on('mouseleave', LCZ_VITALITY_LAYER_ID, () => { if (ispezioneCelle.get()) map.getCanvas().style.cursor = ''; });
     map.on('click', LCZ_VITALITY_LAYER_ID, e => {
+        if (!ispezioneCelle.get()) return;
         const p = e.features?.[0]?.properties;
         if (!p) return;
         const fmt = v => (typeof v === 'number' ? (Number.isInteger(v) ? v : +v.toFixed(3)) : v);
@@ -2008,15 +2010,22 @@ function bindLczPopup(map) {
 const CELL_MAP_TYPES = new Set(['utci', 'stato']);
 let lastCellMap = null, cellMapIndex = null; // ultimo risultato e id cella -> posizione
 
-// Nello stile Nolli UTCI e Sound map stanno sotto gli edifici e colorano solo il vuoto dove si cammina: il caldo
-// si sente in strada, la musica si ascolta in strada. Le mappe LCZ descrivono anche gli edifici: restano sopra.
+// Di default, in ogni stile, le celle stanno sopra lo sfondo bianco e sotto verde, acqua, strade ed edifici:
+// il bianco non le copre (setWhiteOverCellsHidden). "Sopra edifici e strade" le porta sopra tutto, ma sotto i
+// puntini delle persone e sotto il quartiere selezionato.
 function placeCellLayers() {
     const map = getMapInstance();
     if (!map.getLayer(LCZ_VITALITY_LAYER_ID)) return;
-    const before = getBaseStyle() === 'nolli' && CELL_MAP_TYPES.has(currentLczVisualizationType)
-        ? 'buildings-fill' : overlayBeforeId(map);
-    map.moveLayer(LCZ_VITALITY_LAYER_ID, before);
-    map.moveLayer(LCZ_VITALITY_LAYER_ID + '-stroke', before);
+    map.moveLayer(LCZ_VITALITY_LAYER_ID, cellsOnTop ? overlayBeforeId(map) : CELLS_UNDER_ID);
+    // All'avvio il livello esiste ma è spento (addLczVitalityLayer(false)): allora il bianco resta com'è
+    const visible = map.getLayoutProperty(LCZ_VITALITY_LAYER_ID, 'visibility') !== 'none';
+    setWhiteOverCellsHidden(visible && !cellsOnTop);
+}
+
+/** Interruttore "Sopra tutta la mappa": true porta le celle sopra edifici, fiume e strade. */
+export function setCellsOnTop(on) {
+    cellsOnTop = on;
+    if (isMapReady()) placeCellLayers();
 }
 
 /** Dopo un cambio di stile della mappa di base (setBaseStyle): puntini e mappe delle celle al loro posto. */

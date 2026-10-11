@@ -5,6 +5,10 @@ const DATA_BASE = import.meta.env.BASE_URL + 'data/';
 export const PHONE_QUERY = '(max-width: 719px), (max-height: 500px) and (pointer: coarse)';
 
 export const KML_URL = DATA_BASE + 'cityrhythm_blimp_areas.kml';
+// Confini di disegno dei quartieri: solo estetica, i calcoli restano sul KML (vedi sound-lab/quartieri_disegno.py)
+export const QUARTIERI_DISEGNO_URL = DATA_BASE + 'quartieri_disegno.geojson';
+// Credito dei confini di disegno: in parte sezioni ISTAT 2021 (CC BY 4.0), in parte il disegno originale
+export const QUARTIERI_CREDITO = 'Confini dei quartieri: in parte <a href="https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/">sezioni di censimento ISTAT 2021</a> (<a href="https://creativecommons.org/licenses/by/4.0/deed.it">CC BY 4.0</a>), adattate; in parte disegno originale';
 export const POI_CSV_URL = DATA_BASE + 'cityrhythm_blimp.csv';
 export const CROWDED_CSV_URL = DATA_BASE + 'cityrhythm_crowded_data.csv';
 export const SPOTS_CSV_URL = DATA_BASE + 'cityrhythm_spotMapper.csv';
@@ -401,10 +405,11 @@ export const MAP_STYLES = {
 
   // LCZ Vitality Layer Style
   LCZ_VITALITY: {
-    FILL_OPACITY: 0.7,
-    STROKE_WIDTH: 1,
-    STROKE_COLOR: '#ffffff',
-    STROKE_OPACITY: 0.8,
+    FILL_OPACITY: 1, // Intensità dello strato di default [S]: 100%, sotto tutto non copre nulla
+    FILL_OPACITY_ON_TOP: 0.7, // Intensità con "Celle sopra edifici e strade" accesa [S]: le celle coprono, 70% lascia vedere sotto
+    // [S] Senza contorno le celle si toccano senza righe: con l'antialias del riempimento, sulle giunzioni
+    // la rete diventava più satura (prova pixel 2026-10-10: 11% dei pixel a z14); spento, tutto resta a 0,70.
+    FILL_ANTIALIAS: false,
     // LCZ Color mapping - using case expression for better error handling
     LCZ_COLORS: [
       'case',

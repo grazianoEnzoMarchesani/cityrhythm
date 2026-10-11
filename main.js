@@ -14,7 +14,8 @@ import {
 import { fitMapToBounds, rangeDays, WEEK_TYPE_FROM_DAYS } from './src/utils/utils.js';
 import { updateStatusMessage, initializeSidebar } from './src/ui/ui-sidebar.js';
 import { setupTimelineControls, getCurrentHour, setHour } from './src/ui/ui-timeline.js';
-import { setupLayerControls, initializeSpotTypeFilter } from './src/ui/ui-layer-controls.js';
+import { setupLayerControls } from './src/ui/ui-layer-controls.js';
+import { setupCasaPanel } from './src/ui/ui-casa.js';
 import { setupMapTools } from './src/ui/ui-map-tools.js';
 import { startCompass } from './src/compass/compass.js';
 import { initCompassUI } from './src/ui/ui-compass.js';
@@ -183,11 +184,19 @@ function setupLayersPanel() {
     setOpen(!PHONE.matches);
     // Sul telefono i gruppi partono chiusi e se ne apre uno alla volta. Sul desktop il primo (Persone) è aperto
     const gruppi = [...panel.querySelectorAll('details.group')];
+    const corpo = panel.querySelector('.panel-body');
     gruppi.forEach((g) => g.addEventListener('toggle', () => {
         if (!g.open || !PHONE.matches) return;
         gruppi.forEach((altro) => { if (altro !== g) altro.open = false; });
     }));
     if (gruppi[0]) gruppi[0].open = !PHONE.matches;
+    // Sfumatura in fondo solo se sotto c'è ancora da scorrere: il pannello dice che il contenuto continua
+    const aggiornaSfumatura = () => {
+        panel.classList.toggle('ha-altro', corpo.scrollHeight - corpo.clientHeight - corpo.scrollTop > 4);
+    };
+    corpo.addEventListener('scroll', aggiornaSfumatura, { passive: true });
+    const osservatore = new ResizeObserver(aggiornaSfumatura);
+    [corpo, ...gruppi].forEach((el) => osservatore.observe(el));
     // Sul telefono Esc chiude il pannello dei livelli
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && !e.defaultPrevented && PHONE.matches && !panel.hidden) setOpen(false);
@@ -203,6 +212,7 @@ async function startApp() {
     try {
         const map = initializeMap(mapContainerId);
         setupLayerControls();
+        setupCasaPanel(); // Chi sta a casa: curva ISTAT dell'ora della timeline
         setupMapTools(); // stile e 3D in alto a destra
         setupLayersPanel();
 
@@ -229,12 +239,9 @@ async function startApp() {
                 // Aree KML sempre visibili: su di esse si clicca per aprire la scheda
                 if (boundsHaveData) addKmlLayer(fullKmlGeoJson, true);
 
-                // Affollamento e spot: spenti all'avvio
+                // Affollamento spento all'avvio. Spot sempre nascosti: servono solo come poliattrattori
                 if (crowdedData?.length > 0) addCrowdedPointsLayer(false);
-                if (spotsData?.length > 0) {
-                    addSpotsLayer(false);
-                    initializeSpotTypeFilter();
-                }
+                if (spotsData?.length > 0) addSpotsLayer(false);
 
                 // Celle LCZ spente all'avvio; la mappa sonora parte solo se i dati ci sono
                 if (lczVitalityData?.length > 0) {

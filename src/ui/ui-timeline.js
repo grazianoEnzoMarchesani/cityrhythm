@@ -3,8 +3,6 @@ import {
     updateAllPresencePoints,
     updateCrowdedPointsLayerStyle,
     getTimelineCrowdednessColumn,
-    addSyntheticCrowdedPointsLayer,
-    removeSyntheticCrowdedPointsLayer,
     setPresenceMoveDuration
 } from '../map/map-layers.js';
 import { refreshKmlChartsForTimeline } from './ui-sidebar.js';
@@ -134,12 +132,6 @@ function updateAppStateForHour(hourIndex) {
         }
         const presenceVisible = getLayerToggleState('presence');
         updateAllPresencePoints(hourIndex, currentCrowdednessMap, presenceVisible);
-        const syntheticCrowdedVisible = getLayerToggleState('synthetic-crowded');
-        if (syntheticCrowdedVisible) {
-            addSyntheticCrowdedPointsLayer(hourIndex, true);
-        } else {
-            removeSyntheticCrowdedPointsLayer();
-        }
         refreshKmlChartsForTimeline(hourIndex);
         // Niente attesa di 'idle': col brulichio dei puntini non arriva mai e gli ascoltatori si accumulano
         setTimeout(resolve, 100);
