@@ -4,7 +4,7 @@ import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { Protocol } from 'pmtiles';
 import { layers, namedFlavor } from '@protomaps/basemaps';
 import { viewport } from '../state/store.js';
-import { INITIAL_CENTER, INITIAL_ZOOM, MAP_DATA_BASE, KML_SOURCE_ID, NOLLI_COLORS } from '../data/config.js';
+import { INITIAL_CENTER, INITIAL_ZOOM, MAP_DATA_BASE, KML_SOURCE_ID, NOLLI_COLORS, LUOGHI_CREDITO } from '../data/config.js';
 
 // Vite impacchetta il worker di MapLibre in un file unico; pmtiles:// legge i file .pmtiles locali.
 maplibregl.setWorkerUrl(workerUrl);
@@ -179,11 +179,13 @@ function buildMapStyle() {
             protomaps: {
                 type: 'vector', url: 'pmtiles://' + mapDataUrl('ascoli_base.pmtiles'),
                 attribution: '© <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> · <a href="https://protomaps.com">Protomaps</a> · Stile Toner: <a href="https://stamen.com">Stamen</a>, <a href="https://github.com/openmaptiles/maptiler-toner-gl-style">MapTiler</a>'
+                    + ' · ' + LUOGHI_CREDITO // la mappa di base è sempre in uso: il credito dei luoghi si vede sempre
+                    + ' · Meteo: <a href="https://open-meteo.com/">Open-Meteo.com</a> (<a href="https://creativecommons.org/licenses/by/4.0/deed.it">CC BY 4.0</a>)'
             },
             buildings: {
                 type: 'geojson', data: mapDataUrl('gba_ascoli.geojson'),
                 attribution: 'Edifici: <a href="https://github.com/zhu-xlab/GlobalBuildingAtlas">GlobalBuildingAtlas, TUM</a> (CC BY-NC 4.0) · Residenti: <a href="https://dataforgood.facebook.com/dfg/tools/high-resolution-population-density-maps">Meta Data for Good</a> (CC BY 4.0)'
-                    + ' · Gente in casa: ISTAT Uso del tempo 2008-09 via <a href="https://doi.org/10.18128/D062.V1.5">IPUMS MTUS v1.5</a>;'
+                    + ' · Gente in casa e affluenza per tipo di luogo: ISTAT Uso del tempo 2008-09 via <a href="https://doi.org/10.18128/D062.V1.5">IPUMS MTUS v1.5</a>;'
                     + ' this document uses the <a href="http://www.timeuse.org/mtus/reference.html">Multinational Time Use Study</a>, Centre for Time Use Research, University College London 2019'
             },
             'terrain-dem': {

@@ -20,10 +20,10 @@ This application goes beyond simple data plotting, incorporating several sophist
 *   **Multiple Data Layers:** Visualise distinct datasets simultaneously, including:
     *   KML Polygons defining specific areas.
     *   Presence Points representing population density.
-    *   POI (Points of Interest) spots.
+    *   Places that attract people (bars, shops, churches, schools, parks…) from OpenStreetMap.
     *   Local Climate Zones (LCZ) and Urban Heat Island (UHI) risk.
-*   **Synthetic Crowdedness Engine:** Where direct footfall data is unavailable, CityRhythm employs a K-Nearest Neighbours algorithm. It estimates crowd levels for POIs based on the distance and tag similarity (Jaccard index) to known crowded points.
-*   **Dynamic Presence Point Simulation:** Population is visualised not as static dots, but as thousands of individual points with organic, "swarming" behaviour driven by a Perlin noise function. Their distribution is intelligently weighted by the synthetic crowdedness engine.
+*   **Place Footfall Model:** Every OpenStreetMap place gets an hourly profile for a typical week from open data only: its opening hours (OSM `opening_hours`, or the average of places of the same type in the Marche region) multiplied by the share of people found at that kind of place in each hour, from time-use diaries (ISTAT 2008-09 via IPUMS MTUS). See `src/data/luoghi-core.js`.
+*   **Dynamic Presence Point Simulation:** Population is visualised not as static dots, but as thousands of individual points with organic, "swarming" behaviour. Their distribution is weighted by the place footfall model.
 *   **Dynamic UHI Risk Visualisation:** The Urban Heat Island risk layer is not static. Its opacity dynamically changes based on the combination of an area's intrinsic UHI risk and the real-time density of presence points, highlighting areas of combined risk.
 *   **Cross-Filtering Interaction:** Clicking on a chart in the sidebar (e.g., gender distribution) instantly re-colours the presence points on the map to match, providing powerful visual feedback.
 *   **3D Visualisation:** Toggle 3D terrain and building extrusions to gain a more immersive understanding of the urban environment.
@@ -35,7 +35,7 @@ CityRhythm is built with a modern front-end stack, leveraging powerful open-sour
 *   **Mapping:** [MapLibre GL JS](https://maplibre.org), [PMTiles](https://protomaps.com) basemap from OpenStreetMap, 3D buildings from [GlobalBuildingAtlas (TUM)](https://github.com/zhu-xlab/GlobalBuildingAtlas), terrain from [Mapterhorn](https://mapterhorn.com)
 *   **Data Visualisation/Charts:** [Apache ECharts](https://echarts.apache.org/)
 *   **Geospatial Analysis:** [Turf.js](https://turfjs.org/)
-*   **Word Cloud Generation:** [D3.js](https://d3js.org/) + `d3-cloud`
+*   **Charts helpers:** [D3.js](https://d3js.org/)
 *   **CSV Parsing:** [PapaParse](https://www.papaparse.com/)
 *   **Date/Time Picker:** [Litepicker](https://litepicker.com/)
 *   **KML parsing:** [@tmcw/togeojson](https://github.com/placemark/togeojson)
@@ -77,13 +77,17 @@ You need a local web server to run the application, as modern browsers restrict 
 
 ## Data Sources
 
-The datasets are served by the site itself from `public/data/`; the paths are configured in `src/data/config.js`.
+The datasets are served by the site itself from `public/data/`; the paths are configured in `src/data/config.js`. Only the Comune di Ascoli Piceno is covered. The scripts that prepare the data are in `sound-lab/`.
 
 *   **KML Areas:** `cityrhythm_blimp_areas.kml`
-*   **POI Historical Data:** `cityrhythm_blimp.csv`
-*   **Crowdedness Data:** `cityrhythm_crowded_data.csv`
-*   **POI Spots (Spot Mapper):** `cityrhythm_spotMapper.csv`
-*   **LCZ Vitality Data:** `lcz_vitality.csv`
+*   **POI Historical Data (presences per area and hour):** `cityrhythm_blimp.csv`
+*   **Places that attract people:** `luoghi_osm.geojson` — names, types, positions and opening hours from [OpenStreetMap](https://www.openstreetmap.org/copyright), © OpenStreetMap contributors, [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/) (Geofabrik extract, prepared by `sound-lab/luoghi_osm.py`). The file is a derivative database and is shared under the same licence.
+*   **Hourly profile per type of place:** `profili_luoghi.json` — aggregate shares from the ISTAT time-use diaries 2008-09, harmonised in IPUMS MTUS (Kimberly Fisher, Jonathan Gershuny, Sarah M. Flood, Juana Lamote, Liana C. Sayer, Daniel Backman, Etienne Breton, and Stephanie Richards. *Multinational Time Use Study Extract System: Version 1.5* [dataset]. Minneapolis, MN: IPUMS, 2025. https://doi.org/10.18128/D062.V1.5; this document uses the Multinational Time Use Study, Centre for Time Use Research, University College London 2019, http://www.timeuse.org/mtus/reference.html). No microdata; every value comes from at least 30 diaries (`sound-lab/profili_mtus.py`).
+*   **Share of people at home:** `quota_in_casa.json` — same diaries and citations (`sound-lab/casa_mtus.py`).
+*   **LCZ cells:** `lcz_ascoli.geojson` (`sound-lab/estrai_lcz.py`)
+*   **Weather:** `meteo_ascoli.json` (Open-Meteo); compass parameters: `bussola.json`
+*   **Neighbourhood drawing:** `quartieri_disegno.geojson` (partly ISTAT 2021 census sections, CC BY 4.0)
+*   **Map:** `mappa/` — basemap from OpenStreetMap via Protomaps, buildings from GlobalBuildingAtlas (TUM, CC BY-NC 4.0) with residents from Meta Data for Good (CC BY 4.0), terrain from Mapterhorn. Full credits are shown in the map.
 
 ## Architecture Overview
 
