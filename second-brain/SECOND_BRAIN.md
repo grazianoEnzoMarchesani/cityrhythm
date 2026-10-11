@@ -2,7 +2,7 @@
 
 > Memoria condivisa del progetto. **Ogni agente legge questo indice prima di iniziare**, poi i file di argomento che servono al lavoro (elenco nella sezione 4). Si aggiorna a fine sessione col comando `/second-brain` (vedi `.claude/skills/second-brain/SKILL.md`). Sintetico: decisioni e stato, non cronaca.
 
-Ultimo aggiornamento: 2026-10-11 (trentunesima sessione: Luoghi fuori dalla vista, commit)
+Ultimo aggiornamento: 2026-10-11 (trentaduesima sessione: dati legali per luoghi e affluenza, branch `dati-legali` in prova)
 
 ## 1. Progetto in breve
 - **CityRhythm**: dashboard geospaziale (**MapLibre GL 6.12** + PMTiles, ECharts 5.5, Turf 7, D3, PapaParse, Litepicker) su affollamento, demografia, POI, LCZ/UHI. 3 dimensioni spaziali + 1 temporale (timeline).
@@ -20,6 +20,7 @@ Ultimo aggiornamento: 2026-10-11 (trentunesima sessione: Luoghi fuori dalla vist
 | **Presenze POI** (11 quartieri KML, `presenze_0..23` orarie) | **2024-06-01 → 2025-02-01**, 246 giorni, 1 sola ora mancante | Ascoli |
 | Affollamento luoghi (87 punti) | nessuna data: settimana tipo 168 h | Comune di Ascoli; **Outscraper**, non visibile (regole) |
 | Spot (1.186 punti) | statici | Comune di Ascoli; **Outscraper**, non visibile (regole) |
+| **Luoghi OSM** (1.469, `luoghi_osm.geojson`) e **profili per tipo di luogo** (`profili_luoghi.json`) | orari OSM al 2026-10-08; diari ISTAT 2008-09 | Comune di Ascoli; **solo sul branch `dati-legali`, in prova** (`dati-legali.md`) |
 | **LCZ** (`lcz_ascoli.geojson`, **12.496 celle vettoriali da 30 m**) | statici | rettangolo dei quartieri ∩ Comune: tutti gli 11 quartieri al 100% |
 | Meteo (`meteo_ascoli.json`) | 5.904 ore, 2024-06-01 → 2025-02-01 | Open-Meteo, punto 42.847 N 13.6 E |
 | Mappa (`public/data/mappa/`) | — | base Protomaps/OSM, terreno Mapterhorn (z ≤ 12), **11.356 edifici TUM** (`res` residenti Meta, `pub` interni pubblici OSM), font e icone |
@@ -57,6 +58,7 @@ Aggiungere una **dimensione sonora** attivabile ("mappa sonora") con quattro mod
 | `persone.md` | puntini (identità, formichine, gente in giro, colori), Synthetic Crowded Points, **gente in casa** (legenda e grafico «Chi sta a casa», in Dettagli), **licenze IPUMS/UCL/ISTAT/Meta** |
 | `interfaccia.md` | layout a tutto schermo, Livelli, Celle della città (Cosa mostrare, legenda cliccabile), comandi della mappa in alto a destra, Mappa sonora, timeline e Periodo, scheda Area (statistiche, Chi frequenta, Tipi di luogo, Dettaglio), crediti, telefono, lingua, browser, accessibilità, nomi vecchi → nuovi, decisioni da prendere |
 | `decisioni-superate.md` | tutte le decisioni non più valide, col perché |
+| `dati-legali.md` | **branch `dati-legali` (in prova)**: luoghi OSM e profili ISTAT al posto di spot e affollamento Outscraper; fonti, licenze, calcolo, copertura, confronto della bussola, inventario delle licenze di `public/data/`, limiti, domande |
 | `strumenti.md` | script di `sound-lab/` (analisi, taratura, estrazioni, Sottotraccia, prove nel browser), avvio |
 | `prompts.md` | prompt musicali per finetuning.ai |
 | `presentazione.md` | presentazione del branch alla collega: deck, scaletta, aspetto, demo |
@@ -68,7 +70,7 @@ Aggiungere una **dimensione sonora** attivabile ("mappa sonora") con quattro mod
 3. **Interfaccia** (`interfaccia.md`, «Da decidere» 1, 2, 5, 6, 8–11, 13–15). Scheda Area (sessione 27): committata il 2026-10-11, da mostrare all'utente. Rappresentazione delle celle: da discutere con l'utente prima del codice.
 4. **Verifiche su iPhone e Safari reali** (finora Chromium e WebKit emulato): mappa sonora (prova in tre passi, `audio.md`); Livelli sul telefono (sessione 26); legenda cliccabile; Solo celle (chiedere se parte acceso); celle senza contorno; Chi sta a casa (`persone.md`); confini di disegno dei quartieri (`quartieri.md`).
 5. **Commit del 2026-10-11** su `ui-redesign` (`git log`): tutte le modifiche pendenti delle sessioni 26–31, come chiesto dall'utente. **Non ancora su `main`** (Pages): unire solo col sì dell'utente. Da chiedere: di chi sono `src/map/map-layers.js`, `src/map/map-interaction.js` e il ramo LCZ tolto in `ui-layer-controls.js` (il commit li include).
-0b. **Licenza di spot e affollamento** (Outscraper): tenerli per ora; soluzione alternativa da trovare più avanti (`persone.md`).
+0b. **Licenza di spot e affollamento** (Outscraper): tenerli per ora; soluzione alternativa da trovare più avanti (`persone.md`). **Alternativa legale pronta sul branch `dati-legali`** (in prova, non ancora approvata, pushato su origin): da guardare e ascoltare con l'utente, rispondere alle domande in `dati-legali.md`; unire solo col sì.
 6. **Music**: il branch è indietro rispetto a `main`. Decidere se unirlo, solo col sì dell'utente.
 7. **Decisioni aperte** (con l'utente): Notte come interruttore o stato; calore nel registro e nella Sound map; Festa e Afa nei metronomi; sincope; matrice estesa a 17 punti (`sottotraccia.md`); «Sulla mappa, adesso: X% in casa» (`persone.md`); Porta Maggiore −9% (`quartieri.md`).
 8. **Verifiche tecniche**: livello di Sottotraccia contro −18 LUFS; `PeriodicWave`; presentazione: copertina e slide mappe ai nove colori.
@@ -81,6 +83,7 @@ Aggiungere una **dimensione sonora** attivabile ("mappa sonora") con quattro mod
 - **2026-10-11 (29)**: **Chi sta a casa** nei Livelli, dentro «Dettagli» (`src/ui/ui-casa.js`). Prova 27/27 in Chromium. Committato il 2026-10-11.
 - **2026-10-11 (30)**: **confini dei quartieri** per il disegno, da sezioni ISTAT 2021 (CC BY 4.0), calcoli sul KML originale; quattro quartieri coprono il loro KML; hover con le celle accese solo contorno. Approvato dall'utente in localhost. Committato il 2026-10-11 (`quartieri.md`, `mappa.md`).
 - **2026-10-11 (31)**: gruppo **Luoghi** tolto dai Livelli (spot e affollamento non visibili; dati ancora pubblici per decisione dell'utente). I bar «in piazza» sono spot veri. Rettangolo LCZ: convergenza di 0,95°, non raddrizzato. Commit su `ui-redesign`, non su `main`.
+- **2026-10-11 (32)**: branch **`dati-legali`** da `origin/main` (`27da705`), **in prova, non ancora approvato**: 1.469 luoghi OpenStreetMap (ODbL) con orari al posto degli spot, profili orari per tipo di luogo dai diari ISTAT via IPUMS MTUS al posto degli affollamenti Outscraper, regola della notte, taratura nuova (stesso stato nel 71,8% dei casi), CSV di spot e affollamento tolti dal branch, gist e pulsante di debug tolti, crediti con OSM e Open-Meteo. Prova Chromium 30/30. Tutto in `dati-legali.md`.
 
 ## 7. Prompt per la prossima sessione
 ```
@@ -93,6 +96,9 @@ Riassumimi in 3 righe dove siamo.
 Presentazione alla collega (deck: https://claude.ai/artifact/8wMEfrXxCtVTpSJe34nZ55, non crearne un altro): ripartire dalla slide 16
 "Chi sta a casa", poi 15, 17, 18. Una slide alla volta, pubblica solo quella, aspetta il sì. Bianco e nero, testi con /no-ai-slop,
 niente numeri senza fonte, Simone non va citato.
+
+Branch `dati-legali` (luoghi OSM e diari ISTAT al posto di spot e affollamento, in prova): leggi second-brain/dati-legali.md e chiedi
+all'utente le risposte alle sue domande prima di toccarlo.
 
 A fine sessione: aggiorna il second brain (/second-brain). Commit e push solo su richiesta; unire su `main` o `Music` solo col sì dell'utente.
 ```
