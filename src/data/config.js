@@ -10,8 +10,13 @@ export const QUARTIERI_DISEGNO_URL = DATA_BASE + 'quartieri_disegno.geojson';
 // Credito dei confini di disegno: in parte sezioni ISTAT 2021 (CC BY 4.0), in parte il disegno originale
 export const QUARTIERI_CREDITO = 'Confini dei quartieri: in parte <a href="https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/">sezioni di censimento ISTAT 2021</a> (<a href="https://creativecommons.org/licenses/by/4.0/deed.it">CC BY 4.0</a>), adattate; in parte disegno originale';
 export const POI_CSV_URL = DATA_BASE + 'cityrhythm_blimp.csv';
-export const CROWDED_CSV_URL = DATA_BASE + 'cityrhythm_crowded_data.csv';
-export const SPOTS_CSV_URL = DATA_BASE + 'cityrhythm_spotMapper.csv';
+// Luoghi che attirano persone: OpenStreetMap (ODbL) con gli orari di apertura (sound-lab/luoghi_osm.py), e profili
+// orari per tipo di luogo dai diari ISTAT 2008-09 via IPUMS MTUS (sound-lab/profili_mtus.py). L'affluenza di ogni
+// luogo per ora la calcola src/data/luoghi-core.js. Branch dati-legali, in prova.
+export const LUOGHI_URL = DATA_BASE + 'luoghi_osm.geojson';
+export const PROFILI_LUOGHI_URL = DATA_BASE + 'profili_luoghi.json';
+// Credito dei luoghi (ODbL: attribuzione obbligatoria); la citazione dei diari IPUMS MTUS sta nei crediti degli edifici
+export const LUOGHI_CREDITO = 'Luoghi e orari di apertura: © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a> (<a href="https://opendatacommons.org/licenses/odbl/1-0/">ODbL</a>)';
 // Celle LCZ da 30 m, area dei quartieri (vedi sound-lab/estrai_lcz.py)
 export const LCZ_GEOJSON_URL = DATA_BASE + 'lcz_ascoli.geojson';
 // Bussola emotiva: parametri (scritti anche da sound-lab/compass.py) e meteo orario Open-Meteo
@@ -36,8 +41,6 @@ export const CROWDED_SOURCE_ID = 'crowded-points-source';
 export const CROWDED_LAYER_ID = 'crowded-points-layer';
 export const SPOTS_SOURCE_ID = 'spots-points-source';
 export const SPOTS_LAYER_ID = 'spots-points-layer';
-export const SYNTHETIC_CROWDED_SOURCE_ID = 'synthetic-crowded-points-source'; // Aggiunto per coerenza
-export const SYNTHETIC_CROWDED_LAYER_ID = 'synthetic-crowded-points-layer'; // Aggiunto per coerenza
 export const LCZ_VITALITY_SOURCE_ID = 'lcz-vitality-source';
 export const LCZ_VITALITY_LAYER_ID = 'lcz-vitality-layer';
 
@@ -49,7 +52,6 @@ export const ATTRACTION_MAX_SEARCH_RADIUS_KM = 2;
 
 export const ATTRACTION_STRENGTH_FACTOR = 100;
 export const ATTRACTION_MAX_DISPLACEMENT_KM = 2;
-export const ATTRACTION_MIN_CROWDEDNESS = 1;
 export const GRAVITATIONAL_DECAY = 2.5;
 
 // Percentuale di presence point statici (non attratti dagli attractor)
@@ -217,127 +219,17 @@ export const MAP_STYLES = {
     CIRCLE_STROKE_OPACITY: 0.9 // Invariato
   },
 
-  // Synthetic Crowded Points Layer Style
-  SYNTHETIC_CROWDED_POINTS: {
-      CIRCLE_RADIUS: [ // Invariato
-          'interpolate', ['linear'], ['get', 'synthetic_crowdedness'],
-
-          10, 0,
-          50, 2,
-          100, 4
-      ],
-      CIRCLE_COLOR: [ // Invariato - palette viola
-          'interpolate', ['linear'], ['get', 'synthetic_crowdedness'],
-          0, '#e0e0ff', // Viola molto chiaro
-          25, '#a1a1e6', // Viola chiaro
-          50, '#6c6cc1', // Viola medio
-          75, '#3a3a99', // Viola scuro
-          100, '#1a1461' // Viola molto scuro
-      ],
-      CIRCLE_OPACITY: 0.7, // Invariato
-      CIRCLE_STROKE_WIDTH: 1, // Invariato
-      CIRCLE_STROKE_COLOR: '#222266', // Stroke più scuro per contrasto
-      CIRCLE_STROKE_OPACITY: 0.8 // Invariato
-  },
-
   // Spots Layer Style
   SPOTS: {
     CIRCLE_RADIUS: 3, // Invariato
-    CIRCLE_COLOR: [ // Mappa colori invariata
-      'match',
-      ['get', 'tipo'],
-       'restaurant', '#FF5733',       // Arancione Rosso
-       'lodging', '#33A1FF',          // Blu Chiaro
-       'clothing_store', '#FF33A8',   // Rosa Fucsia
-       'art_gallery', '#A833FF',      // Viola
-       'health', '#33FF57',          // Verde Chiaro
-       'point_of_interest', '#FFDD33',// Giallo
-       'home_goods_store', '#3498DB', // Blu
-       'city_hall', '#E74C3C',        // Rosso Mattone
-       'library', '#2ECC71',        // Verde Smeraldo
-       'bar', '#F39C12',            // Arancione
-       'insurance_agency', '#9B59B6', // Viola Ametista
-       'doctor', '#1ABC9C',          // Turchese
-       'meal_delivery', '#D35400',    // Arancione Bruciato
-       'bank', '#27AE60',            // Verde Scuro
-       'veterinary_care', '#8E44AD', // Viola Scuro
-       'bicycle_store', '#F1C40F',    // Giallo Girasole
-       'hospital', '#E74C3C',        // Rosso (come city hall)
-       'store', '#16A085',          // Verde Mare Scuro
-       'supermarket', '#2980B9',     // Blu Scuro
-       'pharmacy', '#C0392B',        // Rosso Scuro
-       'florist', '#F39C12',        // Arancione (come bar)
-       'cafe', '#D35400',            // Arancione Bruciato (come meal_delivery)
-       'accounting', '#7F8C8D',      // Grigio Ardesia
-       'museum', '#E67E22',          // Arancione Carota
-       'tourist_attraction', '#3498DB',// Blu (come home_goods_store)
-       'parking', '#BDC3C7',        // Grigio Argento
-       'movie_theater', '#E74C3C',    // Rosso (come hospital)
-       'car_repair', '#7F8C8D',      // Grigio (come accounting)
-       'electrician', '#F39C12',     // Arancione (come florist)
-       'park', '#2ECC71',            // Verde (come library)
-       'hair_care', '#9B59B6',      // Viola (come insurance)
-       'car_rental', '#34495E',      // Blu Notte
-       'lawyer', '#7F8C8D',          // Grigio (come car_repair)
-       'church', '#3498DB',          // Blu (come tourist_attraction)
-       'jewelry_store', '#F1C40F',    // Giallo (come bicycle_store)
-       'general_contractor', '#95A5A6',// Grigio Chiaro
-       'bakery', '#E67E22',          // Arancione (come museum)
-       'place_of_worship', '#9B59B6', // Viola (come hair_care)
-       'finance', '#2980B9',         // Blu (come supermarket)
-       'shoe_store', '#E74C3C',       // Rosso (come movie_theater)
-       'furniture_store', '#16A085',  // Verde (come store)
-       'plumber', '#7F8C8D',         // Grigio (come lawyer)
-       'police', '#3498DB',           // Blu (come church)
-       'transit_station', '#95A5A6',   // Grigio (come general_contractor)
-       'liquor_store', '#D35400',     // Arancione (come cafe)
-       'university', '#2980B9',      // Blu (come finance)
-       'gym', '#F39C12',             // Arancione (come electrician)
-       'travel_agency', '#3498DB',    // Blu (come police)
-       'dentist', '#E74C3C',          // Rosso (come shoe_store)
-       'local_government_office', '#7F8C8D', // Grigio (come plumber)
-       'school', '#2ECC71',           // Verde (come park)
-       'beauty_salon', '#E67E22',     // Arancione (come bakery)
-       'electronics_store', '#9B59B6',// Viola (come place_of_worship)
-       'cemetery', '#7F8C8D',         // Grigio (come local_government_office)
-       'moving_company', '#95A5A6',   // Grigio (come transit_station)
-       'real_estate_agency', '#3498DB',// Blu (come travel_agency)
-       'storage', '#7F8C8D',         // Grigio (come cemetery)
-       'gas_station', '#F39C12',      // Arancione (come gym)
-       'car_wash', '#16A085',         // Verde (come furniture_store)
-       'food', '#D35400',             // Arancione (come liquor_store)
-       'shopping_mall', '#9B59B6',    // Viola (come electronics_store)
-       'atm', '#2980B9',             // Blu (come university)
-       'primary_school', '#2ECC71',    // Verde (come school)
-       'secondary_school', '#27AE60', // Verde Scuro (come bank)
-       'grocery_or_supermarket', '#2980B9', // Blu (come atm)
-       'laundry', '#7F8C8D',         // Grigio (come storage)
-       'train_station', '#95A5A6',    // Grigio (come moving_company)
-       'book_store', '#2980B9',       // Blu (come grocery)
-       'post_office', '#E74C3C',      // Rosso (come dentist)
-       'meal_takeaway', '#D35400',    // Arancione (come food)
-       'landmark', '#F1C40F',         // Giallo (come jewelry_store)
-       'night_club', '#8E44AD',       // Viola Scuro (come veterinary_care)
-       'roofing_contractor', '#7F8C8D',// Grigio (come laundry)
-       'courthouse', '#3498DB',       // Blu (come real_estate_agency)
-       'spa', '#9B59B6',             // Viola (come shopping_mall)
-       'car_dealer', '#16A085',       // Verde (come car_wash)
-       'drugstore', '#C0392B',        // Rosso Scuro (come pharmacy)
-       'stadium', '#2980B9',          // Blu (come book_store)
-       'physiotherapist', '#1ABC9C',  // Turchese (come doctor)
-       'department_store', '#9B59B6', // Viola (come spa)
-       'hardware_store', '#7F8C8D',   // Grigio (come roofing_contractor)
-       'locksmith', '#95A5A6',        // Grigio (come train_station)
-       'rv_park', '#27AE60',          // Verde Scuro (come secondary_school)
-       'zoo', '#D35400',             // Arancione (come meal_takeaway)
-       'funeral_home', '#7F8C8D',     // Grigio (come hardware_store)
-       'pet_store', '#9B59B6',        // Viola (come department_store)
-       'amusement_park', '#F1C40F',   // Giallo (come landmark)
-       'convenience_store', '#16A085',// Verde (come car_dealer)
-       'bus_station', '#95A5A6',      // Grigio (come locksmith)
-       'bowling_alley', '#8E44AD',    // Viola Scuro (come night_club)
-       'campground', '#2ECC71',       // Verde (come primary_school)
-       '#AAAAAA' // Default Grigio
+    // Colore per categoria dei luoghi OSM (src/data/luoghi-core.js); livello nascosto, colori scelti per distinguerle [S]
+    CIRCLE_COLOR: [
+      'match', ['get', 'categoria'],
+      'bar', '#D35400', 'ristoranti', '#E67E22', 'alimentari', '#2980B9', 'moda', '#9B59B6', 'negozi', '#16A085',
+      'persona', '#C0392B', 'farmacie', '#27AE60', 'salute', '#1ABC9C', 'servizi', '#7F8C8D', 'scuole', '#F1C40F',
+      'culto', '#34495E', 'cultura', '#8E44AD', 'sport', '#F39C12', 'verde', '#2ECC71', 'monumenti', '#E74C3C',
+      'auto', '#95A5A6', 'stazioni', '#3498DB',
+      '#AAAAAA'
     ],
     CIRCLE_OPACITY: 0.5, // Invariato
     CIRCLE_STROKE_WIDTH: 1, // Invariato

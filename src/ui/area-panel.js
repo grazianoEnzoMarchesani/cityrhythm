@@ -124,7 +124,7 @@ function scheletro(v) {
 
         <section class="ap-sez">
             <h4>Tipi di luogo</h4>
-            <p class="ap-nota">Luoghi con affollamento simulato in quest’ora. La barra è l’affollamento sommato per tipo. Non cambia con il Periodo.</p>
+            <p class="ap-nota">Luoghi di OpenStreetMap che in quest’ora attirano gente. La barra è l’affluenza stimata sommata per tipo, da orari di apertura e diari ISTAT. Non cambia con il Periodo.</p>
             <div id="ap-luoghi"></div>
             <details class="ap-altri" id="ap-luoghi-altri">
                 <summary id="ap-luoghi-altri-titolo">Altri tipi</summary>
@@ -171,7 +171,8 @@ function aggiornaTesti() {
     html('ap-dove', blocchiDove(v));
 
     const massimoLuogo = v.luoghi[0]?.valore ?? 0;
-    html('ap-luoghi', righeLuoghi(v.luoghi.slice(0, TOP_LUOGHI), massimoLuogo));
+    html('ap-luoghi', v.luoghi.length ? righeLuoghi(v.luoghi.slice(0, TOP_LUOGHI), massimoLuogo)
+        : '<p class="ap-nota">In quest’ora nessun luogo dell’area attira gente.</p>');
     html('ap-luoghi-resto', righeLuoghi(v.luoghi.slice(TOP_LUOGHI), massimoLuogo));
     const altriLuoghi = v.luoghi.length - TOP_LUOGHI;
     const altriBox = document.getElementById('ap-luoghi-altri');
@@ -241,7 +242,7 @@ function righeLuoghi(voci, massimo) {
         <div class="ap-riga">
             <span class="ap-riga-nome">${esc(x.nome)}</span>
             <span class="ap-traccia"><span style="width:${massimo > 0 ? (x.valore / massimo * 100).toFixed(1) : 0}%;background:${COLORE_GIORNI}"></span></span>
-            <span class="ap-riga-val">${numero(x.conteggio)} ${x.conteggio === 1 ? 'punto' : 'punti'}</span>
+            <span class="ap-riga-val">${numero(x.conteggio)} ${x.conteggio === 1 ? 'luogo' : 'luoghi'}</span>
         </div>`).join('');
 }
 

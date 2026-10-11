@@ -6,10 +6,10 @@ import { KML_LAYER_ID, KML_SOURCE_ID } from '../data/config.js';
 import { resetSidebar } from '../ui/ui-sidebar.js';
 import { displayKmlFeatureInfoAndCalculateAverages } from '../ui/ui-sidebar.js';
 import { getCurrentHour } from '../ui/ui-timeline.js';
-import { fullSyntheticCrowdedGeoJson } from './map-layers.js'; // IMPORTANTE: aggiungi export a fullSyntheticCrowdedGeoJson in map-layers.js
 import { DEBUG_MODE } from '../data/config.js';
 import { ispezioneCelle } from '../state/store.js';
-import { getFullKmlGeoJson } from '../data/data-loader.js';
+import { getFullKmlGeoJson, getLuoghi } from '../data/data-loader.js';
+import { getWeekIndex } from '../utils/utils.js';
 
 
 // Variabile per tenere traccia dell'ID della feature correntemente in hover
@@ -100,19 +100,14 @@ function handleKmlClick(e) {
              if (featureId !== undefined) {
                 if (DEBUG_MODE) console.debug(`KML Layer clicked. Feature ID: ${featureId}, Properties:`, kmlFeature.properties);
                 displayKmlFeatureInfoAndCalculateAverages(kmlFeature, getCurrentHour());
-                // --- LOG SYNTHETIC CROWDED POINTS ATTRACTIVENESS ---
-                if (fullSyntheticCrowdedGeoJson && fullSyntheticCrowdedGeoJson.features?.length) {
+                // Solo in modalità sviluppatore: affluenza dei luoghi dell'area in quest'ora
+                if (DEBUG_MODE) {
                     // Conteggio sul confine dei dati (KML originale), non su quello disegnato
                     const confineDati = getFullKmlGeoJson()?.features.find(k => k.id === featureId)?.geometry ?? kmlFeature.geometry;
-                    const inside = fullSyntheticCrowdedGeoJson.features.filter(f => {
-                        return turf.booleanPointInPolygon(f, confineDati);
-                    });
-                    const values = inside.map(f => f.properties?.synthetic_crowdedness ?? null).filter(v => v !== null);
-                    if (DEBUG_MODE) console.log(`Synthetic crowded points in area ${featureId}:`, values);
-                } else {
-                    if (DEBUG_MODE) console.log('No synthetic crowded points loaded.');
+                    const ora = getWeekIndex(getCurrentHour());
+                    const valori = getLuoghi().filter(l => turf.booleanPointInPolygon([l.lon, l.lat], confineDati)).map(l => l.affluenza[ora]);
+                    console.log(`Affluenza dei luoghi nell'area ${featureId}:`, valori);
                 }
-                // ---
              } else {
                  if (DEBUG_MODE) console.warn("Clicked on KML layer but feature ID is missing:", kmlFeature);
              }

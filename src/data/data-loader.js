@@ -1,8 +1,9 @@
 import Papa from 'papaparse';
 import { kml } from '@tmcw/togeojson';
 // data-loader.js
-import { POI_CSV_URL, KML_URL, CROWDED_CSV_URL, SPOTS_CSV_URL, LCZ_GEOJSON_URL, QUARTIERI_DISEGNO_URL, DEBUG_MODE } from './config.js';
+import { POI_CSV_URL, KML_URL, LUOGHI_URL, PROFILI_LUOGHI_URL, LCZ_GEOJSON_URL, QUARTIERI_DISEGNO_URL, DEBUG_MODE } from './config.js';
 import { updateStatusMessage } from '../ui/ui-sidebar.js';
+import { preparaLuoghi } from './luoghi-core.js';
 
 // Data structure for POIs: { "poi_name_normalized": [record1, record2, ...], ... }
 let poiDataStore = {};
@@ -10,10 +11,8 @@ let poiDataStore = {};
 let fullKmlGeoJson = null;
 // Confini di disegno per nome di quartiere: solo per la mappa; i calcoli leggono fullKmlGeoJson (il KML originale)
 let displayGeometries = new Map();
-// Data store for crowded points - Array of records initially
-let crowdedDataStore = [];
-// Data store for spot mapper points
-let spotMapperDataStore = [];
+// Luoghi che attirano persone (OpenStreetMap) con l'affluenza per ora della settimana (luoghi-core.js)
+let luoghiStore = [];
 // Data store for LCZ vitality polygons
 let lczVitalityDataStore = [];
 
@@ -134,116 +133,28 @@ export function getPoiData() {
 }
 
 /**
- * Loads and parses Crowded Points data from the specified CSV URL.
- * Converts latitude/longitude and hourly data to numbers.
- * @returns {Promise<Array<object>>} A promise that resolves with the crowdedDataStore array.
+ * Carica i luoghi OSM e i profili orari dei diari ISTAT e calcola l'affluenza di ogni luogo per le 168 ore
+ * della settimana tipo (src/data/luoghi-core.js). Prende il posto dei vecchi spot e dei loro affollamenti.
+ * @returns {Promise<Array<object>>} luoghi con id, nome, categoria, nomeCategoria, lon, lat, affluenza (Float32Array 168)
  */
-export function loadCrowdedData() {
-    return new Promise((resolve, reject) => {
-        updateStatusMessage("Loading crowded points data...");
-        Papa.parse(CROWDED_CSV_URL, {
-            download: true,
-            header: true,
-            dynamicTyping: true, // Let PapaParse handle basic types (numbers, booleans)
-            skipEmptyLines: true,
-            complete: results => {
-                // Manual trim of header fields and data keys (to replace transformHeader)
-                if (results.meta?.fields && results.data) {
-                    const trimmedFields = results.meta.fields.map(f => f.trim());
-                    results.meta.fields = trimmedFields;
-                    results.data = results.data.map(row => {
-                        const newRow = {};
-                        for (const key in row) {
-                            newRow[key.trim()] = row[key];
-                        }
-                        return newRow;
-                    });
-                }
-                if (DEBUG_MODE) {
-                    console.log("Crowded CSV parsing completed:", results);
-                    console.log("Crowded CSV headers found:", results.meta?.fields);
-                }
-
-                if (results.errors.length > 0) {
-                    if (DEBUG_MODE) {
-                        console.error("Errors during Crowded CSV parsing:", results.errors);
-                        const firstError = results.errors[0];
-                        // Adjust row number: +1 for header, +1 for 0-based index
-                        const errMsg = `Crowded CSV parsing error: ${firstError.message} (row ${firstError.row + 2})`;
-                        updateStatusMessage(errMsg, true);
-                    }
-                    reject(new Error("Crowded CSV parsing error"));
-                    return;
-                }
-                if (!results.data || results.data.length === 0) {
-                    updateStatusMessage("Crowded CSV file is empty or invalid.", true);
-                    reject(new Error("Empty Crowded CSV file"));
-                    return;
-                }
-
-                crowdedDataStore = []; // Reset store
-                let loadedCount = 0;
-                let processedCount = 0;
-                let geoErrorCount = 0;
-
-                results.data.forEach((row, index) => {
-                    loadedCount++;
-                    // Validate essential fields: latitude and longitude
-                    if (row && typeof row.latitude === 'number' && typeof row.longitude === 'number' &&
-                        !isNaN(row.latitude) && !isNaN(row.longitude)) {
-
-                        // Optional: Ensure hourly data are numbers (PapaParse dynamicTyping should handle this, but good to verify)
-                        // Example check for one column:
-                        // if (typeof row['sunday-00'] !== 'number') {
-                        //    console.warn(`Row ${index+2}: 'sunday-00' is not a number`, row['sunday-00']);
-                        //    // Decide how to handle: skip row, set to 0, etc. Here we'll keep it simple.
-                        // }
-
-                        // Add unique ID based on row index for safety
-                        row.id = `crowded_${index}`;
-                        crowdedDataStore.push(row);
-                        processedCount++;
-                    } else {
-                        // console.warn(`Skipping Crowded row ${index + 2} due to invalid lat/lon:`, row);
-                        geoErrorCount++; // Skip row if essential geo data is invalid
-                    }
-                });
-
-                if (DEBUG_MODE) {
-                    console.log(`Read ${loadedCount} Crowded CSV rows.`);
-                    console.log(`- Processed ${processedCount} rows with valid lat/lon.`);
-                    console.log(`- Skipped ${geoErrorCount} rows for invalid lat/lon.`);
-                }
-
-                if (processedCount === 0 && loadedCount > 0) {
-                    updateStatusMessage("No valid rows found in Crowded CSV file after lat/lon check.", true);
-                    if (DEBUG_MODE) {
-                        console.warn("Warning: No valid Crowded data loaded.");
-                    }
-                } else {
-                     updateStatusMessage(`Loaded ${processedCount} crowded points.`);
-                }
-
-                resolve(crowdedDataStore); // Resolve with the array of records
-            },
-            error: error => {
-                if (DEBUG_MODE) {
-                    console.error("PapaParse Crowded CSV error:", error);
-                    const errMsg = `Error loading/parsing Crowded CSV: ${error.message || error}`;
-                    updateStatusMessage(errMsg, true);
-                }
-                reject(new Error("Error loading Crowded CSV"));
-            }
-        });
-    });
+export async function loadLuoghi() {
+    updateStatusMessage("Carico i luoghi della città…");
+    const [luoghi, profili] = await Promise.all([LUOGHI_URL, PROFILI_LUOGHI_URL].map(async url => {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status} per ${url}`);
+        return response.json();
+    }));
+    luoghiStore = preparaLuoghi(luoghi, profili);
+    if (DEBUG_MODE) console.log(`Luoghi con affluenza: ${luoghiStore.length} su ${luoghi.features.length}`);
+    return luoghiStore;
 }
 
 /**
- * Returns the stored crowded points data.
- * @returns {Array<object>} The crowdedDataStore array.
+ * Luoghi caricati da loadLuoghi (vuoto finché non sono pronti).
+ * @returns {Array<object>}
  */
-export function getCrowdedData() {
-    return crowdedDataStore;
+export function getLuoghi() {
+    return luoghiStore;
 }
 
 /**
@@ -398,114 +309,6 @@ function enrichGeoJsonWithPoiDataPresence(geoJson, poiData) {
  */
 export function getFullKmlGeoJson() {
     return fullKmlGeoJson;
-}
-
-/**
- * Loads and parses spot mapper data from the specified CSV URL.
- * Converts latitude/longitude to numbers.
- * @returns {Promise<Array<object>>} A promise that resolves with the spotMapperDataStore array.
- */
-export function loadSpotMapperData() {
-    return new Promise((resolve, reject) => {
-        updateStatusMessage("Loading spot mapper data...");
-        Papa.parse(SPOTS_CSV_URL, {
-            download: true,
-            header: true,
-            dynamicTyping: true, // Let PapaParse handle basic types (numbers, booleans)
-            skipEmptyLines: true,
-            complete: results => {
-                // Manual trim of header fields and data keys (to replace transformHeader)
-                if (results.meta?.fields && results.data) {
-                    const trimmedFields = results.meta.fields.map(f => f.trim());
-                    results.meta.fields = trimmedFields;
-                    results.data = results.data.map(row => {
-                        const newRow = {};
-                        for (const key in row) {
-                            newRow[key.trim()] = row[key];
-                        }
-                        return newRow;
-                    });
-                }
-                if (DEBUG_MODE) {
-                    console.log("Spot Mapper CSV parsing completed:", results);
-                    console.log("Spot Mapper CSV headers found:", results.meta?.fields);
-                }
-
-                if (results.errors.length > 0) {
-                    if (DEBUG_MODE) {
-                        console.error("Errors during Spot Mapper CSV parsing:", results.errors);
-                        const firstError = results.errors[0];
-                        // Adjust row number: +1 for header, +1 for 0-based index
-                        const errMsg = `Spot Mapper CSV parsing error: ${firstError.message} (row ${firstError.row + 2})`;
-                        updateStatusMessage(errMsg, true);
-                    }
-                    reject(new Error("Spot Mapper CSV parsing error"));
-                    return;
-                }
-                if (!results.data || results.data.length === 0) {
-                    updateStatusMessage("Spot Mapper CSV file is empty or invalid.", true);
-                    reject(new Error("Empty Spot Mapper CSV file"));
-                    return;
-                }
-
-                spotMapperDataStore = []; // Reset store
-                let loadedCount = 0;
-                let processedCount = 0;
-                let geoErrorCount = 0;
-
-                results.data.forEach((row, index) => {
-                    loadedCount++;
-                    // Validate essential fields: latitude and longitude
-                    if (row && typeof row.Latitudine === 'number' && typeof row.Longitudine === 'number' &&
-                        !isNaN(row.Latitudine) && !isNaN(row.Longitudine)) {
-
-                        // Add unique ID based on row index for safety
-                        row.id = `spot_${index}`;
-                        spotMapperDataStore.push(row);
-                        processedCount++;
-                    } else {
-                        if (DEBUG_MODE) {
-                            console.warn(`Skipping Spot Mapper row ${index + 2} due to invalid lat/lon:`, row);
-                        }
-                        geoErrorCount++; // Skip row if essential geo data is invalid
-                    }
-                });
-
-                if (DEBUG_MODE) {
-                    console.log(`Read ${loadedCount} Spot Mapper CSV rows.`);
-                    console.log(`- Processed ${processedCount} rows with valid lat/lon.`);
-                    console.log(`- Skipped ${geoErrorCount} rows for invalid lat/lon.`);
-                }
-
-                if (processedCount === 0 && loadedCount > 0) {
-                    updateStatusMessage("No valid rows found in Spot Mapper CSV file after lat/lon check.", true);
-                    if (DEBUG_MODE) {
-                        console.warn("Warning: No valid Spot Mapper data loaded.");
-                    }
-                } else {
-                     updateStatusMessage(`Loaded ${processedCount} spot points.`);
-                }
-
-                resolve(spotMapperDataStore); // Resolve with the array of records
-            },
-            error: error => {
-                if (DEBUG_MODE) {
-                    console.error("PapaParse Spot Mapper CSV error:", error);
-                    const errMsg = `Error loading/parsing Spot Mapper CSV: ${error.message || error}`;
-                    updateStatusMessage(errMsg, true);
-                }
-                reject(new Error("Error loading Spot Mapper CSV"));
-            }
-        });
-    });
-}
-
-/**
- * Returns the stored spot mapper data.
- * @returns {Array<object>} The spotMapperDataStore array.
- */
-export function getSpotMapperData() {
-    return spotMapperDataStore;
 }
 
 /**

@@ -3,13 +3,12 @@ import { Litepicker } from 'litepicker';
 import 'litepicker/dist/css/litepicker.css';
 import { initializeMap } from './src/map/map-setup.js';
 import {
-    loadPoiData, loadKMLLayer, loadCrowdedData, loadSpotMapperData, loadLczVitalityData,
+    loadPoiData, loadKMLLayer, loadLuoghi, loadLczVitalityData,
     getFullKmlGeoJson,
     getPoiDateRange
 } from './src/data/data-loader.js';
 import {
-    addKmlLayer, updateAllPresencePoints, addCrowdedPointsLayer,
-    updateCrowdedPointsLayerStyle, getTimelineCrowdednessColumn, addSpotsLayer, addLczVitalityLayer
+    addKmlLayer, updateAllPresencePoints, addCrowdedPointsLayer, addSpotsLayer, addLczVitalityLayer
 } from './src/map/map-layers.js';
 import { fitMapToBounds, rangeDays, WEEK_TYPE_FROM_DAYS } from './src/utils/utils.js';
 import { updateStatusMessage, initializeSidebar } from './src/ui/ui-sidebar.js';
@@ -224,11 +223,8 @@ async function startApp() {
                 updateStatusMessage('Carico le aree…');
                 const kmlGeoJson = await loadKMLLayer();
 
-                updateStatusMessage('Carico gli affollamenti…');
-                const crowdedData = await loadCrowdedData();
-
-                updateStatusMessage('Carico gli spot…');
-                const spotsData = await loadSpotMapperData();
+                updateStatusMessage('Carico i luoghi della città…');
+                const luoghi = await loadLuoghi();
 
                 updateStatusMessage('Carico le celle…');
                 const lczVitalityData = await loadLczVitalityData();
@@ -239,9 +235,8 @@ async function startApp() {
                 // Aree KML sempre visibili: su di esse si clicca per aprire la scheda
                 if (boundsHaveData) addKmlLayer(fullKmlGeoJson, true);
 
-                // Affollamento spento all'avvio. Spot sempre nascosti: servono solo come poliattrattori
-                if (crowdedData?.length > 0) addCrowdedPointsLayer(false);
-                if (spotsData?.length > 0) addSpotsLayer(false);
+                // Luoghi OSM sempre nascosti: servono solo come poliattrattori (l'affollamento solo in modalità sviluppatore)
+                if (luoghi?.length > 0) addSpotsLayer(false);
 
                 // Celle LCZ spente all'avvio; la mappa sonora parte solo se i dati ci sono
                 if (lczVitalityData?.length > 0) {
@@ -253,31 +248,18 @@ async function startApp() {
 
                 setupTimelineControls();
                 const initialHour = getCurrentHour();
-
-                const initialColumnName = getTimelineCrowdednessColumn(initialHour);
-                const initialCrowdednessMap = new Map();
-                if (initialColumnName && crowdedData?.length > 0) {
-                    crowdedData.forEach(record => {
-                        if (record?.id !== undefined && record?.id !== null) {
-                            const val = parseFloat(record[initialColumnName]);
-                            initialCrowdednessMap.set(String(record.id), !isNaN(val) ? val : 0);
-                        }
-                    });
-                }
-                if (crowdedData?.length > 0) {
-                    updateCrowdedPointsLayerStyle(initialHour, initialCrowdednessMap);
-                }
+                if (luoghi?.length > 0) addCrowdedPointsLayer(initialHour, false);
 
                 setupCalendarDateRange();
 
                 // Puntini: tre passi di aggiornamento, perché la sorgente non è pronta subito
                 await wait(1000);
                 if (boundsHaveData && poiData && Object.keys(poiData).length > 0) {
-                    updateAllPresencePoints(initialHour, initialCrowdednessMap, true);
+                    updateAllPresencePoints(initialHour, true);
                     await wait(700);
-                    updateAllPresencePoints(initialHour, initialCrowdednessMap, true);
+                    updateAllPresencePoints(initialHour, true);
                     await wait(1000);
-                    updateAllPresencePoints(initialHour, initialCrowdednessMap, true);
+                    updateAllPresencePoints(initialHour, true);
                 }
                 if (boundsHaveData) fitMapToBounds(map, fullKmlGeoJson);
 

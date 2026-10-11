@@ -2,11 +2,9 @@ import { hourToLabel } from '../utils/utils.js';
 import {
     updateAllPresencePoints,
     updateCrowdedPointsLayerStyle,
-    getTimelineCrowdednessColumn,
     setPresenceMoveDuration
 } from '../map/map-layers.js';
 import { refreshKmlChartsForTimeline } from './ui-sidebar.js';
-import { getCrowdedData } from '../data/data-loader.js';
 import { getLayerToggleState } from './ui-layer-controls.js';
 import { DEBUG_MODE, PRESENCE_MOVE_MS } from '../data/config.js';
 import { time } from '../state/store.js';
@@ -115,23 +113,11 @@ function stepTo(delta) {
 function updateAppStateForHour(hourIndex) {
     time.set({ index: hourIndex, date: window._timelineMap?.[hourIndex]?.date ?? null });
     return new Promise((resolve) => {
-        const crowdedData = getCrowdedData();
-        const columnName = getTimelineCrowdednessColumn(hourIndex);
-        const currentCrowdednessMap = new Map();
-        if (columnName && crowdedData?.length > 0) {
-            crowdedData.forEach(record => {
-                if (record?.id !== undefined && record?.id !== null) {
-                    const crowdedValue = parseFloat(record[columnName]);
-                    const currentCrowdedness = !isNaN(crowdedValue) ? crowdedValue : 0;
-                    currentCrowdednessMap.set(String(record.id), currentCrowdedness);
-                }
-            });
-        }
         if (DEBUG_MODE) {
-            updateCrowdedPointsLayerStyle(hourIndex, currentCrowdednessMap);
+            updateCrowdedPointsLayerStyle(hourIndex);
         }
         const presenceVisible = getLayerToggleState('presence');
-        updateAllPresencePoints(hourIndex, currentCrowdednessMap, presenceVisible);
+        updateAllPresencePoints(hourIndex, presenceVisible);
         refreshKmlChartsForTimeline(hourIndex);
         // Niente attesa di 'idle': col brulichio dei puntini non arriva mai e gli ascoltatori si accumulano
         setTimeout(resolve, 100);

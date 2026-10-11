@@ -7,9 +7,7 @@ import {
     PRESENCE_POINTS_SOURCE_ID, PRESENCE_POINTS_LAYER_ID,
     CROWDED_SOURCE_ID, CROWDED_LAYER_ID,
     SPOTS_SOURCE_ID, SPOTS_LAYER_ID,
-    SYNTHETIC_CROWDED_SOURCE_ID, SYNTHETIC_CROWDED_LAYER_ID, // Assicurati sia definito in config.js
     LCZ_VITALITY_SOURCE_ID, LCZ_VITALITY_LAYER_ID,
-    ATTRACTION_MIN_CROWDEDNESS,
     MAP_DATA_BASE, HOME_SHARE_URL, PRESENCE_HOME_OPACITY, PRESENCE_HOME_RADIUS, PRESENCE_MOVE_MS, PRESENCE_EXIT_METERS,
     PRESENCE_STAGGER, PRESENCE_BEND_MAX_M, PRESENCE_WIGGLE_PX, PRESENCE_WIGGLE_MIN_M, PRESENCE_WIGGLE_MAX_M,
     PRESENCE_WIGGLE_STEP_PX, MAP_STYLES, LCZ_DATA_VIEWS, UTCI_BANDS, UTCI_RAMP, SOUND_STATE_COLORS,
@@ -53,16 +51,14 @@ function presencePaint(colored) {
 import { calculateAveragePresenceForFeature, generatePointsForFeature, perlin2d, hash01, getWeekIndex, getDateTimeFromIndex } from '../utils/utils.js';
 import { residentsSeenAtNight, homeShareFor } from './home-share.js';
 import { applyPresenceColors, getPreviousPersonColor } from './presence-colors.js';
-import { getFullKmlGeoJson, getPoiData, getCrowdedData, getSpotMapperData, getLczVitalityData, getDisplayGeometry } from '../data/data-loader.js';
+import { getFullKmlGeoJson, getPoiData, getLuoghi, getLczVitalityData, getDisplayGeometry } from '../data/data-loader.js';
 import { addMapInteraction } from './map-interaction.js';
 import { cellMap, presence, ispezioneCelle } from '../state/store.js';
 import { setCellMapActive } from '../compass/cell-map.js';
 import { coloreSuono } from '../compass/sound-color.js';
 
-let fullCrowdedGeoJson = null;
-let preparedCrowdedPoints = []; // prepared attractor points
-let fullSpotsGeoJson = null;
-export let fullSyntheticCrowdedGeoJson = null; // Cache per punti 'attractor' sintetici
+let fullCrowdedGeoJson = null; // luoghi con l'affluenza dell'ora (livello di debug «Affollamento»)
+let fullSpotsGeoJson = null;   // luoghi OSM (livello sempre nascosto: i luoghi servono da poliattrattori)
 let currentPresencePoints = null; // GeoJSON dei punti generati (con seed)
 let animationFrameId = null;
 let currentLczVisualizationType = 'LCZ'; // 'LCZ' or 'UHI'
@@ -87,21 +83,13 @@ function metersToLonDegrees(meters, lat) {
     return meters / (111320 * Math.cos(lat * Math.PI / 180));
 }
 
-// Genera la griglia FORCE_GRID in base alla bounding box delle KML e ai synthetic crowded
+// Genera la griglia FORCE_GRID in base alla bounding box delle KML e ai luoghi che attirano gente in quell'ora
 function generateForceGrid(fullKml, timelineHourIndex) {
     if (!fullKml?.features?.length) return [];
-    // Ottieni synthetic crowded points
-    const spotsData = getSpotMapperData();
-    const crowdedData = getCrowdedData();
-    const crowdednessColumn = getTimelineCrowdednessColumn(timelineHourIndex);
-    const syntheticGeoJson = generateSyntheticCrowdedPointsGeoJson(spotsData, crowdedData, crowdednessColumn);
-    const attractors = (syntheticGeoJson?.features || [])
-        .filter(f => (f.properties?.synthetic_crowdedness || 0) > 0)
-        .map(f => ({
-            lon: f.geometry.coordinates[0],
-            lat: f.geometry.coordinates[1],
-            strength: f.properties.synthetic_crowdedness
-        }));
+    const ora = getWeekIndex(timelineHourIndex);
+    const attractors = getLuoghi()
+        .filter(l => l.affluenza[ora] > 0)
+        .map(l => ({ lon: l.lon, lat: l.lat, strength: l.affluenza[ora] }));
     // DEBUG: log attractors
     console.log('Attractors:', attractors.length, attractors.map(a => a.strength));
     // Calcola la bounding box di tutte le KML
@@ -300,7 +288,7 @@ export function addKmlLayer(geoJson, initialVisibility = true) {
 
         // Determina dove inserire i layer (sotto i punti se esistono)
         let beforeLayerId;
-        const pointLayers = [PRESENCE_POINTS_LAYER_ID, CROWDED_LAYER_ID, SPOTS_LAYER_ID, SYNTHETIC_CROWDED_LAYER_ID];
+        const pointLayers = [PRESENCE_POINTS_LAYER_ID, CROWDED_LAYER_ID, SPOTS_LAYER_ID];
         for (const pointLayer of pointLayers) {
             if (map.getLayer(pointLayer)) {
                 beforeLayerId = pointLayer;
@@ -473,86 +461,56 @@ export function addOrUpdatePresencePointsLayer(pointsGeoJson, initialVisibility 
     }
 }
 
-// --- LAYER PUNTI AFFOLLAMENTO (CROWDED POINTS) ---
+// --- LUOGHI CHE ATTIRANO PERSONE (OpenStreetMap, affluenza da src/data/luoghi-core.js) ---
 
+/**
+ * Luoghi come punti, con l'affluenza (0–100) dell'ora della settimana tipo `oraSettimana`
+ * (0 = lunedì 00:00 … 167). Prende il posto degli spot "sintetici" che copiavano i luoghi affollati.
+ */
+export function getAttrattoriGeoJson(oraSettimana) {
+    return {
+        type: 'FeatureCollection',
+        features: getLuoghi().map(l => ({
+            type: 'Feature',
+            id: l.id,
+            properties: { id: l.id, nome: l.nome, categoria: l.categoria, nomeCategoria: l.nomeCategoria, affluenza: l.affluenza[oraSettimana] ?? 0 },
+            geometry: { type: 'Point', coordinates: [l.lon, l.lat] }
+        }))
+    };
+}
+
+// Luoghi dentro ogni quartiere (confine del KML), calcolati una volta: id quartiere → luoghi
+const luoghiPerQuartiere = new Map();
+function getLuoghiForFeature(kmlFeature) {
+    if (luoghiPerQuartiere.has(kmlFeature.id)) return luoghiPerQuartiere.get(kmlFeature.id);
+    const luoghi = getLuoghi().filter(l => turf.booleanPointInPolygon([l.lon, l.lat], kmlFeature.geometry));
+    if (getLuoghi().length) luoghiPerQuartiere.set(kmlFeature.id, luoghi); // non ricordare un elenco vuoto prima del caricamento
+    return luoghi;
+}
+
+// Livello «Affollamento (punti)»: solo in modalità sviluppatore, i luoghi con l'affluenza dell'ora
 export function removeCrowdedPointsLayer() {
     const map = getMapInstance(); if (!map) return;
     try { if (map.getLayer(CROWDED_LAYER_ID)) map.removeLayer(CROWDED_LAYER_ID); } catch (e) { /* ignore */ }
     try { if (map.getSource(CROWDED_SOURCE_ID)) map.removeSource(CROWDED_SOURCE_ID); } catch (e) { /* ignore */ }
 }
 
-/** Colonna dei luoghi affollati (settimana tipo) per una posizione della timeline, anche con giorni veri. */
-export function getTimelineCrowdednessColumn(timelineHourIndex) {
-    return getCrowdednessColumnName(getWeekIndex(timelineHourIndex));
+function convertAndStoreCrowdedGeoJson(oraSettimana) {
+    const fc = getAttrattoriGeoJson(oraSettimana);
+    fc.features.forEach(f => { f.properties.current_crowdedness = f.properties.affluenza; });
+    fullCrowdedGeoJson = fc.features.length ? fc : null;
 }
 
-export function getCrowdednessColumnName(hourIndex) {
-    if (typeof hourIndex !== 'number' || hourIndex < 0 || hourIndex > 167) { return null; }
-    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-    const timelineDayIndex = Math.floor(hourIndex / 24);
-    const hour = hourIndex % 24;
-    if (timelineDayIndex < 0 || timelineDayIndex >= days.length) return null;
-    const dayName = days[timelineDayIndex];
-    const hourString = hour.toString().padStart(2, '0');
-    return `${dayName}-${hourString}`;
-}
-
-function convertAndStoreCrowdedGeoJson(crowdedData) {
-    fullCrowdedGeoJson = null;
-    if (!crowdedData?.length) {
-        console.warn("convertAndStoreCrowdedGeoJson: No crowded data provided.");
-        return;
-    }
-    try {
-        let validCount = 0; let invalidCount = 0;
-        const features = crowdedData.map((record) => {
-            const lat = record?.latitude;
-            const lon = record?.longitude;
-            const id = record?.id;
-            if (typeof lat === 'number' && typeof lon === 'number' && !isNaN(lat) && !isNaN(lon) && id !== undefined && id !== null) {
-                validCount++;
-                const properties = { ...record, current_crowdedness: 0 };
-                return {
-                    type: 'Feature',
-                    geometry: { type: 'Point', coordinates: [lon, lat] },
-                    properties: properties,
-                    id: id
-                };
-            } else {
-                invalidCount++;
-                return null;
-            }
-        }).filter(feature => feature !== null);
-
-        if (invalidCount > 0) {
-             console.warn(`convertAndStoreCrowdedGeoJson: Skipped ${invalidCount} invalid records.`);
-        }
-        if (!features.length) {
-            console.warn("convertAndStoreCrowdedGeoJson: No valid features generated from crowded data.");
-            return;
-        }
-        fullCrowdedGeoJson = { type: 'FeatureCollection', features: features };
-    } catch (error) {
-        console.error("Error converting crowded data to GeoJSON:", error);
-        fullCrowdedGeoJson = null;
-    }
-}
-
-export function addCrowdedPointsLayer(initialVisibility = true) {
+export function addCrowdedPointsLayer(timelineHourIndex, initialVisibility = true) {
     if (!DEBUG_MODE) return; // Non caricare layer in modalità non-debug
     const map = getMapInstance();
     if (!map || !isMapReady()) {
-        whenMapReady(() => addCrowdedPointsLayer(initialVisibility));
+        whenMapReady(() => addCrowdedPointsLayer(timelineHourIndex, initialVisibility));
         return;
     }
-    if (!fullCrowdedGeoJson) {
-        convertAndStoreCrowdedGeoJson(getCrowdedData());
-    }
-    if (!fullCrowdedGeoJson?.features?.length) {
-        removeCrowdedPointsLayer();
-        return;
-    }
+    convertAndStoreCrowdedGeoJson(getWeekIndex(timelineHourIndex));
     removeCrowdedPointsLayer();
+    if (!fullCrowdedGeoJson) return;
     try {
         map.addSource(CROWDED_SOURCE_ID, {
             type: 'geojson',
@@ -582,46 +540,13 @@ export function addCrowdedPointsLayer(initialVisibility = true) {
     }
 }
 
-export function updateCrowdedPointsLayerStyle(timelineHourIndex, currentCrowdednessMap) {
+export function updateCrowdedPointsLayerStyle(timelineHourIndex) {
     if (!DEBUG_MODE) return; // Non aggiornare layer in modalità non-debug
     const map = getMapInstance();
-    if (!map || !isMapReady() || !fullCrowdedGeoJson?.features?.length || !currentCrowdednessMap) {
-        return;
-    }
-    const source = map.getSource(CROWDED_SOURCE_ID);
-    if (!source) {
-        return;
-    }
-    let dataChanged = false;
-    preparedCrowdedPoints = [];
-    try {
-        let countCrowdedAboveThreshold = 0;
-        let maxCrowdednessValue = 0;
-        fullCrowdedGeoJson.features.forEach(feature => {
-            if (feature.properties && feature.id !== undefined && feature.id !== null) {
-                const featureIdStr = String(feature.id);
-                const currentCrowdedness = currentCrowdednessMap.get(featureIdStr) || 0;
-                maxCrowdednessValue = Math.max(maxCrowdednessValue, currentCrowdedness);
-                if (feature.properties.current_crowdedness !== currentCrowdedness) {
-                    feature.properties.current_crowdedness = currentCrowdedness;
-                    dataChanged = true;
-                }
-                if (currentCrowdedness >= ATTRACTION_MIN_CROWDEDNESS) {
-                    preparedCrowdedPoints.push({
-                        id: feature.id,
-                        feature: feature,
-                        currentCrowdedness: currentCrowdedness
-                    });
-                    countCrowdedAboveThreshold++;
-                }
-            }
-        });
-        if (dataChanged) {
-            source.setData(fullCrowdedGeoJson);
-        }
-    } catch (error) {
-         console.error("Error updating crowded points properties:", error);
-    }
+    const source = map && isMapReady() ? map.getSource(CROWDED_SOURCE_ID) : null;
+    if (!source) return;
+    convertAndStoreCrowdedGeoJson(getWeekIndex(timelineHourIndex));
+    if (fullCrowdedGeoJson) source.setData(fullCrowdedGeoJson);
 }
 
 // --- GENTE IN CASA ---
@@ -1111,24 +1036,20 @@ function movePresencePointsTo(target, visible, arrivals = new Set(), leavers = [
 
 // Ridisegna i puntini dell'ora corrente (es. dopo aver cambiato la colorazione)
 export function refreshPresencePoints(visible) {
-    if (lastPresenceArgs) updateAllPresencePoints(lastPresenceArgs[0], lastPresenceArgs[1], visible ?? lastPresenceArgs[2]);
+    if (lastPresenceArgs) updateAllPresencePoints(lastPresenceArgs[0], visible ?? lastPresenceArgs[1]);
 }
 
 // --- AGGIORNAMENTO COMPLESSIVO PUNTI PRESENZA (CON CAMPO DI FORZE STATICO) ---
-export function updateAllPresencePoints(timelineHourIndex, currentCrowdednessMap, initialVisibility = true) {
+export function updateAllPresencePoints(timelineHourIndex, initialVisibility = true) {
     const map = getMapInstance();
     const fullKml = getFullKmlGeoJson();
     const poiData = getPoiData();
-    const spotsData = getSpotMapperData();
-    const crowdedData = getCrowdedData();
-    const crowdednessColumn = getTimelineCrowdednessColumn(timelineHourIndex);
-    const syntheticGeoJson = generateSyntheticCrowdedPointsGeoJson(spotsData, crowdedData, crowdednessColumn);
-    const syntheticPoints = (syntheticGeoJson?.features || []).filter(f => (f.properties?.synthetic_crowdedness || 0) > 0);
+    const ora = getWeekIndex(timelineHourIndex); // ora della settimana tipo per l'affluenza dei luoghi
     let allFinalPointsFeatures = [];
     const areas = [];
     const JITTER_METERS = 10;
     const { jsDayOfWeek, hour } = getDateTimeFromIndex(timelineHourIndex);
-    lastPresenceArgs = [timelineHourIndex, currentCrowdednessMap, initialVisibility];
+    lastPresenceArgs = [timelineHourIndex, initialVisibility];
     ensureHomesLoaded();
     const presenceArrivals = new Set(); // chi arriva in città: entra dall'esterno e compare piano
     const presenceLeavers = [];         // chi lascia la città: esce verso l'esterno e svanisce
@@ -1147,27 +1068,31 @@ export function updateAllPresencePoints(timelineHourIndex, currentCrowdednessMap
         fullKml.features.forEach(kmlFeature => {
             if (!kmlFeature?.properties?.poi_data_available) return;
             const { averagePresence } = calculateAveragePresenceForFeature(kmlFeature, poiData, timelineHourIndex);
-            // Trova i synthetic point interni all'area
-            const synthInArea = averagePresence > 0
-                ? syntheticPoints.filter(synth => turf.booleanPointInPolygon(synth, kmlFeature.geometry))
-                : [];
             const state = getPresenceState(kmlFeature.id);
-            // Persone attese a ogni attrattore in quest'ora, in proporzione all'affollamento
-            const totalCrowdedness = synthInArea.reduce((sum, s) => sum + (s.properties.synthetic_crowdedness || 0), 0);
+            // Peso di ogni luogo del quartiere in quest'ora: la sua affluenza (0–100, src/data/luoghi-core.js)
+            const pesi = new Map();
+            if (averagePresence > 0) {
+                getLuoghiForFeature(kmlFeature).forEach(l => {
+                    state.attrCoords.set(l.id, [l.lon, l.lat]);
+                    if (l.affluenza[ora] > 0) pesi.set(l.id, l.affluenza[ora]);
+                });
+                // [S] Nessun luogo attivo (notti dei feriali: i diari hanno meno di 30 casi e quei valori valgono 0):
+                // la gente resta divisa fra i luoghi come nell'ultima ora, invece di sparire. Quasi tutti sono a casa.
+                if (!pesi.size) state.at.forEach(attrId => pesi.set(attrId, (pesi.get(attrId) || 0) + 1));
+            }
+            // Persone attese a ogni luogo in quest'ora, in proporzione al peso
+            const totale = [...pesi.values()].reduce((somma, w) => somma + w, 0);
             const targets = new Map();
-            synthInArea.forEach(synth => {
-                state.attrCoords.set(synth.id, synth.geometry.coordinates);
-                const n = totalCrowdedness > 0
-                    ? Math.round((synth.properties.synthetic_crowdedness / totalCrowdedness) * averagePresence * 0.3)
-                    : Math.floor((averagePresence / synthInArea.length) * 0.3); // somma zero: distribuisci uniformemente
-                if (n > 0) targets.set(synth.id, n);
+            pesi.forEach((w, attrId) => {
+                const n = Math.round(w / totale * averagePresence * 0.3);
+                if (n > 0) targets.set(attrId, n);
             });
             const { movers, needs } = rebalanceInsideArea(state, targets);
             areas.push({
                 kmlFeature, state, movers, needs, averagePresence,
                 homes: getHomesForFeature(kmlFeature),
                 homeShare: homeShareFor(getResidentsSeen(kmlFeature), homeCurve, jsDayOfWeek, hour, averagePresence),
-                nRandom: synthInArea.length ? Math.round(averagePresence * 0.1) : 0
+                nRandom: pesi.size ? Math.round(averagePresence * 0.1) : 0
             });
         });
         transferBetweenAreas(areas);
@@ -1201,7 +1126,7 @@ export function updateAllPresencePoints(timelineHourIndex, currentCrowdednessMap
                 const radius = hash01(key + ':r') * JITTER_METERS;
                 const { latDeg, lonDeg } = metersToDegrees(radius, cLat);
                 placePerson(key, cLon + Math.cos(angle) * lonDeg, cLat + Math.sin(angle) * latDeg, {
-                    syntheticId: attrId,
+                    attrattoreId: attrId,
                     kmlFeatureId: kmlFeature.id,
                     isStatic: false,
                     noiseSeedX: Math.random() * 10000,
@@ -1396,187 +1321,13 @@ function addForceGridDebugLayer(map) {
     });
 }
 
-// --- PUNTI AFFOLLAMENTO SINTETICI (SYNTHETIC CROWDED POINTS) ---
+// --- LAYER DEI LUOGHI (ex spot) ---
+// Sempre nascosto (gruppo Luoghi tolto dai Livelli il 2026-10-11): i luoghi servono da poliattrattori dei puntini.
 
-// Maestri di ogni spot: i K luoghi reali (crowded) più simili per etichette e più vicini.
-// Sono fissi per tutte le ore: un maestro chiuso conta 0 invece di essere sostituito da uno aperto lontano
-// (prima alle 3 di notte restava "aperto" il 66% degli spot copiando bar a 1 km di distanza).
-let syntheticMastersCache = null; // { spotsData, crowdedData, masters: [{ spot, coords, tags, knn: [{ cp, weight }] }] }
-
-function getSyntheticMasters(spotsData, crowdedData) {
-    if (syntheticMastersCache?.spotsData === spotsData && syntheticMastersCache?.crowdedData === crowdedData) {
-        return syntheticMastersCache.masters;
-    }
-    const EPSILON = 0.01; // km, per evitare divisione per zero
-    const K = 5; // Numero di maestri
-
-    // Similarità Jaccard tra due array di tag
-    function jaccardSimilarity(tagsA, tagsB) {
-        if (!tagsA.length || !tagsB.length) return 0;
-        const setA = new Set(tagsA);
-        const setB = new Set(tagsB);
-        const intersection = [...setA].filter(x => setB.has(x)).length;
-        return intersection / (setA.size + setB.size - intersection);
-    }
-    const parseTags = (s) => (s || '').toLowerCase().split(',').map(t => t.trim()).filter(Boolean);
-
-    const realCrowdedPoints = crowdedData
-        .filter(cp => typeof cp.longitude === 'number' && typeof cp.latitude === 'number')
-        .map(cp => ({ cp, tags: parseTags(cp.TAG), coords: [cp.longitude, cp.latitude] }));
-
-    const masters = spotsData.map((spot, idx) => {
-        const tags = parseTags(spot.TAG);
-        const coords = [spot.Longitudine, spot.Latitudine];
-        if (!tags.length || typeof coords[0] !== 'number' || typeof coords[1] !== 'number') return null;
-        const knn = realCrowdedPoints
-            .map(r => {
-                const tagSim = jaccardSimilarity(tags, r.tags);
-                if (tagSim === 0) return null;
-                const distKm = turf.distance(coords, r.coords, { units: 'kilometers' });
-                return { cp: r.cp, weight: tagSim / (distKm + EPSILON) };
-            })
-            .filter(Boolean)
-            .sort((a, b) => b.weight - a.weight)
-            .slice(0, K);
-        return { spot, idx, coords, knn };
-    }).filter(Boolean);
-    syntheticMastersCache = { spotsData, crowdedData, masters };
-    return masters;
-}
-
-export function generateSyntheticCrowdedPointsGeoJson(spotsData, crowdedData, crowdednessColumn) {
-    if (!Array.isArray(spotsData) || !Array.isArray(crowdedData) || !crowdednessColumn) {
-        console.warn("generateSyntheticCrowdedPointsGeoJson: Invalid input data or column name.");
-        return null;
-    }
-    const syntheticFeatures = getSyntheticMasters(spotsData, crowdedData).map(({ spot, idx, coords, knn }) => {
-        // Media pesata dell'affollamento dei maestri in quest'ora, chiusi compresi (0)
-        let weightedSum = 0;
-        let weightSum = 0;
-        knn.forEach(({ cp, weight }) => {
-            weightedSum += (parseFloat(cp[crowdednessColumn]) || 0) * weight;
-            weightSum += weight;
-        });
-        return {
-            type: 'Feature',
-            id: spot.id || `spot_${idx}`,
-            properties: {
-                ...spot,
-                synthetic_crowdedness: weightSum > 0 ? weightedSum / weightSum : 0
-            },
-            geometry: { type: 'Point', coordinates: coords }
-        };
-    });
-    return { type: 'FeatureCollection', features: syntheticFeatures };
-}
-
-// --- LAYER PUNTI AFFOLLAMENTO SINTETICI ---
-
-export function removeSyntheticCrowdedPointsLayer() {
-    const map = getMapInstance();
-    if (!map) return;
-    try { if (map.getLayer(SYNTHETIC_CROWDED_LAYER_ID)) map.removeLayer(SYNTHETIC_CROWDED_LAYER_ID); } catch (e) { /* ignore */ }
-    try { if (map.getSource(SYNTHETIC_CROWDED_SOURCE_ID)) map.removeSource(SYNTHETIC_CROWDED_SOURCE_ID); } catch (e) { /* ignore */ }
-}
-
-export function addSyntheticCrowdedPointsLayer(timelineHourIndex, initialVisibility = true) {
-    const map = getMapInstance();
-    if (!map || !isMapReady()) {
-        whenMapReady(() => addSyntheticCrowdedPointsLayer(timelineHourIndex, initialVisibility));
-        return;
-    }
-    const spotsData = getSpotMapperData();
-    const crowdedData = getCrowdedData();
-    const crowdednessColumn = getTimelineCrowdednessColumn(timelineHourIndex);
-    if (!spotsData?.length || !crowdedData?.length || !crowdednessColumn) {
-        console.warn("addSyntheticCrowdedPointsLayer: Missing data to generate synthetic points.");
-        removeSyntheticCrowdedPointsLayer();
-        return;
-    }
-    fullSyntheticCrowdedGeoJson = generateSyntheticCrowdedPointsGeoJson(spotsData, crowdedData, crowdednessColumn);
-    if (!fullSyntheticCrowdedGeoJson?.features?.length) {
-        removeSyntheticCrowdedPointsLayer();
-        return;
-    }
-    removeSyntheticCrowdedPointsLayer();
-    try {
-        let beforeLayerId;
-         if (map.getLayer(CROWDED_LAYER_ID)) {
-             beforeLayerId = CROWDED_LAYER_ID;
-         } else if (map.getLayer(PRESENCE_POINTS_LAYER_ID)) {
-             beforeLayerId = PRESENCE_POINTS_LAYER_ID;
-         }
-        map.addSource(SYNTHETIC_CROWDED_SOURCE_ID, {
-            type: 'geojson',
-            data: fullSyntheticCrowdedGeoJson,
-            promoteId: 'id'
-        });
-        map.addLayer({
-            id: SYNTHETIC_CROWDED_LAYER_ID,
-            type: 'circle',
-            source: SYNTHETIC_CROWDED_SOURCE_ID,
-            layout: { 'visibility': initialVisibility ? 'visible' : 'none' },
-            paint: {
-                'circle-radius': MAP_STYLES.SYNTHETIC_CROWDED_POINTS.CIRCLE_RADIUS,
-                'circle-color': MAP_STYLES.SYNTHETIC_CROWDED_POINTS.CIRCLE_COLOR,
-                'circle-opacity': MAP_STYLES.SYNTHETIC_CROWDED_POINTS.CIRCLE_OPACITY,
-                'circle-stroke-width': MAP_STYLES.SYNTHETIC_CROWDED_POINTS.CIRCLE_STROKE_WIDTH,
-                'circle-stroke-color': MAP_STYLES.SYNTHETIC_CROWDED_POINTS.CIRCLE_STROKE_COLOR,
-                'circle-stroke-opacity': MAP_STYLES.SYNTHETIC_CROWDED_POINTS.CIRCLE_STROKE_OPACITY,
-                'circle-pitch-alignment': 'viewport',
-                'circle-pitch-scale': 'map'
-            }
-        }, beforeLayerId);
-    } catch (error) {
-        console.error("Error adding synthetic crowded points source or layer:", error);
-        removeSyntheticCrowdedPointsLayer();
-    }
-}
-
-
-// --- LAYER SPOT MAPPER (POI SPOTS) ---
-
-function convertAndStoreSpotsGeoJson(spotsData) {
-    fullSpotsGeoJson = null;
-    if (!spotsData || !Array.isArray(spotsData) || spotsData.length === 0) {
-        console.warn("convertAndStoreSpotsGeoJson: No spots data provided.");
-        return null;
-    }
-    try {
-        const features = spotsData
-            .filter(spot => typeof spot.Longitudine === 'number' && typeof spot.Latitudine === 'number')
-            .map((spot, index) => {
-                const id = spot.id || `spot_${index}`;
-                return {
-                    type: 'Feature',
-                    id: id,
-                    properties: {
-                        ...spot,
-                        id: id,
-                        name: spot.Nome || 'Spot',
-                        tipo: spot.Tipo || 'unknown',
-                        tag: spot.TAG || ''
-                    },
-                    geometry: {
-                        type: 'Point',
-                        coordinates: [spot.Longitudine, spot.Latitudine]
-                    }
-                };
-        });
-        if (!features.length) {
-            console.warn("convertAndStoreSpotsGeoJson: No valid features generated from spots data.");
-            return null;
-        }
-        fullSpotsGeoJson = {
-            type: 'FeatureCollection',
-            features: features
-        };
-        return fullSpotsGeoJson;
-    } catch (error) {
-        console.error("Error converting spots data to GeoJSON:", error);
-        fullSpotsGeoJson = null;
-        return null;
-    }
+function convertAndStoreSpotsGeoJson() {
+    const fc = getAttrattoriGeoJson(0);
+    fullSpotsGeoJson = fc.features.length ? fc : null;
+    return fullSpotsGeoJson;
 }
 
 export function removeSpotsLayer() {
@@ -1597,7 +1348,7 @@ export function addSpotsLayer(initialVisibility = true) {
         return;
     }
     if (!fullSpotsGeoJson) {
-        convertAndStoreSpotsGeoJson(getSpotMapperData());
+        convertAndStoreSpotsGeoJson();
     }
     if (!fullSpotsGeoJson?.features?.length) {
         removeSpotsLayer();
@@ -1632,7 +1383,7 @@ export function addSpotsLayer(initialVisibility = true) {
             source: SPOTS_SOURCE_ID,
             layout: {
                 'visibility': initialVisibility ? 'visible' : 'none',
-                'text-field': ['get', 'name'],
+                'text-field': ['coalesce', ['get', 'nome'], ''],
                 'text-font': MAP_STYLES.SPOTS.LABELS.TEXT_FONT,
                 'text-size': MAP_STYLES.SPOTS.LABELS.TEXT_SIZE,
                 'text-offset': MAP_STYLES.SPOTS.LABELS.TEXT_OFFSET,
@@ -1691,7 +1442,7 @@ export function addSpotsLayer(initialVisibility = true) {
 // Livello sotto cui vanno le celle quando stanno "sopra edifici e strade": il primo livello di dati presente.
 // Il KML (quartiere selezionato) e i puntini (sottolivelli -color e -zoom) restano sopra anche con le celle al 100%.
 function overlayBeforeId(map) {
-    return [KML_LAYER_ID, PRESENCE_POINTS_LAYER_ID + '-color', PRESENCE_POINTS_LAYER_ID + '-zoom', CROWDED_LAYER_ID, SPOTS_LAYER_ID, SYNTHETIC_CROWDED_LAYER_ID].find(id => map.getLayer(id));
+    return [KML_LAYER_ID, PRESENCE_POINTS_LAYER_ID + '-color', PRESENCE_POINTS_LAYER_ID + '-zoom', CROWDED_LAYER_ID, SPOTS_LAYER_ID].find(id => map.getLayer(id));
 }
 
 export function removeLczVitalityLayer() {
