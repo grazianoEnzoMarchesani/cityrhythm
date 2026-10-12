@@ -55,7 +55,21 @@ function timeLabel(hourIndex) {
 
 function showTime() {
     const label = timeLabel(currentHour);
-    if (timeDisplay) timeDisplay.textContent = label;
+    if (timeDisplay) {
+        // "Giorno · ora" in tre pezzi: sul telefono il separatore sparisce e i due testi vanno su due righe (style.css)
+        const [first, ...rest] = label.split(' · ');
+        timeDisplay.textContent = '';
+        if (rest.length === 0) {
+            timeDisplay.textContent = label;
+        } else {
+            for (const [cls, text] of [['tt-first', first], ['tt-sep', ' · '], ['tt-last', rest.join(' · ')]]) {
+                const span = document.createElement('span');
+                span.className = cls;
+                span.textContent = text;
+                timeDisplay.appendChild(span);
+            }
+        }
+    }
     if (timeSlider) timeSlider.setAttribute('aria-valuetext', label);
 }
 
