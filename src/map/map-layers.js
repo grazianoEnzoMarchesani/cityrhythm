@@ -1,5 +1,6 @@
 import * as turf from '@turf/turf';
 import { Popup } from 'maplibre-gl';
+import { cellPopupHtml, LCZ_NAMES, UHI_NAMES } from '../ui/cell-popup.js';
 // src/map/map-layers.js
 import { getMapInstance, isMapReady, whenMapReady, getBaseStyle, setWhiteOverCellsHidden, CELLS_UNDER_ID } from './map-setup.js';
 import {
@@ -1577,32 +1578,8 @@ export function addLczVitalityLayer(initialVisibility = true, visualizationType 
     }
 }
 
-// Nomi delle classi LCZ (Stewart & Oke) e del rischio isola di calore
-export const LCZ_NAMES = {
-    '1': 'Compatto alto', '2': 'Compatto medio', '3': 'Compatto basso', '4': 'Aperto alto',
-    '5': 'Aperto medio', '6': 'Aperto basso', '7': 'Leggero basso', '8': 'Grandi edifici bassi',
-    '9': 'Edificato sparso', '10': 'Industria pesante', 'A': 'Alberi fitti', 'B': 'Alberi sparsi',
-    'C': 'Arbusti e macchia', 'D': 'Piante basse', 'E': 'Roccia o pavimentato', 'F': 'Suolo nudo',
-    'G': 'Acqua'
-};
-const UHI_NAMES = {
-    'Very Low': 'Molto basso', 'Low': 'Basso', 'Low-Medium': 'Basso-medio', 'Medium-Low': 'Medio-basso',
-    'Medium': 'Medio', 'High': 'Alto', 'Very High': 'Molto alto'
-};
-// Parametri che costruiscono la classe: [campo, etichetta, unità]
-const LCZ_PARAMS = [
-    ['svf_mean', 'Cielo visibile (Sky View Factor)', '0–1'],
-    ['aspect_ratio', 'Rapporto altezza/larghezza (H/W)', ''],
-    ['building_frac', 'Superficie coperta da edifici', '%'],
-    ['impervious_frac', 'Superficie impermeabile', '%'],
-    ['pervious_frac', 'Superficie permeabile', '%'],
-    ['z_h', 'Altezza media di edifici e alberi', 'm'],
-    ['terrain_rough', 'Classe di rugosità (Davenport)', '1–8'],
-    ['admittance', 'Ammettenza termica', 'J m⁻² s⁻½ K⁻¹'],
-    ['albedo', 'Albedo', '0–1'],
-    ['anthro_heat', 'Calore antropico', 'W/m²'],
-    ['industry_heat', 'Calore industriale', 'W/m²']
-];
+// Nomi delle classi LCZ e del rischio isola di calore: in src/ui/cell-popup.js
+export { LCZ_NAMES };
 
 /**
  * Colore delle celle per una vista: 'LCZ', 'UHI' o un campo di LCZ_DATA_VIEWS (scala continua).
@@ -1707,7 +1684,8 @@ function applyLczPaint() {
     if (!map || !isMapReady() || !map.getLayer(LCZ_VITALITY_LAYER_ID)) return;
     // Con il cerchio d'ascolto acceso le celle fuori dal cerchio si fanno tenui, e dentro c'è il varco a piena forza
     const tenue = varcoAttivo() && celleVisibili(map);
-    map.setPaintProperty(LCZ_VITALITY_LAYER_ID, 'fill-opacity', opacitaCelle(tenue ? FUORI_VARCO : 1));
+    // Dentro il cerchio la base si spegne: ci sta solo il varco, senza due strati uno sull'altro
+    map.setPaintProperty(LCZ_VITALITY_LAYER_ID, 'fill-opacity', tenue ? ['case', DENTRO, 0, opacitaCelle(FUORI_VARCO)] : opacitaCelle(1));
     if (map.getLayer(VARCO_LAYER_ID)) map.setPaintProperty(VARCO_LAYER_ID, 'fill-opacity', opacitaVarco(map));
 }
 /** Opacità del riempimento (base, più l'eventuale voce evidenziata) moltiplicata per `k`. */
@@ -1836,6 +1814,19 @@ export function setLczHighlight(selection) {
 
 let lczPopupBound = false;
 
+/** Se la scheda esce dallo schermo o finisce sotto la timeline, sposta la mappa quanto basta (con la scheda più alta dello spazio, vince la parte in alto). */
+function tieniNellaVista(map, popup) {
+    requestAnimationFrame(() => {
+        const el = popup.getElement()?.querySelector('.maplibregl-popup-content');
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        const tl = document.getElementById('timeline-container')?.getBoundingClientRect();
+        const alto = 12, basso = (tl && tl.top > 0 ? tl.top : window.innerHeight) - 12;
+        const dy = r.top < alto || r.height > basso - alto ? r.top - alto : r.bottom > basso ? r.bottom - basso : 0;
+        if (Math.abs(dy) > 1) map.panBy([0, dy], { duration: 250 });
+    });
+}
+
 /** Popup al clic su una cella LCZ: classe, rischio e parametri con cui è stata calcolata. */
 function bindLczPopup(map) {
     if (lczPopupBound) return;
@@ -1847,29 +1838,27 @@ function bindLczPopup(map) {
         if (!ispezioneCelle.get()) return;
         const p = e.features?.[0]?.properties;
         if (!p) return;
-        const fmt = v => (typeof v === 'number' ? (Number.isInteger(v) ? v : +v.toFixed(3)) : v);
-        const rows = LCZ_PARAMS
-            .filter(([key]) => p[key] !== undefined && p[key] !== null)
-            .map(([key, label, unit]) => `<tr><td>${label}</td><td style="text-align:right;padding-left:8px"><b>${fmt(p[key])}</b> ${unit}</td></tr>`)
-            .join('');
-        const fix = p.lcz_esa_fix && p.lcz_esa_fix !== '-' ? `<br>Corretta con ESA WorldCover: ${p.lcz_esa_fix}` : '';
         const k = lastCellMap && cellMapIndex?.get(p.id);
-        const now = k === undefined || k === null ? '' : (() => {
+        const adesso = k === undefined || k === null ? null : (() => {
             const u = lastCellMap.utci[k], st = lastCellMap.stato[k];
             const band = Number.isNaN(u) ? null : [...UTCI_BANDS].reverse().find(([t]) => u >= t);
-            return `<div style="margin-top:6px;padding:4px 6px;background:#f3f3f3;border-radius:4px">In quest'ora: `
-                + (band ? `UTCI ≈ <b>${Math.round(u)} °C</b> (${band[3]}, stima) · ` : '')
-                + `mappa sonora <b>${st ? st[0].toUpperCase() + st.slice(1) : '—'}</b>`
-                + ` · ≈ ${Math.round(lastCellMap.people[k])} persone in giro qui intorno</div>`;
+            return { utci: Number.isNaN(u) ? null : u, fascia: band ? band[3] : null, stato: st || null,
+                colore: st ? coloreSuono(lastCellMap.x[k], lastCellMap.y[k], st) : null, persone: lastCellMap.people[k] };
         })();
-        new Popup({ maxWidth: '340px' })
+        const popup = new Popup({ maxWidth: '340px', className: 'cella-popup' })
             .setLngLat(e.lngLat)
-            .setHTML(`<div style="font-size:12px;line-height:1.4">
-                <div style="font-size:14px"><b>LCZ ${p.lcz_class} – ${LCZ_NAMES[p.lcz_class] ?? 'sconosciuta'}</b></div>
-                Rischio isola di calore: <b>${UHI_NAMES[p.lcz_vulnerability] ?? p.lcz_vulnerability}</b>${fix}${now}
-                <table style="margin-top:6px;border-collapse:collapse">${rows}</table>
-                <div style="color:#888;margin-top:4px">Cella ${p.id} · 30 × 30 m</div></div>`)
+            .setHTML(cellPopupHtml(p, adesso))
             .addTo(map);
+        if (window.matchMedia('(max-width: 1099px)').matches) {
+            // Telefono e tablet: la scheda va a tutto schermo e sopra a ogni comando, quindi esce dal contenitore della mappa (CSS: .cella-popup)
+            document.body.appendChild(popup.getElement());
+            const esc = ev => { if (ev.key === 'Escape') popup.remove(); };
+            document.addEventListener('keydown', esc);
+            popup.on('close', () => document.removeEventListener('keydown', esc));
+        } else {
+            tieniNellaVista(map, popup);
+            popup.getElement().addEventListener('toggle', () => tieniNellaVista(map, popup), true); // «Dettagli» cambia l'altezza
+        }
     });
 }
 

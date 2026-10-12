@@ -29,7 +29,9 @@ const DESCRIZIONI = {
     notte: 'Buio e poca gente: la città dorme.'
 };
 const nome = s => NOMI[s] ?? '—';
-const MODI = [['ia', 'IA'], ['classica', 'Classica'], ['metronomi', 'Metronomi'], ['sottotraccia', 'Sottotraccia']];
+const MODI_TUTTI = [['ia', 'IA'], ['classica', 'Classica'], ['metronomi', 'Metronomi'], ['sottotraccia', 'Scale']];
+// Al pubblico due modi: le scale (Sottotraccia) e la classica. IA e metronomi restano in DEBUG_MODE.
+const MODI = DEBUG_MODE ? MODI_TUTTI : MODI_TUTTI.filter(([v]) => v === 'classica' || v === 'sottotraccia');
 // Fasce della temperatura percepita (UTCI), in parole semplici; soglia inferiore in °C
 const FASCE_TERMICHE = [
     [46, 'caldo estremo'], [38, 'caldo molto forte'], [32, 'caldo forte'], [26, 'caldo moderato'],
@@ -249,9 +251,7 @@ export function initCompassUI(map) {
     }
     const lineaModo = el('p', 'mode-desc');
     const musica = el('div', 'card-music');
-    // Fuori da DEBUG_MODE il modo è sempre Sottotraccia: il selettore non si mostra
-    if (DEBUG_MODE) musica.append(etichettaMusica, modi);
-    musica.append(lineaModo);
+    musica.append(etichettaMusica, modi, lineaModo);
 
     // Volume: slider nativo (si muove anche col dito e con le frecce); si salva solo la scelta dell'utente
     const VOLUME_CHIAVE = 'cityrhythm-volume';
@@ -307,17 +307,32 @@ export function initCompassUI(map) {
         p.append(el('strong', null, autori + '. '), testo);
         return p;
     };
+    // Due blocchi, uno per modo: si mostra solo quello del modo scelto
+    const scale = el('div');
+    const classica = el('div');
     suono.append(
         el('h3', 'card-label', 'Come suona'),
-        el('p', 'details-note', 'Si sentono due strati insieme. Sotto c\'è la musica del modo scelto, sempre allo stesso volume, così non cambia da un punto all\'altro. Sopra ci sono i suoni della città: folla, traffico, parco, cicale e grilli. Ognuno entra più o meno forte secondo lo stato, ma resta sempre più piano della musica. Quando ti sposti, tutto passa da uno stato all\'altro in circa un secondo; fuori dalle celle c\'è silenzio. Quello che segue riguarda Sottotraccia, la musica costruita da regole. IA e classica sono brani già registrati.'),
-        el('h3', 'card-label', 'Cosa abbiamo imparato dagli studi'),
+        el('p', 'details-note', 'Si sentono due strati insieme. Sotto c\'è la musica del modo scelto, sempre allo stesso volume, così non cambia da un punto all\'altro. Sopra ci sono i suoni della città: folla, traffico, parco, cicale e grilli. Ognuno entra più o meno forte secondo lo stato, ma resta sempre più piano della musica. Quando ti sposti, tutto passa da uno stato all\'altro in circa un secondo; fuori dalle celle c\'è silenzio.'),
+        scale,
+        classica
+    );
+    scale.append(
+        el('h3', 'card-label', 'Scale: cosa abbiamo imparato dagli studi'),
         studio('Russell (1980) e Barrett & Russell (1998)', 'Le emozioni si ordinano su due assi indipendenti: quanta energia hanno e quanto sono piacevoli. Sono i nostri due assi, gente e benessere.'),
         studio('Axelsson e colleghi (2010)', 'Cento ascoltatori hanno giudicato 50 registrazioni di strade e piazze. Contano soprattutto piacevolezza e vivacità. I rumori tecnici, come il traffico, risultano sgradevoli, i suoni naturali piacevoli, quelli umani vivaci. Per questo traffico, natura e folla sono strati a parte, sopra la musica.'),
         studio('Plomp & Levelt (1965)', 'Due toni puri molto vicini «sfregano» fra loro. Lo sfregamento è massimo quando la distanza è circa un quarto della banda che l\'orecchio tratta insieme. Quando si sta male, Sottotraccia suona due toni (1000 e 1040 Hz) esattamente a quella distanza.'),
         studio('Arnal e colleghi (2015), Kumar e colleghi (2012)', 'I suoni ruvidi, come le urla, attivano l\'amigdala, la parte del cervello che si occupa del pericolo, e fanno reagire più in fretta. Per questo il disagio è reso con la ruvidezza e non solo con più volume.'),
         studio('Fastl & Zwicker (2007)', 'Sopra circa 15 colpi al secondo un ritmo si trasforma in ruvidità, e i suoni acuti e nitidi sono più aspri. Per questo il ritmo non supera i 180 battiti al minuto, e quando si sta bene il suono diventa più tondo e più scuro.'),
-        el('h3', 'card-label', 'Cosa è una nostra scelta'),
+        el('h3', 'card-label', 'Scale: cosa è una nostra scelta'),
         el('p', 'details-note', 'Gli studi non dicono tutto. Questa parte è una scelta del progetto. I nove stati e le loro soglie. La scala: nei tre stati più piacevoli togliamo un tasto nero del pianoforte alla volta, fino a note tutte bianche, per far sentire sempre più «si sta bene». L\'idea viene dal consiglio di una musicista che ha ascoltato la mappa; nessuno degli studi letti parla di scale. Anche la nota di base più grave col caldo è un\'ipotesi. Gli studi riguardano suoni singoli e ascoltatori in laboratorio: che questa musica faccia provare le stesse emozioni a chi usa la mappa è un\'interpretazione, non una dimostrazione.')
+    );
+    const elencoBrani = el('dl', 'details-list');
+    classica.append(
+        el('h3', 'card-label', 'Classica: come l\'abbiamo scelta'),
+        el('p', 'details-note', `Qui la musica non è generata: sono registrazioni di brani famosi, uno per ognuno dei nove stati più uno per ${NOMI.notte}. Il brano di ogni stato l'abbiamo scelto noi, perché ne richiama il carattere: calmo e luminoso per ${NOMI.rifugio}, vivace per ${NOMI.festa}, pesante per ${NOMI.fatica}. Nessuno studio dice quale brano corrisponde a quale stato: è una scelta del progetto, come i nove stati.`),
+        el('p', 'details-note', `Di ogni brano si usa un tratto di circa 70–95 secondi, che poi riparte da capo con una dissolvenza di 2 secondi. L'inizio e la fine sono scelti con un calcolo, in due punti dove il suono è simile, così il giro non si sente. Per ${NOMI.fatica} si usa solo l'introduzione lenta e pesante dell'Egmont, senza l'Allegro che segue. Tutti i brani hanno lo stesso volume, come le scale.`),
+        elencoBrani,
+        el('p', 'details-note', 'Le registrazioni vengono dalla raccolta di Musopen, che le dichiara di pubblico dominio e chiede di citarla.')
     );
     corpo.append(elenco, note, guida, suono);
     dettagli.append(corpo);
@@ -326,7 +341,18 @@ export function initCompassUI(map) {
 
     // Titoli e autori dei brani classici (per la riga del modo e per la citazione obbligatoria)
     let brani = null;
-    fetch(AUDIO_BASE + 'classica/manifest.json').then(r => r.json()).then(j => { brani = j; render(); }).catch(() => {});
+    fetch(AUDIO_BASE + 'classica/manifest.json').then(r => r.json()).then(j => { brani = j; riempiBrani(); render(); }).catch(() => {});
+
+    const riempiBrani = () => {
+        elencoBrani.replaceChildren(...Object.entries(brani).filter(([k]) => NOMI[k]).flatMap(([k, b]) => {
+            const dt = el('dt', 'stato-nome');
+            const campione = el('span', 'stato-colore');
+            campione.style.background = SOUND_STATE_COLORS[k];
+            campione.setAttribute('aria-hidden', 'true');
+            dt.append(campione, NOMI[k]);
+            return [dt, el('dd', null, `${b.autore}, ${b.titolo}`)];
+        }));
+    };
 
     // Riga sotto la griglia: il modo scelto, con il brano o il ritmo di quest'ora quando c'è una misura
     const descrizioneModo = (modo, m) => {
@@ -392,7 +418,8 @@ export function initCompassUI(map) {
             descStato.textContent = DESCRIZIONI[m.stato] ?? '';
         }
 
-        musica.hidden = !on;
+        scale.hidden = modo !== 'sottotraccia';
+        classica.hidden = modo !== 'classica';
         lineaModo.textContent = descrizioneModo(modo, misura ? m : null);
         dettagli.hidden = !misura;
         if (misura) riempiDettagli(m);

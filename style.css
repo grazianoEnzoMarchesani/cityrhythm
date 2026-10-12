@@ -726,7 +726,7 @@ svg { display: block; }
     box-shadow: var(--shadow);
     z-index: 30;
     display: grid;
-    grid-template-columns: 76px minmax(0, 1fr);   /* quadrante a sinistra, ora e cursore a destra */
+    grid-template-columns: 100px minmax(0, 1fr);   /* quadrante a sinistra, ora e cursore a destra */
     column-gap: 12px;
     row-gap: 6px;
     align-items: center;
@@ -759,7 +759,7 @@ svg { display: block; }
 .compass-dial {
     grid-column: 1;
     grid-row: 1 / span 2;
-    width: 76px;
+    width: 100px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -857,7 +857,7 @@ svg { display: block; }
     justify-content: center;
     gap: 4px;
     min-height: 32px;
-    max-width: 76px;
+    max-width: 100px;
     padding: 0 4px;
     border: 0;
     border-radius: var(--radius-sm);
@@ -1049,6 +1049,57 @@ button.ap-riga:hover .ap-riga-nome { text-decoration: underline; text-underline-
     overflow-wrap: anywhere;
 }
 .maplibregl-popup-close-button { font-size: 1.2rem; padding: 4px 8px; }
+
+/* Scheda della cella LCZ (src/ui/cell-popup.js) */
+.cella-popup .maplibregl-popup-content {
+    width: min(320px, calc(100vw - 32px));
+    max-width: none;
+    max-height: min(560px, calc(100dvh - var(--timeline-h) - 48px));
+    overflow-y: auto;
+    padding: 16px;
+    border-radius: var(--radius);
+}
+.cella-popup .maplibregl-popup-close-button {
+    width: var(--target); height: var(--target); padding: 0; font-size: 1.4rem; line-height: 1;
+    color: var(--ink-2); border-radius: var(--radius-sm);
+}
+.cp { color: var(--ink); font-size: 0.8125rem; line-height: 1.4; display: flex; flex-direction: column; gap: 14px; }
+.cp b { font-weight: 650; }
+.cp small { display: block; color: var(--ink-3); font-size: 0.75rem; line-height: 1.35; }
+.cp-testa { display: flex; flex-direction: column; gap: 4px; }
+.cp-icona { align-self: center; width: min(170px, 100%); height: auto; display: block; margin-top: -4px; }
+.cp-sigla { display: flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: 0.8125rem; font-weight: 650; letter-spacing: 0.04em; }
+.cp-campione { width: 10px; height: 10px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25); }
+.cp-nome { margin: 2px 0 0; font-size: 1.25rem; line-height: 1.15; font-weight: 700; }
+.cp-tit { margin-bottom: 6px; color: var(--ink-2); font-size: 0.8125rem; }
+.cp-uhi { display: flex; gap: 2px; }
+.cp-uhi span { flex: 1; height: 10px; border-radius: 3px; opacity: 0.45; position: relative; }
+.cp-uhi span.is-qui { opacity: 1; height: 14px; margin-top: -2px; box-shadow: 0 0 0 1.5px var(--ink); }
+.cp-uhi-agli { display: flex; justify-content: space-between; margin-top: 3px; color: var(--ink-3); font-size: 0.6875rem; }
+.cp-comp { display: flex; height: 12px; border-radius: 4px; overflow: hidden; background: var(--paper-2); }
+.cp-comp span { display: block; }
+.cp-edifici { background: #555555; }
+.cp-imp { background: #bcbcbc; }
+.cp-perm { background: #7fb069; }
+.cp-leg { display: flex; flex-wrap: wrap; gap: 2px 12px; margin: 6px 0 0; padding: 0; list-style: none; color: var(--ink-2); }
+.cp-leg i { display: inline-block; width: 8px; height: 8px; margin-right: 5px; border-radius: 2px; }
+.cp-ora { padding: 10px 12px; background: var(--paper-2); border-radius: var(--radius-sm); }
+.cp-ora ul { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.cp-ora li { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 8px; }
+.cp-ora small { flex-basis: 100%; text-align: right; }
+.cp-chiave { color: var(--ink-2); }
+.cp-punto { display: inline-block; width: 9px; height: 9px; margin-right: 6px; border-radius: 50%; }
+.cp-dettagli > summary {
+    display: flex; align-items: center; justify-content: space-between; min-height: var(--target);
+    cursor: pointer; list-style: none; color: var(--ink); font-weight: 650;
+}
+.cp-dettagli > summary::-webkit-details-marker { display: none; }
+.cp-dettagli > summary::after { content: "+"; font-size: 1.1rem; color: var(--ink-3); }
+.cp-dettagli[open] > summary::after { content: "−"; }
+.cp-dettagli dl { display: grid; grid-template-columns: 1fr; gap: 8px; margin: 4px 0 0; }
+.cp-dettagli dt { color: var(--ink-2); }
+.cp-dettagli dd { margin: -6px 0 0; }
+.cp-cella { margin: 10px 0 0; color: var(--ink-3); font-size: 0.75rem; }
 .maplibregl-ctrl-group button { min-width: 32px; min-height: 32px; }
 .maplibregl-ctrl-attrib { font-size: 11px; }
 
@@ -1094,7 +1145,7 @@ button.ap-riga:hover .ap-riga-nome { text-decoration: underline; text-underline-
         width: min(360px, calc(100vw - var(--gutter) * 2));
         padding: 12px 14px;
         gap: 12px;
-        max-height: max(calc(50dvh - var(--timeline-h) - 44px - env(safe-area-inset-bottom)), 160px);
+        max-height: max(calc(50dvh - var(--timeline-h) + 35px - env(safe-area-inset-bottom)), 239px);   /* +79 px: si intravede l'inizio di ciò che sta sotto, così si capisce che si scorre */
     }
 
     /* Timeline: in alto il cursore a tutta larghezza; sotto una sola riga: quadrante (con "Modi"), Play, giorno e ora
@@ -1141,6 +1192,32 @@ button.ap-riga:hover .ap-riga-nome { text-decoration: underline; text-underline-
         padding-top: env(safe-area-inset-top);
     }
     .drawer-body { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+
+    /* Scheda della cella (src/ui/cell-popup.js): a tutto schermo e sopra a tutto, come la scheda area */
+    .cella-popup {
+        position: fixed !important; inset: 0; z-index: 70;
+        transform: none !important; max-width: none !important;
+        pointer-events: auto; background: var(--paper);
+    }
+    .cella-popup .maplibregl-popup-tip { display: none; }
+    .cella-popup .maplibregl-popup-content {
+        width: 100%; height: 100%; max-height: none; border-radius: 0; box-shadow: none;
+        padding: calc(16px + env(safe-area-inset-top)) 20px calc(28px + env(safe-area-inset-bottom));
+        -webkit-overflow-scrolling: touch;
+    }
+    .cella-popup .maplibregl-popup-close-button {
+        position: fixed; top: calc(8px + env(safe-area-inset-top)); right: 8px;
+        width: 44px; height: 44px; font-size: 1.8rem; background: var(--paper-2); border-radius: 50%; z-index: 1;
+    }
+    .cp { font-size: 1rem; gap: 20px; max-width: 560px; margin: 0 auto; }
+    .cp small, .cp-leg, .cp-uhi-agli, .cp-cella { font-size: 0.875rem; }
+    .cp-tit { font-size: 0.9375rem; }
+    .cp-nome { font-size: 1.75rem; }
+    .cp-icona { width: min(260px, 80%); }
+    .cp-uhi span { height: 14px; }
+    .cp-uhi span.is-qui { height: 20px; }
+    .cp-comp { height: 16px; }
+    .cp-ora { padding: 14px 16px; }
     .ap .ap-voce, .ap .ap-riga { min-height: 40px; }
 
     .status-bar { top: 64px; max-width: calc(100vw - 24px); }

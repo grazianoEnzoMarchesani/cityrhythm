@@ -2,7 +2,7 @@
 
 > Memoria condivisa del progetto. **Ogni agente legge questo indice prima di iniziare**, poi i file di argomento che servono al lavoro (elenco nella sezione 4). Si aggiorna a fine sessione col comando `/second-brain` (vedi `.claude/skills/second-brain/SKILL.md`). Sintetico: decisioni e stato, non cronaca.
 
-Ultimo aggiornamento: 2026-10-12 (sessione 37: **sole e luna** sulla pallina del cerchio, raggio di partenza 100 m, zoom all'accensione; sessione 36: colori delle mappe dei parametri dalle rampe di FETCH; sessione 35: cerchio d'ascolto; sessioni 34–37 committate e pubblicate su `main`)
+Ultimo aggiornamento: 2026-10-12 (sessione 39: **selettore Scale/Classica** di nuovo nel pannello, spiegazione della classica nei Dettagli, pannello «Modi» più alto sul telefono; sessione 38: «Celle sopra edifici e strade» si spegne con le celle; dentro il cerchio la base si spegne; sessione 37: **sole e luna** sulla pallina del cerchio, raggio di partenza 100 m, zoom all'accensione; sessione 36: colori delle mappe dei parametri dalle rampe di FETCH; sessione 35: cerchio d'ascolto; sessioni 34–37 committate e pubblicate su `main`)
 
 ## 1. Progetto in breve
 - **CityRhythm**: dashboard geospaziale (**MapLibre GL 6.12** + PMTiles, ECharts 5.5, Turf 7, D3, PapaParse, Litepicker) su affollamento, demografia, POI, LCZ/UHI. 3 dimensioni spaziali + 1 temporale (timeline).
@@ -93,6 +93,8 @@ Aggiungere una **dimensione sonora** attivabile ("mappa sonora") con quattro mod
 - **2026-10-12 (36)**: grafico dell'età: **65+** da rosso a marrone `#795548` (era uguale al 18-24 arancione; `config.js`). Con la **mappa sonora accesa le aree KML non si selezionano** (`map-interaction.js`, come Solo celle). Non committato, non provato nel browser.
 - **2026-10-12 (36)**: colori delle mappe di Forma della città, Superficie del suolo e Calore uniformati alle rampe QGIS del repo FETCH (`config.js`, `LCZ_DATA_VIEWS`); UTCI, Mappa sonora, LCZ, UHI intatti. Non committato (`mappa.md`).
 - **2026-10-12 (37)**: pallina del cerchio = **sole/luna** che gira con l'ora (mezzogiorno a sud; alba e tramonto SunCalc, media del periodo con ≥ 7 giorni), raggio di partenza **100 m**, zoom all'accensione (raggio = 0,25 del lato corto). Sessioni 34–37 **committate e pubblicate su `main`** su richiesta dell'utente (`cerchio.md`).
+- **2026-10-12 (38)**: spegnendo «Mostra le celle», «Celle sopra edifici e strade» e l'intensità tornano a spento/100% (`ui-layer-controls.js`). Con celle accese e cerchio, la base si spegne dentro il cerchio (`['case', DENTRO, 0, …]`, `map-layers.js`): niente doppio strato; trascinamento provato dall'utente, «va molto bene». Non committato (insieme a `style.css`, `cell-popup.js`, `public/lcz-icone/` di altre sessioni).
+- **2026-10-12 (39)**: richiesta di una collega: il pannello della Mappa sonora riporta il selettore **Scale / Classica** (anche a musica spenta); IA e metronomi solo in debug. Dettagli: blocco «Come suona» per modo, con «Classica: come l'abbiamo scelta» (`audio.md`). Pannello «Modi» sul telefono +79 px. Committato con le modifiche pendenti di altre sessioni (`cell-popup.js`, `public/lcz-icone/`, `style.css`, `map-layers.js`).
 - **2026-10-12 (33)**: **privacy**: avviso in basso a sinistra alla prima visita, poi tasto «Privacy» sempre visibile; informativa in un pannello; email offuscata come sul sito personale. Verificato che il sito non fa nessuna richiesta esterna. Pubblicato su `main` (`privacy.md`).
 
 ## 7. Prompt per la prossima sessione

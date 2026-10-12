@@ -97,6 +97,10 @@ export function setupLayerControls() {
             } else {
                 removeLczVitalityLayer();
                 if (lczVisualizationSelector) lczVisualizationSelector.hidden = true;
+                // Spente le celle, «sopra edifici e strade» e l'intensità tornano ai valori di partenza
+                if (cellsOnTopToggle && cellsOnTopToggle.checked) cellsOnTopToggle.checked = false;
+                setCellsOnTop(false);
+                setIntensity(Math.round(MAP_STYLES.LCZ_VITALITY.FILL_OPACITY * 100));
             }
         });
     }
