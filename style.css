@@ -999,7 +999,7 @@ button.ap-riga:hover .ap-riga-nome { text-decoration: underline; text-underline-
         left: var(--gutter);
         right: auto;
         width: min(320px, calc(100vw - var(--gutter) * 2 - 56px));   /* 56 px lasciano liberi i comandi di zoom */
-        max-height: calc(50dvh - 36px - env(safe-area-inset-top));
+        max-height: calc(50dvh + 64px - env(safe-area-inset-top));   /* ~100 px più alto di prima: si vede che sotto c'è altro */
     }
     .layers { max-height: none; }
     .panel-body { min-height: 0; overflow-y: auto; }
