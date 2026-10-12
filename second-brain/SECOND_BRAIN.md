@@ -2,7 +2,7 @@
 
 > Memoria condivisa del progetto. **Ogni agente legge questo indice prima di iniziare**, poi i file di argomento che servono al lavoro (elenco nella sezione 4). Si aggiorna a fine sessione col comando `/second-brain` (vedi `.claude/skills/second-brain/SKILL.md`). Sintetico: decisioni e stato, non cronaca.
 
-Ultimo aggiornamento: 2026-10-11 (trentaduesima sessione: dati legali per luoghi e affluenza, branch `dati-legali` in prova)
+Ultimo aggiornamento: 2026-10-12 (sessione 32: dati legali per luoghi e affluenza, uniti su `main`)
 
 ## 1. Progetto in breve
 - **CityRhythm**: dashboard geospaziale (**MapLibre GL 6.12** + PMTiles, ECharts 5.5, Turf 7, D3, PapaParse, Litepicker) su affollamento, demografia, POI, LCZ/UHI. 3 dimensioni spaziali + 1 temporale (timeline).
@@ -43,7 +43,7 @@ Aggiungere una **dimensione sonora** attivabile ("mappa sonora") con quattro mod
 - **Microdati con licenza mai su GitHub** (`IPUMS/`, `UsoTempo_*/`, `Lcz_neurali 2/` in `.gitignore`); nel sito solo aggregati, con le citazioni (dettagli in `persone.md`).
 - **Interfaccia**: una lingua (italiano), numeri all'italiana, niente riquadri né fili intorno a grafici e sezioni; le spiegazioni secondarie in un blocco «Dettagli» chiuso all'avvio (richiesta dell'utente); Aree KML e affollamento solo in `DEBUG_MODE`; nessun framework; obiettivo Chrome 110+, Safari 16.4+, Firefox 115+ (`interfaccia.md`).
 - **Pubblicazione**: Pages pubblica solo da `main` (`deploy.yml`). Unire su `main` vuol dire pubblicare: solo col sì dell'utente. I branch si vedono in locale con `npm run dev -- --host 0.0.0.0`.
-- **Spot e affollamento (Outscraper, estratti dall'utente)**: non più visibili dal 2026-10-11, ma i dati restano nel repository e nel sito per decisione dell'utente («per ora»). **Non cancellare, non riscrivere la cronologia, non proporre la sostituzione con OSM** senza un motivo nuovo: l'utente l'ha rifiutata. Licenza non chiarita (`persone.md`).
+- **Dati legali (dal 2026-10-12)**: nel repository solo dati con licenza chiara. Spot e affollamento Outscraper sono **stati tolti da tutta la cronologia** (riscrittura con force push, ordinata dall'utente) e sostituiti da luoghi OSM e diari ISTAT (`dati-legali.md`); copie solo in `~/Documents/CityRhythm-archivio-locale/` (anche backup completo della cronologia precedente), in `.gitignore`. Non rimetterli. Blimp (acquisto dell'Università) e LCZ (lavoro dell'autore) dichiarati utilizzabili dall'utente.
 - **Mai i paper nel repository**: i PDF (copyright degli editori) stanno fuori dal progetto, in `~/Documents/CityRhythm-paper/`. Non si aggiungono mai al repository né si committano, neanche per sbaglio: prima di ogni commit si controlla che non ci siano PDF. Anche le clip generate (`sound-lab/*/clip/`) e `sound-lab/metronomi/` restano fuori da git: si rigenerano con gli script.
 - **Confini di disegno dei quartieri**: solo estetica. Presenze, km², celle, case, Spot, puntini e scheda leggono il KML originale (`getFullKmlGeoJson()`), mai il disegno (`quartieri.md`).
 
@@ -102,3 +102,5 @@ all'utente le risposte alle sue domande prima di toccarlo.
 
 A fine sessione: aggiorna il second brain (/second-brain). Commit e push solo su richiesta; unire su `main` o `Music` solo col sì dell'utente.
 ```
+
+- **2026-10-12 (32, seguito)**: l'utente ha provato e approvato `dati-legali`: unito su `main` (`5f023d4`), sito pubblicato senza i CSV Outscraper (404). Cronologia riscritta su tutti i branch e il tag (tolti i 2 CSV e lo zip storico); gist con dati Outscraper cancellati; gruppo Luoghi resta nascosto; Open-Meteo nei crediti.

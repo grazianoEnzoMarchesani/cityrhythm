@@ -2,7 +2,7 @@
 
 > Parte del second brain di CityRhythm: **indice in `SECOND_BRAIN.md`**, da leggere per primo. Questo file si legge quando il lavoro tocca i luoghi della città, la loro affluenza o le licenze dei dati, e si aggiorna col comando `/second-brain`.
 
-**Stato: in prova sul branch `dati-legali`, non ancora approvato.** `main` e `ui-redesign` usano ancora spot e affollamenti estratti con Outscraper (`persone.md`). Il branch parte da `origin/main` (`27da705`), sessione 32 del 2026-10-11.
+**Stato (2026-10-12): approvato dall'utente e unito su `main` (`5f023d4`). Cronologia riscritta per togliere i due CSV e lo zip.** `main` e `ui-redesign` usano ancora spot e affollamenti estratti con Outscraper (`persone.md`). Il branch parte da `origin/main` (`27da705`), sessione 32 del 2026-10-11.
 
 ## In breve
 Gli spot (1.186 punti) e i 87 profili di affollamento tipo Popular Times, estratti con Outscraper da Google, sono sostituiti da dati che il progetto può pubblicare:
