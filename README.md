@@ -1,6 +1,6 @@
 # CityRhythm
 
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15641271.svg)](https://doi.org/10.5281/zenodo.15641271)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) [![DOI all versions](https://zenodo.org/badge/DOI/10.5281/zenodo.15641270.svg)](https://doi.org/10.5281/zenodo.15641270) [![DOI v1.0.0](https://zenodo.org/badge/DOI/10.5281/zenodo.15641271.svg)](https://doi.org/10.5281/zenodo.15641271)
 
 CityRhythm is an interactive map of how a city breathes through the week: where people are, who they are, how hot it feels, and **how all of that could sound**. It combines footfall, demographics, places, local climate and a sound layer that turns the mood of each part of the city into music. It is built for outreach: the music is there to convey feelings that images alone do not.
 
@@ -100,7 +100,7 @@ The pieces talk to each other only through the store. The compass is the only wr
 
 ## How to cite
 
-Use the DOI above. Please also credit the data sources listed in the app's credits panel.
+Use the DOI for all versions (10.5281/zenodo.15641270) to cite the project in general, or the DOI of a specific version (for example 10.5281/zenodo.15641271 for v1.0.0) to cite that release; all versions are listed on the Zenodo page. Please also credit the data sources listed in the app's credits panel.
 
 ## Licence
 
