@@ -12,26 +12,29 @@ doi: 10.5281/zenodo.15641270
 authors:
   - family-names: Marchesani
     given-names: Graziano Enzo
+    affiliation: "University of Camerino"
     orcid: "https://orcid.org/0000-0002-4723-5099"
   - family-names: Cocci Grifoni
     given-names: Roberta
-    affiliation: "Università di Camerino"
+    affiliation: "University of Camerino"
     orcid: "https://orcid.org/0000-0002-7092-6293"
   - family-names: Bernabei
     given-names: Maria Simonetta
-    affiliation: "Università di Camerino"
+    affiliation: "University of Camerino"
     orcid: "https://orcid.org/0000-0003-4542-1178"
   - family-names: Malavolta
     given-names: Simone
-    affiliation: "Università di Camerino"
+    affiliation: "University of Camerino"
     orcid: "https://orcid.org/0009-0009-5273-7972"
   - family-names: Riera
     given-names: Dajla
+    affiliation: "University of Camerino"
     orcid: "https://orcid.org/0000-0003-4349-1471"
   - family-names: Khodaparast
     given-names: Mohammadjavad
-    affiliation: "Università di Camerino"
+    affiliation: "University of Camerino"
     orcid: "https://orcid.org/0009-0005-9019-616X"
   - family-names: "D'Onofrio"
     given-names: Rosalba
+    affiliation: "University of Camerino"
     orcid: "https://orcid.org/0000-0003-3630-579X"
