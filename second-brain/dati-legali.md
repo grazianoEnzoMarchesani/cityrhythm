@@ -92,9 +92,9 @@ Data di accesso: quella scritta nel second brain; se manca, il giorno in cui il 
 | `quota_in_casa.json` | curva in casa per giorno e ora | come sopra (`casa_mtus.py`) | come sopra | 2026-10-05 | come sopra (`persone.md`) |
 | `bussola.json` | parametri della bussola | lavoro del progetto, fonti nel campo `fonti` | del repository (GPL-3.0) | 2026-10-04; `energia_cella` riscritta il 2026-10-11 su questo branch | — |
 | `meteo_ascoli.json` | meteo orario 2024-06-01 → 2025-02-01 | Open-Meteo, archivio storico | **CC BY 4.0** | 2026-10-04 | **mancava**: aggiunta su questo branch nei crediti («Meteo: Open-Meteo.com, CC BY 4.0») |
-| `cityrhythm_blimp.csv` | presenze per quartiere e ora | **non scritta** | **non scritta** | 2026-10-04 (nel repository) | — (domanda all'utente) |
-| `cityrhythm_blimp_areas.kml` | 11 aree | **non scritta** | **non scritta** | 2026-10-04 (nel repository) | — (domanda all'utente) |
-| `lcz_ascoli.geojson` | 12.496 celle LCZ da 30 m | progetto QGIS di terzi (`Lcz_neurali 2`, non nel repository) | **non scritta** | 2026-10-04 | — (domanda all'utente) |
+| `cityrhythm_blimp.csv` | presenze per quartiere e ora | Blimp (dati acquistati dall'Università di Camerino, anonimizzati da Blimp) | acquisto: uso da parte dell'Università (dichiarazione dell'utente, 2026-10-12; contratto non nel repository) | 2026-10-04 (nel repository) | da citare Blimp nei crediti (non ancora fatto) |
+| `cityrhythm_blimp_areas.kml` | 11 aree | Blimp (stesso acquisto) | come sopra (dichiarazione dell'utente, 2026-10-12) | 2026-10-04 (nel repository) | come sopra |
+| `lcz_ascoli.geojson` | 12.496 celle LCZ da 30 m | progetto QGIS di terzi (`Lcz_neurali 2`, non nel repository) | licenza dell'autore, dichiarata dall'utente il 2026-10-12 (le celle sono suo lavoro) | 2026-10-04 | da scrivere la licenza scelta nel repository |
 | `quartieri_disegno.geojson` | confini di disegno | in parte sezioni ISTAT 2021, in parte disegno originale | CC BY 4.0 (parte ISTAT) | 2026-10-11 | `QUARTIERI_CREDITO` nei crediti (`quartieri.md`) |
 | `mappa/ascoli_base.pmtiles` | mappa di base | Protomaps Basemap 4.15.2 (OSM fino al 2026-10-04, Natural Earth) | ODbL (OSM); Natural Earth pubblico dominio | 2026-10-04 | «© OpenStreetMap · Protomaps» |
 | `mappa/ascoli_terreno.pmtiles` | rilievo | Mapterhorn | licenze per fonte (pagina https://mapterhorn.com/attribution) | 2026-10-04 | «© Mapterhorn» con il link |
@@ -134,13 +134,14 @@ Tolti su questo branch (restano nella storia di `main` e `ui-redesign`): `cityrh
 - **Copertura OSM** più bassa nei quartieri esterni (Porta Cartara 4 luoghi, San Filippo 8, Tofare 11, Borgo Chiaro 12): lì i puntini si raccolgono attorno a pochi punti.
 - Il venerdì notte usa i diari feriali: la movida del venerdì è sottostimata.
 
-## Domande per l'utente
-1. **`cityrhythm_blimp.csv`** (presenze per quartiere e per ora) e il **KML delle aree**: chi li ha prodotti, con quale accordo o licenza? Nel progetto non è scritto. Vanno verificati con la stessa cura.
-2. **`lcz_ascoli.geojson`**: viene dal progetto QGIS di un terzo; con quale permesso si pubblicano le celle?
-3. **Gruppo Luoghi**: resta nascosto o si riattiva con i luoghi OSM (il livello è pronto, colorato per categoria)?
-4. **`cityrhythm1.0.zip`** (backup del 2025, nel repository): dentro il vecchio codice compresso ci sono i nomi dei due CSV e 6 indirizzi di gist. Tenerlo, toglierlo da questo branch o chiarire i gist?
-5. **Open-Meteo** mancava nei crediti di `main`: aggiunto qui; va portato anche su `main`?
-6. **`IPUMS/DDI.md`** sul disco non contiene più il codebook dell'estratto (c'è un altro testo): il DDI originale (XML) va riscaricato da IPUMS se serve.
+## Risposte dell'utente (2026-10-12)
+1. **Blimp**: `cityrhythm_blimp.csv` e il KML delle aree sono dati venduti da Blimp all'Università di Camerino, anonimizzati da Blimp; l'utente li dichiara utilizzabili. Il contratto non è nel repository. Resta da fare: citare Blimp nei crediti.
+2. **`lcz_ascoli.geojson`**: l'utente dichiara che le celle sono suo lavoro e la licenza è sua. Resta da scegliere e scrivere la licenza.
+3. **Gruppo Luoghi**: resta **nascosto**.
+4. **`cityrhythm1.0.zip`**: tolto dal branch (copia solo in `~/Documents/CityRhythm-archivio-locale/`, in `.gitignore`). Anche i due CSV Outscraper sono in `.gitignore`. I gist con dati Outscraper sono scaricati in locale.
+5. **Open-Meteo**: da portare anche su `main` (sì dell'utente, ma la pubblicazione su `main` resta da ordinare).
+6. **Unione su `main`**: solo col sì esplicito dell'utente dopo che ha guardato e ascoltato; non decisa.
+7. **`IPUMS/DDI.md`**: il DDI originale va riscaricato da IPUMS se serve.
 
 ## Come si rigenera
 ```bash

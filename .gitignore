@@ -31,3 +31,11 @@ paper/
 sound-lab/sottotraccia/clip/
 sound-lab/disagio/clip/
 sound-lab/metronomi/
+sound-lab/scala-piano/clip/
+# campioni del pianoforte (Salamander, CC BY 3.0): li riscarica scala-piano/genera.py
+sound-lab/scala-piano/campioni/
+
+# Dati e file senza licenza chiara (Outscraper/Google, vecchio zip del sito): copia solo in ~/Documents/CityRhythm-archivio-locale, mai nei commit
+public/data/cityrhythm_spotMapper.csv
+public/data/cityrhythm_crowded_data.csv
+cityrhythm1.0.zip
