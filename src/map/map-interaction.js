@@ -7,9 +7,12 @@ import { resetSidebar } from '../ui/ui-sidebar.js';
 import { displayKmlFeatureInfoAndCalculateAverages } from '../ui/ui-sidebar.js';
 import { getCurrentHour } from '../ui/ui-timeline.js';
 import { DEBUG_MODE } from '../data/config.js';
-import { ispezioneCelle } from '../state/store.js';
+import { ispezioneCelle, audioEnabled } from '../state/store.js';
 import { getFullKmlGeoJson, getLuoghi } from '../data/data-loader.js';
 import { getWeekIndex } from '../utils/utils.js';
+
+// Le aree non si selezionano né si evidenziano né con «Solo celle» né con la mappa sonora accesa
+const areeBloccate = () => ispezioneCelle.get() || audioEnabled.get();
 
 
 // Variabile per tenere traccia dell'ID della feature correntemente in hover
@@ -18,12 +21,14 @@ let hoveredFeatureId = null;
 const hoverAnimations = {};
 
 // Accendere l'ispezione delle celle (ui-map-tools.js) toglie l'evidenziazione dell'area sotto il mouse
-ispezioneCelle.subscribe((on) => {
+const spegniEvidenziazione = (on) => {
     if (on && hoveredFeatureId !== null) {
         setHoveredFeatureState(null);
         changeCursor(getMapInstance(), '');
     }
-});
+};
+ispezioneCelle.subscribe(spegniEvidenziazione);
+audioEnabled.subscribe(spegniEvidenziazione);
 
 /**
  * Anima il valore di hoverAmount per una feature KML.
@@ -90,7 +95,7 @@ function removeAllListeners(map) {
  */
 function handleKmlClick(e) {
     // Ispezione delle celle accesa: l'area non si apre, il clic va alla cella (popup in map-layers.js)
-    if (ispezioneCelle.get()) return;
+    if (areeBloccate()) return;
     if (e.features && e.features.length > 0) {
         const kmlFeature = e.features[0];
         // Verifica la validità della feature prima di processarla
@@ -195,7 +200,7 @@ function setHoveredFeatureState(featureId) {
  */
 function handleKmlMouseEnter(e) {
     const map = getMapInstance();
-    if (!map || ispezioneCelle.get()) return;
+    if (!map || areeBloccate()) return;
 
     changeCursor(map, 'pointer');
 
@@ -251,7 +256,7 @@ function handleKmlMouseEnter(e) {
  */
 function handleKmlMouseLeave() {
     const map = getMapInstance();
-    if (!map || ispezioneCelle.get()) return;
+    if (!map || areeBloccate()) return;
     // console.log("Mouse leave da layer KML, clearing hover state.");
     changeCursor(map, '');
     // Rimuovi lo stato hover solo se c'era uno stato hover attivo
@@ -330,7 +335,7 @@ function handleMouseMove(e) {
             KML_LAYER_ID,
             KML_LAYER_ID + '-outline',
             KML_LAYER_ID + '-base-outline'
-        ].filter(id => map.getLayer(id) && !ispezioneCelle.get());
+        ].filter(id => map.getLayer(id) && !areeBloccate());
 
         // Se non ci sono layer KML, esci e assicurati che l'hover sia resettato
         if (existingKmlLayers.length === 0) {

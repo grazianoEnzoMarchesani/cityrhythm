@@ -8,7 +8,7 @@
 // Nei modi con brani: dissolvenza incrociata equal-power verso lo stato nuovo, lunga quanto le animazioni
 // della mappa (PRESENCE_MOVE_MS, oggi 1 s). Fuori dalle celle LCZ (stato null): silenzio.
 // Suoni urbani: ogni gruppo alterna a caso le sue varianti (mix calcolato in public/audio/mix.json).
-import { audioEnabled, mood, musicMode } from '../state/store.js';
+import { audioEnabled, mood, musicMode, volume } from '../state/store.js';
 import { AUDIO_BASE, PRESENCE_MOVE_MS } from '../data/config.js';
 import { METRO, createMetronomi, nextBeat, beatGain, clickSamples, discomfort } from './metronomi.js';
 import { Sottotraccia } from './sottotraccia.js';
@@ -24,7 +24,7 @@ const TICK_MS = 200;
 
 const N = 64; // punti delle curve di dissolvenza
 
-let ctx = null, master = null, mix = null, sfxManifest = null;
+let ctx = null, master = null, vol = null, mix = null, sfxManifest = null;
 let mode = 'ia';
 const music = {};      // 'sorgente/stato' -> { gain, loading: Promise }
 const sfx = {};        // gruppo -> { gain, buffers, last }
@@ -41,6 +41,7 @@ export function initAudioEngine() {
         if (mix && audioEnabled.get()) play(m?.stato ?? null);
         if (mode === 'sottotraccia' && sotto.on) sottotracciaIngressi(m);
     });
+    volume.subscribe(v => { if (vol) vol.gain.setTargetAtTime(v ** 2, ctx.currentTime, 0.03); });
     musicMode.subscribe(m => {
         mode = m;
         if (mix && audioEnabled.get()) { current = null; play(mood.get()?.stato ?? null); preloadAll(); }
@@ -69,7 +70,10 @@ async function start() {
         ctx = new AudioContext(); // creato dopo il clic sull'interruttore (regola dei browser)
         master = ctx.createGain();
         master.gain.value = 0;
-        master.connect(ctx.destination);
+        vol = ctx.createGain();                  // volume dell'utente, dopo la dissolvenza di accensione
+        vol.gain.value = volume.get() ** 2;
+        master.connect(vol);
+        vol.connect(ctx.destination);
     }
     // Safari su iPhone accetta resume() solo dentro il clic: va chiamato subito, prima di qualsiasi attesa.
     // Non si aspetta la promise: se Safari non la risolve, il suono riparte alla ripresa successiva.

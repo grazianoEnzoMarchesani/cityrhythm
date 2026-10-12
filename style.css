@@ -192,22 +192,82 @@ svg { display: block; }
 /* Crediti aperti: il testo va a capo entro una larghezza fissa, senza coprire tutta la parte alta della mappa */
 #map .maplibregl-ctrl-attrib-inner { max-width: 340px; }
 
-/* Il crosshair del mirino sta al centro del contenitore della mappa */
-.crosshair {
+/* Cerchio del raggio d'ascolto: tratteggio nero con alone bianco; la misura sta a destra, sul bordo */
+.raggio-cerchio {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    box-sizing: border-box;
+    border: 2px dotted #111;
+    border-radius: 50%;
+    /* Alone bianco dentro e fuori: il tratteggio nero si legge anche sui puntini neri */
+    box-shadow: 0 0 0 2px rgb(255 255 255 / 0.85), inset 0 0 0 2px rgb(255 255 255 / 0.85);
+    pointer-events: none;   /* il cerchio non blocca la mappa: si afferrano solo bordo e pallina */
+    z-index: 2;
+}
+.raggio-cerchio[hidden] { display: none; }
+.raggio-etichetta {
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    margin-left: 16px;
+    transform: translateY(-50%);
+    font-size: 0.75rem;
+    font-weight: 650;
+    color: #111;
+    background: rgb(255 255 255 / 0.9);
+    padding: 1px 5px;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+
+.raggio-anello {
+    position: absolute;
+    left: -20px;
+    top: -20px;
+    width: calc(100% + 40px);
+    height: calc(100% + 40px);
+    overflow: visible;
+    pointer-events: none;
+}
+.raggio-anello circle { fill: none; stroke: transparent; stroke-width: 24; pointer-events: stroke; cursor: ew-resize; touch-action: none; }
+.raggio-pallina {
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    width: 24px;
+    height: 24px;
+    margin: -12px 0 0 -12px;
+    padding: 0;
+    border: 2px solid #111;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 0 2px rgb(255 255 255 / 0.85);
+    cursor: ew-resize;
+    pointer-events: auto;
+    touch-action: none;
+}
+/* Di notte la pallina è la luna: falce bianca su disco nero, a due soli colori */
+.raggio-pallina.luna { background: radial-gradient(circle at 68% 38%, #111 0 7px, transparent 7.5px), #fff; }
+.raggio-centro {
     position: absolute;
     left: 50%;
     top: 50%;
     width: 22px;
     height: 22px;
     margin: -11px 0 0 -11px;
-    pointer-events: none;
-    z-index: 2;
-    /* Bianco con differenza: su un fondo chiaro si vede scuro, sui puntini neri si vede chiaro */
-    background:
-        linear-gradient(#fff, #fff) center / 2px 100% no-repeat,
-        linear-gradient(#fff, #fff) center / 100% 2px no-repeat;
-    mix-blend-mode: difference;
+    padding: 0;
+    border: 2px solid #111;
+    border-radius: 50%;
+    background: radial-gradient(#111 0 3px, #fff 4px);
+    box-shadow: 0 0 0 2px rgb(255 255 255 / 0.85);
+    cursor: grab;
+    pointer-events: auto;
+    touch-action: none;
 }
+.raggio-cerchio.sta-trascinando .raggio-centro { cursor: grabbing; }
+.raggio-centro:focus-visible, .raggio-pallina:focus-visible { outline: 2px solid #111; outline-offset: 3px; }
+.raggio-cerchio.sta-trascinando .raggio-pallina { border-width: 3px; }
 
 /* 4. Pannelli e controlli -------------------------------------------------- */
 .panel {
@@ -549,36 +609,33 @@ svg { display: block; }
 .lcz-legend-ticks span:last-child { transform: translateX(-100%); }
 .lcz-legend-note { color: var(--ink-3); font-size: 0.78rem; }
 
-/* Rosa della Mappa sonora: il quadrato con le sfumature e i nomi agli angoli */
+/* Legenda della Mappa sonora: griglia 3×3 di riquadri colorati con il nome dentro */
 .lcz-legend-compass {
-    position: relative;
-    width: 150px;
-    height: 150px;
-    margin: 22px 0 30px 34px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px 8px;
+    margin: 8px 0 4px;
 }
-.lcz-legend-compass canvas { width: 100%; height: 100%; display: block; border-radius: 3px; }
+.lcz-legend-compass .state-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 3px;
+}
 .lcz-legend-compass .state-tag {
-    position: absolute;
-    transform: translate(-50%, -50%);
-    padding: 1px 4px;
+    min-height: 44px;
+    padding: 4px 3px;
     border: 0;
-    border-radius: 3px;
-    background: transparent;
+    border-radius: 4px;
     font-size: 0.72rem;
-    white-space: nowrap;
-    color: var(--ink);
+    line-height: 1.15;
+    overflow-wrap: anywhere;
     cursor: pointer;
 }
 .lcz-legend-compass .state-tag[aria-pressed="true"] { font-weight: 700; }
-.lcz-legend-compass .axis {
-    position: absolute;
-    left: 0;
-    top: 100%;
-    margin-top: 14px;
-    font-size: 0.75rem;
-    color: var(--ink-2);
-    white-space: nowrap;
-}
+.lcz-legend-compass .axis { font-size: 0.75rem; color: var(--ink-2); }
+.lcz-legend-compass .axis-y { writing-mode: vertical-rl; transform: rotate(180deg); text-align: center; white-space: nowrap; }
+.lcz-legend-compass .axis-x { grid-column: 2; text-align: center; }
+.lcz-legend-compass .axis-nota { grid-column: 2; color: var(--ink-3); font-size: 0.72rem; }
 
 .range-row { display: flex; flex-direction: column; gap: 4px; }
 .range-line { display: flex; align-items: center; gap: 10px; }
@@ -738,6 +795,22 @@ svg { display: block; }
 /* Spenta, in caricamento o fuori dalle celle: niente colori né lancetta */
 .dial-square.is-spento .dial-cell { background: var(--paper-2); opacity: 1; }
 .dial-square.is-spento .dial-arm { display: none; }
+/* Spenta la musica: una nota (croma) grigia al centro, per dire «tocca per far partire il suono». Si dissolve quando si accende. */
+.dial-square::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 26px;
+    height: 26px;
+    background: var(--ink-3);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 18.5V5.5l10-2.5v4.2L11.5 9v9.5a3.5 3 0 1 1-2.5-3z'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 18.5V5.5l10-2.5v4.2L11.5 9v9.5a3.5 3 0 1 1-2.5-3z'/%3E%3C/svg%3E") center / contain no-repeat;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 300ms ease-out;
+}
+.dial-toggle[aria-checked="false"] .dial-square::after { opacity: 0.55; }
 /* Notte: tutto il quadrante blu, lancetta bianca */
 .dial-square.is-notte { --needle: #fff; --needle-edge: #14204a; }
 
@@ -1171,3 +1244,14 @@ button.ap-riga:hover .ap-riga-nome { text-decoration: underline; text-underline-
     .privacy-note, .privacy-tasto { bottom: calc(138px + var(--gutter) * 2); }
 }
 .privacy-corpo a { color: var(--ink); text-underline-offset: 2px; }
+.details-guide { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line); }
+.details-guide .card-label { margin: 0; }
+.card-volume { display: flex; flex-direction: column; gap: 4px; }
+.card-volume .card-label { margin: 0; }
+.volume-row { display: flex; align-items: center; gap: 12px; }
+.volume-slider { flex: 1; min-width: 0; height: 44px; margin: 0; accent-color: var(--ink); touch-action: pan-y; cursor: pointer; }   /* 44 px: si afferra bene col dito */
+.volume-value { min-width: 3ch; text-align: right; font-size: 0.8125rem; font-variant-numeric: tabular-nums; color: var(--ink-2); }
+
+/* Quadratino del colore dello stato, lo stesso della Sound map, davanti al nome nella guida dei Dettagli */
+.details-list dt.stato-nome { display: flex; align-items: baseline; gap: 8px; }
+.stato-colore { flex: none; width: 12px; height: 12px; border-radius: 3px; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.12); }

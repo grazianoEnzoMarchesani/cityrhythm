@@ -13,7 +13,6 @@ SR = 44100
 DUR = 20.0
 N = int(SR * DUR)
 CODA = 1.5                               # le note decadono oltre la fine del brano: si tagliano dopo
-NOTA_DURATA_S = 1.5                      # come in sottotraccia.js
 SEME = 2026
 MUSICA_LUFS = -18.0
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -46,16 +45,18 @@ def eventi_da_js(fotogrammi, seme):
     return json.loads(risultato.stdout)
 
 
-def inviluppo_nota(n):
-    # Come in sottotraccia.js: attacco di 10 ms, poi decadimento esponenziale con costante 0,35 s
-    t = np.arange(n) / SR
-    return np.minimum(1, t / 0.01) * np.exp(-np.maximum(t - 0.01, 0) / 0.35)
+def timbro(m):
+    """Attacco, decadimento, armoniche e durata della nota: stessi numeri di timbroNota() in sottotraccia-regole.js."""
+    attacco, tau = 0.010 + 0.05 * m, 0.35 + 0.25 * m
+    return attacco, tau, [(1, 1.0), (2, 0.3 * (1 - 0.7 * m)), (3, 0.1 * (1 - 0.9 * m))], attacco + 4.3 * tau
 
 
-def nota(f, g, n):
+def nota(f, g, m):
+    attacco, tau, armoniche, durata = timbro(m)
+    n = int(durata * SR)
     t = np.arange(n) / SR
-    tono = sum(peso * np.sin(2 * np.pi * f * mult * t) for mult, peso in [(1, 1.0), (2, 0.3), (3, 0.1)])
-    return g * tono * inviluppo_nota(n)
+    tono = sum(peso * np.sin(2 * np.pi * f * mult * t) for mult, peso in armoniche)
+    return g * tono * np.minimum(1, t / attacco) * np.exp(-np.maximum(t - attacco, 0) / tau)
 
 
 def cassa(g):
@@ -91,7 +92,7 @@ def sintetizza(eventi):
         elif e['tipo'] == 'hihat':
             s = hihat(e['g'], e['banda'], SEME * 100000 + i)
         elif e['tipo'] == 'nota':
-            s = nota(e['f'], e['g'], int(NOTA_DURATA_S * SR))
+            s = nota(e['f'], e['g'], e.get('m', 0))
         else:
             continue
         if i0 < 0 or i0 >= len(buf):

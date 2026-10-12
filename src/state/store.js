@@ -20,6 +20,18 @@ export const audioEnabled = writable(false);
 // Da dove viene la musica della mappa sonora: 'ia' (brani finetuning.ai), 'classica' (Musopen), 'metronomi', 'sottotraccia' (regole).
 // Parte da 'sottotraccia': è la modalità con cui si avvia la musica. La scrive solo il selettore in src/ui/ui-compass.js; la legge src/audio/audio-engine.js.
 export const musicMode = writable('sottotraccia');
+// Volume della mappa sonora, da 0 a 1 (posizione dello slider; il motore lo porta al quadrato, più vicino all'orecchio).
+// Parte da 1: il mix è calcolato a quel livello. Lo scrive solo src/ui/ui-compass.js; lo legge src/audio/audio-engine.js.
+export const volume = writable(1);
+// Fino a dove si ascolta la gente intorno al centro della mappa, in metri (parte da 100: su telefono 50 m è un cerchio troppo piccolo; 50 è il minimo e la taratura).
+// Lo scrive solo src/ui/ui-compass.js; lo legge src/compass/compass.js. Non si salva nel browser.
+export const raggioAscolto = writable(100);
+// Punto d'ascolto [lon, lat]: dove sta il cerchio, indipendente dalla telecamera. Si sposta a mano trascinando il cerchio.
+// null = audio spento (all'accensione parte dal centro della mappa). Lo scrive solo src/ui/ui-compass.js; lo legge src/compass/compass.js.
+export const puntoAscolto = writable(null);
+// Celle sotto il cerchio d'ascolto (insieme di id), per cui servono stato e colore anche a celle spente
+// (src/map/map-layers.js, varco): src/compass/cell-map.js calcola solo queste invece di tutte. null = cerchio spento.
+export const celleVarco = writable(null);
 // Bussola emotiva della cella al centro della mappa (src/compass/compass.js):
 // stato = confermato dopo l'isteresi (null fuori dalle celle), proposto = in attesa di conferma.
 export const mood = writable(null);

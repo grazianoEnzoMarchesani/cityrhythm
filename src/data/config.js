@@ -21,6 +21,8 @@ export const LUOGHI_CREDITO = 'Luoghi e orari di apertura: © <a href="https://w
 export const LCZ_GEOJSON_URL = DATA_BASE + 'lcz_ascoli.geojson';
 // Bussola emotiva: parametri (scritti anche da sound-lab/compass.py) e meteo orario Open-Meteo
 export const BUSSOLA_URL = DATA_BASE + 'bussola.json';
+// Giorno scelto per ogni cella e ora della settimana tipo (sound-lab/pick_giorni.mjs): evita di rifare il calcolo a ogni ora
+export const PICK_GIORNI_URL = DATA_BASE + 'pick_giorni.bin';
 export const METEO_URL = DATA_BASE + 'meteo_ascoli.json';
 export const HOME_SHARE_URL = DATA_BASE + 'quota_in_casa.json'; // quota in casa per giorno e ora (ISTAT via IPUMS MTUS)
 // Brani, suoni urbani e mix della mappa sonora (preparati in sound-lab/)
@@ -31,6 +33,9 @@ export const MAP_DATA_BASE = DATA_BASE + 'mappa/';
 
 export const INITIAL_CENTER = [13.5786, 42.8545]; // Ascoli Piceno
 export const INITIAL_ZOOM = 13;
+// Quando si accende la musica la mappa si avvicina finché il raggio del cerchio occupa questa parte del lato corto dello schermo [S]
+// (0,25: su un telefono largo 390 px il cerchio è largo circa metà schermo). Solo avvicinando: se il cerchio è già così grande o più, non si tocca.
+export const FRAZIONE_ASCOLTO = 0.25;
 
 
 export const KML_SOURCE_ID = 'kml-data-source';
@@ -98,7 +103,7 @@ export const CHART_COLORS = {
       '35-44': '#4CAF50', // Verde
       '45-54': '#FFC107', // Giallo
       '55-64': '#9C27B0', // Viola
-      '65+': '#F44336'    // Rosso
+      '65+': '#795548'    // Marrone (il rosso era troppo vicino all'arancione di 18-24)
     },
     NATIONALITY_CHART: {
       ITALIANS: '#4CAF50',
@@ -341,64 +346,66 @@ export const MAP_STYLES = {
 };
 
 // Altre mappe delle celle LCZ, una per parametro di costruzione (selettore "Show" sotto LCZ Vitality).
-// Scale continue in tinte che non compaiono fra i colori LCZ né UHI (blu notte, ciano, viola, magenta, ardesia).
+// Colori dalle rampe QGIS usate da FETCH (FETCH/ui/constants.py, PARAM_VISUALIZATION): SVF Viridis, H/W Plasma, edificato Reds,
+// impermeabile Greys, permeabile Greens, altezza YlOrBr, rugosità PuBu, ammettenza OrRd, albedo RdYlGn, calore Inferno.
+// Ogni rampa è campionata a 0, 25, 50, 75, 100% e assegnata ai 5 stop; i valori degli stop restano i nostri. Calore industriale: stessa rampa del calore umano [S].
 // stops: [valore, colore] crescenti, scelti sui percentili 5–95 per non farsi schiacciare dagli estremi;
 // celle senza valore (o con il valore di difetto `missing`) trasparenti.
 export const LCZ_DATA_VIEWS = {
   svf_mean: {
     label: 'Cielo visibile (SVF)', unit: '0–1', missing: 0,
     note: 'Quota di cielo visibile dalla strada: scuro = vicoli stretti, chiaro = spazio aperto',
-    stops: [[0.2, '#0d1a3a'], [0.4, '#2d4a8a'], [0.55, '#3f86b4'], [0.7, '#7fc3d6'], [0.9, '#e3f5fa']]
+    stops: [[0.2, '#440154'], [0.4, '#3b528b'], [0.55, '#20908c'], [0.7, '#5dc963'], [0.9, '#fde725']]
   },
   aspect_ratio: {
     label: 'Canyon stradale (H/W)', unit: '',
-    note: 'Altezza degli edifici ÷ larghezza della strada: viola scuro = canyon profondi e in ombra',
-    stops: [[0, '#efedf5'], [0.3, '#bcbddc'], [0.7, '#9e9ac8'], [1.2, '#756bb1'], [2, '#3f007d']]
+    note: 'Altezza degli edifici ÷ larghezza della strada: blu = strade larghe, giallo = canyon profondi e in ombra',
+    stops: [[0, '#0d0887'], [0.3, '#7e03a8'], [0.7, '#cb4778'], [1.2, '#f89541'], [2, '#f0f921']]
   },
   building_frac: {
     label: 'Superficie edificata', unit: '%',
     note: 'Suolo coperto da edifici',
-    stops: [[0, '#eef0f8'], [15, '#b7bde0'], [35, '#7a83c4'], [60, '#4a4f98'], [100, '#1d1f56']]
+    stops: [[0, '#fff5f0'], [15, '#fcbea5'], [35, '#fb7050'], [60, '#d32020'], [100, '#67000d']]
   },
   impervious_frac: {
     label: 'Superficie impermeabile', unit: '%',
     note: 'Asfalto e pavimentazioni: l’acqua non penetra',
-    stops: [[0, '#f1edf3'], [15, '#c9bcd3'], [35, '#9580aa'], [60, '#5e4a78'], [100, '#2a1c40']]
+    stops: [[0, '#fafafa'], [15, '#bdbdbd'], [35, '#808080'], [60, '#424242'], [100, '#050505']]
   },
   pervious_frac: {
     label: 'Superficie permeabile', unit: '%',
     note: 'Terra, prato e alberi: suolo che respira e raffresca',
-    stops: [[0, '#e8f6f5'], [25, '#a3dcd6'], [50, '#4fb7b0'], [75, '#178a8a'], [100, '#0b4f58']]
+    stops: [[0, '#f7fcf5'], [25, '#c9eac2'], [50, '#7bc77c'], [75, '#2a924b'], [100, '#00441b']]
   },
   z_h: {
     label: 'Altezza di edifici e alberi', unit: 'm',
     note: 'Altezza media di ciò che sta sulla cella',
-    stops: [[0, '#f2eefa'], [6, '#c7c0ea'], [12, '#8f86d6'], [18, '#5a4cb0'], [26, '#2b1d72']]
+    stops: [[0, '#ffffd4'], [6, '#fed98e'], [12, '#fe9929'], [18, '#d95f0e'], [26, '#993404']]
   },
   terrain_rough: {
     label: 'Classe di rugosità', unit: '1–8',
     note: 'Classi di Davenport: quanto la cella frena il vento (8 = centro della città)',
-    stops: [[2, '#e0f7fa'], [4, '#80deea'], [6, '#26c6da'], [7, '#00838f'], [8, '#004d57']]
+    stops: [[2, '#f1eef6'], [4, '#bdc9e1'], [6, '#74a9cf'], [7, '#2b8cbe'], [8, '#045a8d']]
   },
   admittance: {
     label: 'Ammettenza termica', unit: 'J m⁻² s⁻½ K⁻¹',
     note: 'Quanto calore accumulano i materiali di giorno e rilasciano di notte',
-    stops: [[1000, '#f6eef7'], [1200, '#d4b9da'], [1400, '#c994c7'], [1600, '#a8509e'], [1800, '#5b1a63']]
+    stops: [[1000, '#fef0d9'], [1200, '#fdcc8a'], [1400, '#fc8d59'], [1600, '#e34a33'], [1800, '#b30000']]
   },
   albedo: {
     label: 'Albedo', unit: '0–1',
-    note: 'Luce solare riflessa: scuro = assorbe e scalda, chiaro = riflette',
-    stops: [[0.2, '#1b1b3a'], [0.25, '#45446e'], [0.28, '#7b78a6'], [0.31, '#b8b5d6'], [0.36, '#f1f0fa']]
+    note: 'Luce solare riflessa: rosso = assorbe e scalda, verde = riflette',
+    stops: [[0.2, '#d7191c'], [0.25, '#fdae61'], [0.28, '#ffffc0'], [0.31, '#a6d96a'], [0.36, '#1a9641']]
   },
   anthro_heat: {
     label: 'Calore prodotto dalle persone', unit: 'W/m²',
     note: 'Calore del traffico, del riscaldamento e del condizionamento',
-    stops: [[0, '#f9e8f2'], [2, '#e6a0c8'], [10, '#c9479b'], [30, '#7d1d72'], [100, '#2c0b3f']]
+    stops: [[0, '#000004'], [2, '#570f6e'], [10, '#bb3754'], [30, '#f98d0a'], [100, '#fcffa4']]
   },
   industry_heat: {
     label: 'Calore industriale', unit: 'W/m²',
     note: 'Solo le 48 celle industriali; il resto è trasparente',
-    stops: [[0, '#f9e8f2'], [5, '#e6a0c8'], [30, '#c9479b'], [70, '#7d1d72'], [150, '#2c0b3f']]
+    stops: [[0, '#000004'], [5, '#570f6e'], [30, '#bb3754'], [70, '#f98d0a'], [150, '#fcffa4']]
   },
 };
 

@@ -6,11 +6,12 @@ import { UTCI_TERMS } from './utci-coeff.js';
 const LAT = 42.854, LON = 13.575;
 
 /** Data vera da un'ora "da orologio" di Roma scritta come 'AAAA-MM-GGTHH:MM'. */
+const ORA_ROMA = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Rome', hour: '2-digit', hourCycle: 'h23' }); // costruirlo costa: una volta sola
 export function romeTime(key) {
     const asUtc = new Date(key + ':00Z');
     for (const offsetH of [2, 1]) { // ora legale, poi solare
         const d = new Date(asUtc.getTime() - offsetH * 3600e3);
-        const hour = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Rome', hour: '2-digit', hourCycle: 'h23' }).format(d);
+        const hour = ORA_ROMA.format(d);
         if (Number(hour) === asUtc.getUTCHours()) return d;
     }
     return new Date(asUtc.getTime() - 3600e3);
@@ -19,6 +20,13 @@ export function romeTime(key) {
 /** Elevazione del sole in gradi su Ascoli. */
 export function sunElevation(date) {
     return getPosition(date, LAT, LON).altitude; // SunCalc 2: gradi, con rifrazione
+}
+
+/** Impronta (FNV-1a, 32 bit) di ciò che decide il giorno scelto per ogni cella: percentile e parametri fisici. Sta nell'intestazione di pick_giorni.bin. */
+export function improntaTabella(cfg) {
+    let h = 0x811c9dc5;
+    for (const ch of JSON.stringify([cfg.parametri.percentile_utci_settimana_tipo, cfg.fisica])) h = Math.imul(h ^ ch.charCodeAt(0), 0x01000193);
+    return h >>> 0;
 }
 
 /** Energia del quartiere (-1 vuoto, +1 affollato) dalle persone nell'ora. */
@@ -32,8 +40,9 @@ export function areaEnergy(people, km2, cfg) {
  * Energia della cella (-1 vuoto, +1 affollato) dalle persone fuori casa entro `raggio_m`,
  * scala log tarata da sound-lab/taratura_energia.mjs (bussola.json → energia_cella).
  */
-export function localEnergy(people, cfg) {
-    const { log_lo: lo, log_hi: hi, raggio_m: r } = cfg.energia_cella;
+export function localEnergy(people, cfg, raggioM) {
+    const { log_lo: lo, log_hi: hi } = cfg.energia_cella;
+    const r = raggioM ?? cfg.energia_cella.raggio_m; // la scala è in persone/km²: vale per ogni raggio, e un raggio largo ne è la media
     const perKm2 = people / (Math.PI * (r / 1000) ** 2);
     const x = 2 * (Math.log10(perKm2 + 1) - lo) / (hi - lo) - 1;
     return Math.max(-1, Math.min(1, x));

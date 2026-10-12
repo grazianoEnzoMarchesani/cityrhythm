@@ -4,11 +4,10 @@
 // Lookahead: 0,5 s con la scheda in vista, 1,5 s a scheda nascosta (i timer del browser rallentano).
 // Niente DOM né store: il collegamento alla mappa sta in audio-engine.js.
 import { Pianificatore } from './sottotraccia-eventi.js';
-import { SOTTOTRACCIA } from './sottotraccia-regole.js';
+import { timbroNota } from './sottotraccia-regole.js';
 import { guadagnoDb } from './sottotraccia-livelli.js';
 
 const TICK_MS = 100;
-const NOTA_DURATA_S = 1.5;      // la nota suona fino a 1,5 s, poi il suo decadimento è finito
 const FADE_S = 1;               // accensione e spegnimento in 1 s, come la mappa sonora
 
 const anticipo = () => (typeof document !== 'undefined' && document.hidden ? 1.5 : 0.5);
@@ -84,7 +83,7 @@ export class Sottotraccia {
         const livello = 10 ** (guadagnoDb(e.ingressi.X, e.ingressi.Y, e.ingressi.H) / 20);
         if (e.tipo === 'cassa') this._cassa(t, e.g * livello);
         else if (e.tipo === 'hihat') this._hihat(t, e.g * livello, e.banda);
-        else if (e.tipo === 'nota') this._nota(t, e.f, e.g * livello);
+        else if (e.tipo === 'nota') this._nota(t, e.f, e.g * livello, e.m ?? 0);
     }
 
     // Cassa: sinusoide con scivolamento da 120 a 45 Hz, decadimento con costante 0,08 s.
@@ -116,21 +115,22 @@ export class Sottotraccia {
         this.attive.push({ nodo: src, fine: t + 0.1 });
     }
 
-    // Nota: tre armoniche (1, 0,3, 0,1), attacco di 10 ms, decadimento con costante TAU_NOTA_S.
-    _nota(t, f, ampiezza) {
+    // Nota: tre armoniche (1, 0,3, 0,1); con la morbidezza m l'attacco si allunga, il decadimento rallenta e le armoniche calano.
+    _nota(t, f, ampiezza, m) {
+        const { attacco, tau, armoniche, durata } = timbroNota(m);
         const env = this.ctx.createGain();
         env.gain.setValueAtTime(0, t);
-        env.gain.linearRampToValueAtTime(ampiezza, t + 0.01);
-        env.gain.setTargetAtTime(0.0001, t + 0.01, SOTTOTRACCIA.TAU_NOTA_S);
+        env.gain.linearRampToValueAtTime(ampiezza, t + attacco);
+        env.gain.setTargetAtTime(0.0001, t + attacco, tau);
         env.connect(this.out);
-        [[1, 1.0], [2, 0.3], [3, 0.1]].forEach(([mult, peso]) => {
+        armoniche.forEach(([mult, peso]) => {
             const osc = this.ctx.createOscillator();
             const g = this.ctx.createGain();
             osc.frequency.value = f * mult;
             g.gain.value = peso;
             osc.connect(g).connect(env);
-            osc.start(t); osc.stop(t + NOTA_DURATA_S);
-            this.attive.push({ nodo: osc, fine: t + NOTA_DURATA_S });
+            osc.start(t); osc.stop(t + durata);
+            this.attive.push({ nodo: osc, fine: t + durata });
         });
     }
 

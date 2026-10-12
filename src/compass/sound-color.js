@@ -18,6 +18,10 @@ const colorePunto = (X, Y) => {
 };
 const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
 
+// Si ricorda il colore per ogni punto del piano a passi di 1/128 (0,4%: invisibile): 12.500 celle a ogni ora
+// ricalcolavano le stesse miscele in Lab, ed era una parte grossa del costo della Sound map.
+const memoria = new Map();
+const PASSI = 128; // [S] scelta nostra: passo di 1/128 sul piano
 /**
  * Colore della Sound map per il punto (X, Y), o null se la cella non ha un suono (fuori dalle celle).
  * Notte è un colore fisso. Gli ingressi fuori da -1..+1 si portano al bordo.
@@ -26,7 +30,14 @@ export function coloreSuono(X, Y, stato) {
     if (stato == null) return null;
     if (stato === 'notte') return SOUND_STATE_COLORS.notte;
     if (!Number.isFinite(X) || !Number.isFinite(Y)) return null;
-    const x = clamp(X, -1, 1), y = clamp(Y, -1, 1);
+    const qx = Math.round(clamp(X, -1, 1) * PASSI), qy = Math.round(clamp(Y, -1, 1) * PASSI);
+    const chiave = (qx + PASSI) * (2 * PASSI + 1) + qy + PASSI;
+    let colore = memoria.get(chiave);
+    if (colore === undefined) memoria.set(chiave, colore = coloreSuonoEsatto(qx / PASSI, qy / PASSI));
+    return colore;
+}
+
+function coloreSuonoEsatto(x, y) {
     // Il quadrato è diviso in quattro: un lato a -1..0 e uno a 0..+1 per ciascun asse
     const x0 = x < 0 ? -1 : 0, x1 = x0 + 1;
     const y0 = y < 0 ? -1 : 0, y1 = y0 + 1;

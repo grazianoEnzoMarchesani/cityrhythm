@@ -2,7 +2,7 @@
 // delle persone (presence), trova la cella LCZ al centro e scrive lo stato in `mood`, con isteresi.
 // Il motore audio legge solo `mood`.
 import * as turf from '@turf/turf';
-import { time, viewport, mood, presence } from '../state/store.js';
+import { time, viewport, mood, presence, raggioAscolto, puntoAscolto } from '../state/store.js';
 import { getLczVitalityData } from '../data/data-loader.js';
 import { getDateTimeFromIndex } from '../utils/utils.js';
 import { BUSSOLA_URL, METEO_URL } from '../data/config.js';
@@ -12,7 +12,8 @@ import { buildCrowdIndex, peopleAround } from './crowd.js';
 let cfg = null;
 let met = null, metIndex = null;
 let cells = [];
-let crowd = null; // indice dei puntini dell'ora corrente
+let crowds = new Map(); // indici dei puntini dell'ora corrente, uno per raggio usato
+let crowdsOf = null;
 
 let resolveReady;
 /** Si risolve quando i dati della bussola sono caricati (usato da cell-map.js). */
@@ -30,10 +31,12 @@ export async function startCompass() {
         const bbox = turf.bbox(f);
         return { f, bbox, center: [(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2], traits: cellTraits(f.properties, cfg) };
     });
-    resolveReady({ cfg, cells, climateChoices, pickDay, crowdFor });
+    resolveReady({ cfg, cells, climateChoices, pickDay, crowdFor, oreMeteo: met.time.length });
     time.subscribe(update);
     viewport.subscribe(update);
     presence.subscribe(update);
+    raggioAscolto.subscribe(update);
+    puntoAscolto.subscribe(update);
     document.addEventListener('dateRangeChanged', update);
 }
 
@@ -43,12 +46,13 @@ function findCell([lng, lat]) {
         lng >= x0 && lng <= x1 && lat >= y0 && lat <= y1 && turf.booleanPointInPolygon(pt, f));
 }
 
-/** Indice dei puntini se corrispondono all'ora `t` della timeline, altrimenti null (in arrivo). */
-function crowdFor(t) {
+/** Indice dei puntini se corrispondono all'ora `t` della timeline, altrimenti null (in arrivo). Raggio di partenza: quello della taratura. */
+function crowdFor(t, raggio = cfg.energia_cella.raggio_m) {
     const p = presence.get();
     if (!p || p.index !== t.index) return null;
-    if (crowd?.p !== p) crowd = buildCrowdIndex(p, cfg.energia_cella.raggio_m);
-    return crowd;
+    if (crowdsOf !== p) { crowds = new Map(); crowdsOf = p; }
+    if (!crowds.has(raggio)) crowds.set(raggio, buildCrowdIndex(p, raggio));
+    return crowds.get(raggio);
 }
 
 /** Giorni veri dell'intervallo scelto (tutto il periodo dei dati se non c'è) che cadono nel giorno della settimana. */
@@ -98,20 +102,22 @@ function pickDay(cell, choices) {
 function update() {
     const t = time.get(), v = viewport.get();
     if (!cfg || !v) return;
-    const index = crowdFor(t);
+    const raggio = raggioAscolto.get();
+    const index = crowdFor(t, raggio);
     if (!index) return; // i puntini di quest'ora non sono ancora pronti: si aggiorna quando arrivano
-    const cell = findCell(v.center);
+    const punto = puntoAscolto.get() ?? v.center; // il cerchio d'ascolto, o il centro della mappa se non c'è
+    const cell = findCell(punto);
     if (!cell) return propose({ stato: null, fuori: true });
 
     const p = cell.f.properties;
     const choices = climateChoices(t);
     const day = pickDay(cell, choices);
     if (!day) return propose({ stato: null, fuori: true });
-    const people = peopleAround(index, cell.center);
-    const X = localEnergy(people, cfg);
+    const people = peopleAround(index, punto);
+    const X = localEnergy(people, cfg, raggio);
     const r = evaluate({ X, sun: day.sun, weather: day.weather, traits: cell.traits }, cfg);
     propose({
-        ...r, sun: day.sun, people, raggio: cfg.energia_cella.raggio_m,
+        ...r, sun: day.sun, people, raggio,
         giorni: t.date ? null : { totale: choices.filter(c => c.weather).length, scelto: day.key.slice(0, 10) },
         cella: p.id, lcz: p.lcz_class, quartiere: p.quartiere,
         distanzaQuartiere: p.quartiere_dist_m, geometry: cell.f.geometry

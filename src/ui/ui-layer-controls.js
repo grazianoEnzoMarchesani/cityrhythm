@@ -1,4 +1,6 @@
 // ui-layer-controls.js
+import { NOMI_STATI } from '../data/stati-nomi.js';
+import { SOUND_STATE_COLORS } from '../data/sound-colors.js';
 import { refreshPresencePoints, setLayerVisibility, updateAllPresencePoints, addLczVitalityLayer, removeLczVitalityLayer, updateLczVitalityVisualization, setLczLayerOpacity, setUhiDynamicVisibility, getLczLegend, setLczHighlight, setCellsOnTop } from '../map/map-layers.js';
 import { KML_LAYER_ID, CROWDED_LAYER_ID, PRESENCE_POINTS_LAYER_ID, DEBUG_MODE, MAP_STYLES } from '../data/config.js';
 import { PRESENCE_COLOR_VARIABLES, setPresenceColorBy } from '../map/presence-colors.js';
@@ -331,41 +333,45 @@ function rampLegend(info) {
     return wrap;
 }
 
-// Sound map: un quadrato con la sfumatura e i nomi degli stati sulle loro posizioni.
-// Asse verticale = piacevolezza (sereno in alto), orizzontale = energia (poca gente → tanta gente).
-// Ogni nome è un pulsante: evidenzia le celle di quello stato.
+// Sound map: nove riquadri, uno per stato, ognuno del suo colore e col suo nome dentro (griglia come il quadrante).
+// Riga = piacevolezza (sereno in alto), colonna = energia (poca gente → tanta gente).
+// Ogni riquadro è un pulsante: evidenzia le celle di quello stato. Sulla mappa i colori sfumano da uno stato all'altro.
 function soundGradientLegend() {
     const wrap = document.createElement('div');
     wrap.className = 'lcz-legend-compass';
-    const canvas = document.createElement('canvas');
-    const N = 60;
-    canvas.width = N; canvas.height = N;
-    const ctx = canvas.getContext('2d');
-    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
-        const X = -1 + 2 * (i + 0.5) / N, Y = 1 - 2 * (j + 0.5) / N;
-        ctx.fillStyle = coloreSuono(X, Y, 'routine');
-        ctx.fillRect(i, j, 1, 1);
-    }
-    wrap.appendChild(canvas);
-    for (const [stato, [X, Y]] of Object.entries(POSIZIONE_STATI)) {
-        const nome = capitalizza(stato);
+    const griglia = document.createElement('div');
+    griglia.className = 'state-grid';
+    const ordinati = Object.entries(POSIZIONE_STATI).sort(([, [xa, ya]], [, [xb, yb]]) => (yb - ya) || (xa - xb));
+    for (const [stato] of ordinati) {
+        const nome = NOMI_STATI[stato] ?? capitalizza(stato);
         const tag = legendItem(`stato-${stato}`, nome, { view: 'stato', key: stato }, [document.createTextNode(nome)], 'state-tag');
-        // Alone bianco: il nome si legge sia sul colore della sfumatura sia sul fondo del pannello
-        tag.style.left = `${(X + 1) / 2 * 100}%`;
-        tag.style.top = `${(1 - Y) / 2 * 100}%`;
-        tag.style.textShadow = '0 0 3px #fff, 0 0 3px #fff, 0 0 2px #fff';
-        wrap.appendChild(tag);
+        const colore = SOUND_STATE_COLORS[stato];
+        tag.style.background = colore;
+        tag.style.color = luminosita(colore) > 0.55 ? '#111' : '#fff';   // testo scuro sui colori chiari, bianco sugli scuri
+        griglia.appendChild(tag);
     }
-    const asse = document.createElement('span');
-    asse.className = 'axis';
-    asse.textContent = 'Poca gente → molta gente';
-    wrap.appendChild(asse);
+    const asseY = document.createElement('span');
+    asseY.className = 'axis axis-y';
+    asseY.textContent = 'Clima: pesante → piacevole';
+    const asseX = document.createElement('span');
+    asseX.className = 'axis axis-x';
+    asseX.textContent = 'Poca gente → molta gente';
+    const nota = document.createElement('span');
+    nota.className = 'axis axis-nota';
+    nota.textContent = 'Sulla mappa i colori sfumano da uno stato all\'altro.';
+    wrap.append(asseY, griglia, asseX, nota);
     return wrap;
 }
 
+/** Luminosità relativa (0..1) di un colore #rrggbb: serve a scegliere il testo chiaro o scuro. */
+function luminosita(hex) {
+    const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255);
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
 function notteLegendItem(color) {
-    return legendItem('stato-notte', 'Notte', { view: 'stato', key: 'notte' },
-        [legendSwatch(color), span('legend-name', 'Notte: buio e poca gente')]);
+    return legendItem('stato-notte', NOMI_STATI.notte, { view: 'stato', key: 'notte' },
+        [legendSwatch(color), span('legend-name', `${NOMI_STATI.notte}: buio e poca gente`)]);
 }
 
 /**

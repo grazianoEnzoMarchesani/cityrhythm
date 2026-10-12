@@ -91,11 +91,15 @@ export class Pianificatore {
             }
         }
         // Una nota a battito: il motivo gira sui gradi della scala
-        const grado = SOTTOTRACCIA.MOTIVO[this.k % SOTTOTRACCIA.MOTIVO.length];
-        const f0 = r.radice_Hz * 2 ** (SOTTOTRACCIA.SCALA[grado % SOTTOTRACCIA.SCALA.length] / 12);
+        const scala = r.scala, n = scala.length;
+        const grado = SOTTOTRACCIA.MOTIVO[this.k % SOTTOTRACCIA.MOTIVO.length] % n;
+        // Accordo "sulla scala": radice, terza e quinta sono note della stessa scala (grado, +2, +4). Niente tasti neri fuori scala.
+        const nota = i => scala[i % n] + 12 * Math.floor(i / n);
+        const f0 = r.radice_Hz;
         const pesi = [1, r.g_terza, r.g_quinta];
-        SOTTOTRACCIA.ACCORDO.forEach((iv, i) => {
-            if (pesi[i] > 0) eventi.push({ t, tipo: 'nota', g: 0.25 * pesi[i], f: f0 * 2 ** (iv / 12), durata: T, ingressi });
+        const m = r.morbidezza;
+        [grado, grado + 2, grado + 4].forEach((g, i) => {
+            if (pesi[i] > 0) eventi.push({ t, tipo: 'nota', g: 0.25 * pesi[i], f: f0 * 2 ** (nota(g) / 12), durata: T, m, ingressi });
         });
         if (r.g_coppia > 0) {
             eventi.push({ t, tipo: 'nota', g: 0.25 * r.g_coppia, f: SOTTOTRACCIA.COPPIA_HZ, durata: T, ingressi });

@@ -53,7 +53,7 @@ import { residentsSeenAtNight, homeShareFor } from './home-share.js';
 import { applyPresenceColors, getPreviousPersonColor } from './presence-colors.js';
 import { getFullKmlGeoJson, getPoiData, getLuoghi, getLczVitalityData, getDisplayGeometry } from '../data/data-loader.js';
 import { addMapInteraction } from './map-interaction.js';
-import { cellMap, presence, ispezioneCelle } from '../state/store.js';
+import { cellMap, presence, ispezioneCelle, puntoAscolto, raggioAscolto, celleVarco } from '../state/store.js';
 import { setCellMapActive } from '../compass/cell-map.js';
 import { coloreSuono } from '../compass/sound-color.js';
 
@@ -1450,10 +1450,12 @@ export function removeLczVitalityLayer() {
     if (!map) return;
     
     try { if (map.getLayer(LCZ_VITALITY_LAYER_ID)) map.removeLayer(LCZ_VITALITY_LAYER_ID); } catch (e) { /* ignore */ }
-    try { if (map.getSource(LCZ_VITALITY_SOURCE_ID)) map.removeSource(LCZ_VITALITY_SOURCE_ID); } catch (e) { /* ignore */ }
+    // La sorgente resta finché serve al varco d'ascolto
+    try { if (map.getSource(LCZ_VITALITY_SOURCE_ID) && !map.getLayer(VARCO_LAYER_ID)) { map.removeSource(LCZ_VITALITY_SOURCE_ID); statoApplicato = new Map(); varcoDentro = new Set(); } } catch (e) { /* ignore */ }
     setCellMapActive(false);
     setWhiteOverCellsHidden(false); // senza celle il bianco torna com'era
     if (isMapReady()) map.setGlobalStateProperty(CELLE_VISIBILI, false); // lo stato globale esiste solo a stile caricato
+    aggiornaVarco(); // se il cerchio d'ascolto è acceso, la mappa sonora resta al suo interno
 }
 
 /**
@@ -1509,7 +1511,7 @@ export function addLczVitalityLayer(initialVisibility = true, visualizationType 
         const beforeLayerId = overlayBeforeId(map);
 
         // Aggiungi la sorgente
-        map.addSource(LCZ_VITALITY_SOURCE_ID, {
+        if (!map.getSource(LCZ_VITALITY_SOURCE_ID)) map.addSource(LCZ_VITALITY_SOURCE_ID, {
             type: 'geojson',
             data: geoJsonData,
             promoteId: 'id'
@@ -1543,9 +1545,10 @@ export function addLczVitalityLayer(initialVisibility = true, visualizationType 
         currentLczVisualizationType = visualizationType;
         placeCellLayers();
         syncCellMap(visualizationType);
-        applyCellMap(lastCellMap); // il feature-state si perde quando la sorgente viene ricreata
+        applyCellMap(lastCellMap, true); // il feature-state si perde quando la sorgente viene ricreata
         lczOpacityBase = currentLczOpacity;
         applyLczPaint(); // riparte dall'opacità normale, con l'eventuale voce evidenziata
+        aggiornaVarco();
 
         if (DEBUG_MODE) {
             console.log(`LCZ Vitality layer added with ${geoJsonData.features.length} features using ${visualizationType} visualization.`);
@@ -1702,10 +1705,123 @@ function lczHighlightCondition({ view, key, lo, hi }) {
 function applyLczPaint() {
     const map = getMapInstance();
     if (!map || !isMapReady() || !map.getLayer(LCZ_VITALITY_LAYER_ID)) return;
-    const on = lczHighlight ? lczHighlightCondition(lczHighlight) : null;
-    // Le altre celle restano appena visibili [S]: si vede dove sta il gruppo nella città, e restano cliccabili
-    map.setPaintProperty(LCZ_VITALITY_LAYER_ID, 'fill-opacity', on ? ['case', on, lczOpacityBase, LCZ_HIGHLIGHT_DIM] : lczOpacityBase);
+    // Con il cerchio d'ascolto acceso le celle fuori dal cerchio si fanno tenui, e dentro c'è il varco a piena forza
+    const tenue = varcoAttivo() && celleVisibili(map);
+    map.setPaintProperty(LCZ_VITALITY_LAYER_ID, 'fill-opacity', opacitaCelle(tenue ? FUORI_VARCO : 1));
+    if (map.getLayer(VARCO_LAYER_ID)) map.setPaintProperty(VARCO_LAYER_ID, 'fill-opacity', opacitaVarco(map));
 }
+/** Opacità del riempimento (base, più l'eventuale voce evidenziata) moltiplicata per `k`. */
+function opacitaCelle(k) {
+    const on = lczHighlight ? lczHighlightCondition(lczHighlight) : null;
+    const per = v => (k === 1 ? v : ['*', k, v]);
+    // Le altre celle restano appena visibili [S]: si vede dove sta il gruppo nella città, e restano cliccabili
+    return on ? ['case', on, per(lczOpacityBase), LCZ_HIGHLIGHT_DIM * k] : per(lczOpacityBase);
+}
+const VARCO_OPACITA = 1; // varco a celle spente: come le celle accese al 100%
+const FUORI_VARCO = 0.25; // [S] opacità delle celle fuori dal cerchio d'ascolto quando le celle sono accese
+
+// --- Varco d'ascolto: dentro il cerchio si vede la mappa sonora (o la vista scelta, a celle accese) ---
+const VARCO_LAYER_ID = 'lcz-varco-layer';
+let varcoCentri = null; // centro di ogni cella: { id, lon, lat }
+let varcoFrame = 0, varcoOn = false;
+const varcoAttivo = () => !!puntoAscolto.get();
+const celleVisibili = (map) => !!map.getLayer(LCZ_VITALITY_LAYER_ID) && map.getLayoutProperty(LCZ_VITALITY_LAYER_ID, 'visibility') !== 'none';
+/** Vista del varco: quella delle celle se sono accese, altrimenti la Sound map. */
+function vistaVarco() {
+    const map = getMapInstance();
+    return map && celleVisibili(map) ? currentLczVisualizationType : 'stato';
+}
+
+function centriCelle() {
+    if (!varcoCentri) {
+        varcoCentri = getLczVitalityData().map(f => {
+            const ring = f.geometry.type === 'MultiPolygon' ? f.geometry.coordinates[0][0] : f.geometry.coordinates[0];
+            let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+            for (const [x, y] of ring) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+            return { id: f.properties.id, lon: (x0 + x1) / 2, lat: (y0 + y1) / 2 };
+        });
+    }
+    return varcoCentri;
+}
+
+/** Id delle celle con il centro dentro il cerchio: il bordo segue la griglia, come in Morphocode. */
+function celleDentroCerchio() {
+    const [lon, lat] = puntoAscolto.get(), r = raggioAscolto.get();
+    const mx = 111320 * Math.cos(lat * Math.PI / 180), my = 110570;
+    const dentro = new Set();
+    for (const c of centriCelle()) if (((c.lon - lon) * mx) ** 2 + ((c.lat - lat) * my) ** 2 <= r * r) dentro.add(c.id);
+    return dentro;
+}
+
+// Il varco non usa un filtro: cambiare un filtro fa rifare al worker di MapLibre l'impaginazione di tutte le 12.500 celle,
+// a ogni movimento del cerchio. Ogni cella ha invece un'etichetta `dentro` nel feature-state, e si scrive solo per quelle
+// che entrano o escono (decine per movimento). L'opacità del varco è 0 per chi non è dentro.
+let varcoDentro = new Set();
+const DENTRO = ['boolean', ['feature-state', 'dentro'], false];
+const opacitaVarco = (map) => ['case', DENTRO, celleVisibili(map) ? opacitaCelle(1) : VARCO_OPACITA, 0];
+
+function aggiornaDentro() {
+    const map = getMapInstance();
+    if (!map || !varcoAttivo() || !map.getLayer(VARCO_LAYER_ID) || !map.getSource(LCZ_VITALITY_SOURCE_ID)) return;
+    const nuove = celleDentroCerchio();
+    let cambiato = false;
+    for (const id of nuove) if (!varcoDentro.has(id)) { map.setFeatureState({ source: LCZ_VITALITY_SOURCE_ID, id }, { dentro: true }); cambiato = true; }
+    for (const id of varcoDentro) if (!nuove.has(id)) { map.setFeatureState({ source: LCZ_VITALITY_SOURCE_ID, id }, { dentro: false }); cambiato = true; }
+    varcoDentro = nuove;
+    if (cambiato) celleVarco.set(nuove); // cell-map.js calcola stato e colore solo per queste, se non serve ogni cella
+}
+
+/** Accende, spegne e aggiorna il varco. Con il cerchio spento lo toglie e rimette le celle com'erano. */
+function aggiornaVarco() {
+    const map = getMapInstance();
+    if (!map || !isMapReady()) return;
+    varcoOn = varcoAttivo();
+    if (!varcoOn) {
+        celleVarco.set(null);
+        if (map.getSource(LCZ_VITALITY_SOURCE_ID)) varcoDentro.forEach(id => map.setFeatureState({ source: LCZ_VITALITY_SOURCE_ID, id }, { dentro: false })); // se la sorgente resta, il cerchio dopo parte pulito
+        varcoDentro = new Set();
+        if (map.getLayer(VARCO_LAYER_ID)) map.removeLayer(VARCO_LAYER_ID);
+        if (!map.getLayer(LCZ_VITALITY_LAYER_ID) && map.getSource(LCZ_VITALITY_SOURCE_ID)) { map.removeSource(LCZ_VITALITY_SOURCE_ID); statoApplicato = new Map(); }
+        applyLczPaint();
+        syncCellMap(currentLczVisualizationType);
+        placeCellLayers();
+        if (!map.getLayer(LCZ_VITALITY_LAYER_ID)) setWhiteOverCellsHidden(false);
+        return;
+    }
+    if (!map.getSource(LCZ_VITALITY_SOURCE_ID)) {
+        map.addSource(LCZ_VITALITY_SOURCE_ID, { type: 'geojson', data: { type: 'FeatureCollection', features: getLczVitalityData() }, promoteId: 'id' });
+    }
+    if (!map.getLayer(VARCO_LAYER_ID)) {
+        map.addLayer({ id: VARCO_LAYER_ID, type: 'fill', source: LCZ_VITALITY_SOURCE_ID,
+            paint: { 'fill-color': getLczFillColor(vistaVarco()), 'fill-opacity': 0, 'fill-antialias': MAP_STYLES.LCZ_VITALITY.FILL_ANTIALIAS } });
+        applyCellMap(lastCellMap, true); // il feature-state si perde se la sorgente è nuova
+    } else {
+        map.setPaintProperty(VARCO_LAYER_ID, 'fill-color', getLczFillColor(vistaVarco()));
+    }
+    map.setPaintProperty(VARCO_LAYER_ID, 'fill-opacity', opacitaVarco(map));
+    aggiornaDentro();
+    applyLczPaint();
+    syncCellMap(currentLczVisualizationType);
+    placeCellLayers();
+    applyCellMap(lastCellMap); // la vista del varco può leggere altri campi del feature-state
+}
+
+// Trascinando il cerchio: a celle spente (solo la mappa sonora nel cerchio) si aggiorna a ogni immagine; a celle accese,
+// dove ogni aggiornamento ridisegna una griglia piena, al massimo ogni VARCO_INTERVALLO_CELLE_MS, con l'ultima posizione
+// sempre applicata alla fine (non si rifanno i passaggi intermedi dello zigzag).
+const VARCO_INTERVALLO_CELLE_MS = 300; // [S] scelta nostra, da rivedere a mano
+let varcoTimer = 0, varcoUltimo = 0;
+function sullaMossaDelCerchio() {
+    if (varcoAttivo() !== varcoOn) { aggiornaVarco(); return; }
+    if (!varcoOn || varcoFrame || varcoTimer) return; // un aggiornamento è già in coda: userà la posizione di quel momento
+    const map = getMapInstance();
+    const attesa = map && celleVisibili(map) ? VARCO_INTERVALLO_CELLE_MS - (performance.now() - varcoUltimo) : 0;
+    const esegui = () => { varcoFrame = 0; varcoTimer = 0; varcoUltimo = performance.now(); aggiornaDentro(); };
+    if (attesa > 0) varcoTimer = setTimeout(esegui, attesa);
+    else varcoFrame = requestAnimationFrame(esegui);
+}
+puntoAscolto.subscribe(sullaMossaDelCerchio);
+raggioAscolto.subscribe(sullaMossaDelCerchio);
 // Opacità delle celle non scelte nella legenda: [S] scelta visiva, da rivedere all'ascolto a schermo
 const LCZ_HIGHLIGHT_DIM = 0.12;
 
@@ -1766,10 +1882,13 @@ let lastCellMap = null, cellMapIndex = null; // ultimo risultato e id cella -> p
 // puntini delle persone e sotto il quartiere selezionato.
 function placeCellLayers() {
     const map = getMapInstance();
-    if (!map.getLayer(LCZ_VITALITY_LAYER_ID)) return;
-    map.moveLayer(LCZ_VITALITY_LAYER_ID, cellsOnTop ? overlayBeforeId(map) : CELLS_UNDER_ID);
+    const haCelle = !!map.getLayer(LCZ_VITALITY_LAYER_ID), haVarco = !!map.getLayer(VARCO_LAYER_ID);
+    if (!haCelle && !haVarco) return;
+    const sopra = cellsOnTop ? overlayBeforeId(map) : CELLS_UNDER_ID;
+    if (haCelle) map.moveLayer(LCZ_VITALITY_LAYER_ID, sopra);
+    if (haVarco) map.moveLayer(VARCO_LAYER_ID, sopra); // dove stanno le celle: sotto edifici e campiture, o sopra tutto con «Sopra tutta la mappa»
     // All'avvio il livello esiste ma è spento (addLczVitalityLayer(false)): allora il bianco resta com'è
-    const visible = map.getLayoutProperty(LCZ_VITALITY_LAYER_ID, 'visibility') !== 'none';
+    const visible = haVarco || (haCelle && map.getLayoutProperty(LCZ_VITALITY_LAYER_ID, 'visibility') !== 'none');
     setWhiteOverCellsHidden(visible && !cellsOnTop);
 }
 
@@ -1791,24 +1910,48 @@ export function applyBaseStyleToOverlays() {
 
 /** Accende il calcolo per cella solo se il livello LCZ è visibile con una mappa oraria. */
 function syncCellMap(type) {
-    const on = CELL_MAP_TYPES.has(type) && !!getMapInstance().getLayer(LCZ_VITALITY_LAYER_ID);
+    const on = (CELL_MAP_TYPES.has(type) && !!getMapInstance().getLayer(LCZ_VITALITY_LAYER_ID))
+        || (varcoAttivo() && CELL_MAP_TYPES.has(vistaVarco()));
     setCellMapActive(on);
 }
 
-function applyCellMap(result) {
+// Ultimo feature-state scritto per ogni cella (id -> { u, s, c }): se non cambia non si riscrive. Si scrivono solo i campi
+// che la vista legge (UTCI: utci; Sound map: stato e colore; le altre viste nessuno): con la Sound map l'UTCI cambia a ogni ora
+// per ogni cella, ma il colore spesso no, e migliaia di setFeatureState inutili costavano più del calcolo.
+let statoApplicato = new Map(), campiApplicati = '';
+const campiDellaVista = (vista) => (vista === 'utci' ? 'u' : vista === 'stato' ? 'sc' : '');
+/** `tutte`: riscrive ogni cella calcolata (dopo che la sorgente è stata ricreata), non solo il pezzo appena arrivato. */
+function applyCellMap(result, tutte = false) {
     lastCellMap = result;
     if (result && !cellMapIndex) cellMapIndex = new Map(result.ids.map((id, k) => [id, k]));
     if (!result) return;
     const map = getMapInstance();
     if (!map.getSource(LCZ_VITALITY_SOURCE_ID)) return;
-    for (let k = 0; k < result.ids.length; k++) {
-        const u = result.utci[k];
-        map.setFeatureState({ source: LCZ_VITALITY_SOURCE_ID, id: result.ids[k] },
-            { utci: Number.isNaN(u) ? null : u, stato: result.stato[k],
-              colore: coloreSuono(result.x[k], result.y[k], result.stato[k]) });
+    // Quello che serve è la vista del varco (che a celle spente è la Sound map) o, senza cerchio, quella delle celle
+    const campi = campiDellaVista(varcoAttivo() ? vistaVarco() : currentLczVisualizationType);
+    if (!campi) { campiApplicati = ''; statoApplicato = new Map(); return; } // la vista non legge nulla: al ritorno si riscrive tutto
+    const daCapo = tutte || campi !== campiApplicati; // vista cambiata o sorgente nuova: si riscrive ogni cella calcolata
+    if (daCapo) { statoApplicato = new Map(); campiApplicati = campi; }
+    const elenco = daCapo ? (result.lista ?? result.ids.map((_, k) => k)) : (result.attive ?? result.ids.map((_, k) => k));
+    const conUtci = campi === 'u';
+    for (const k of elenco) {
+        const u = Number.isNaN(result.utci[k]) ? null : result.utci[k], st = result.stato[k];
+        if (u === null && !st) continue; // non ancora calcolata
+        const id = result.ids[k];
+        const prima = statoApplicato.get(id);
+        if (conUtci) {
+            if (prima && prima.u === u) continue;
+            statoApplicato.set(id, { u });
+            map.setFeatureState({ source: LCZ_VITALITY_SOURCE_ID, id }, { utci: u });
+        } else {
+            const colore = coloreSuono(result.x[k], result.y[k], st);
+            if (prima && prima.s === st && prima.c === colore) continue;
+            statoApplicato.set(id, { s: st, c: colore });
+            map.setFeatureState({ source: LCZ_VITALITY_SOURCE_ID, id }, { stato: st, colore });
+        }
     }
 }
-cellMap.subscribe(applyCellMap);
+cellMap.subscribe(r => applyCellMap(r));
 
 /**
  * Cambia il tipo di visualizzazione del layer LCZ Vitality.
@@ -1827,6 +1970,8 @@ export function updateLczVitalityVisualization(visualizationType) {
         currentLczVisualizationType = visualizationType;
         placeCellLayers();
         syncCellMap(visualizationType);
+        aggiornaVarco();
+        applyCellMap(lastCellMap); // la nuova vista può leggere altri campi del feature-state
 
         // Se stiamo passando a UHI e la visualizzazione dinamica è attiva, aggiorna
         if (visualizationType === 'UHI' && uhiDynamicVisibilityEnabled) {
