@@ -1106,3 +1106,73 @@ button.ap-riga:hover .ap-riga-nome { text-decoration: underline; text-underline-
 @media print {
     .side-column, .timeline, .drawer, .layers-toggle, .status-bar, .map-tools { display: none !important; }
 }
+
+/* Privacy (src/ui/ui-privacy.js) ----------------------------------------- */
+.privacy-note {
+    position: fixed;
+    left: var(--gutter);
+    bottom: var(--gutter);
+    width: min(340px, calc(100vw - var(--gutter) * 2));
+    padding: 12px 14px;
+    background: var(--panel-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    z-index: 35;
+    font-size: 0.88rem;
+}
+.privacy-note p { margin: 6px 0 10px; color: var(--ink-2); }
+.privacy-note-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.privacy-note-azioni { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.privacy-dialog {
+    width: min(520px, calc(100vw - var(--gutter) * 2));
+    max-height: min(80vh, 720px);
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    background: var(--paper);
+    color: var(--ink);
+    overflow: hidden;
+}
+.privacy-dialog[open] { display: flex; flex-direction: column; }
+.privacy-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
+.privacy-corpo { overflow-y: auto; font-size: 0.9rem; line-height: 1.5; }
+.privacy-corpo h3 { display: block; margin: 16px 0 4px; font-size: 0.95rem; font-weight: 650; }
+.privacy-corpo h3:first-child { margin-top: 0; }
+.privacy-corpo p { margin: 4px 0 8px; }
+.privacy-corpo code { font-size: 0.85em; overflow-wrap: anywhere; }
+.privacy-mail { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 6px 0; }
+.privacy-mail-testo { font-weight: 600; overflow-wrap: anywhere; }
+.privacy-tasto {
+    position: fixed;
+    left: var(--gutter);
+    bottom: var(--gutter);
+    display: inline-flex; align-items: center; gap: 6px;
+    min-height: var(--target);
+    padding: 4px 12px 4px 10px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--panel-bg);
+    box-shadow: var(--shadow);
+    color: var(--ink);
+    font: inherit; font-size: 0.85rem;
+    cursor: pointer;
+    z-index: 35;
+}
+.privacy-tasto[hidden] { display: none; }
+.privacy-tasto svg { width: 16px; height: 16px; }
+.privacy-tasto svg path { fill: none; stroke: var(--ink); stroke-width: 1.8; stroke-linejoin: round; }
+@media (hover: hover) { .privacy-tasto:hover { background: var(--paper-2); } }
+/* La timeline è larga 640 px e centrata: l'angolo in basso a sinistra resta libero per l'avviso (352 px) solo da
+   1384 px di schermo in su, e per il tasto (~110 px) da ~910 px. Sotto, salgono sopra la timeline. */
+@media (max-width: 1399px) {
+    .privacy-note { bottom: calc(var(--timeline-h) + var(--gutter) * 2); }
+}
+@media (max-width: 919px) {
+    .privacy-tasto { bottom: calc(var(--timeline-h) + var(--gutter) * 2); }
+}
+@media (max-width: 719px) {
+    .privacy-note, .privacy-tasto { bottom: calc(138px + var(--gutter) * 2); }
+}
+.privacy-corpo a { color: var(--ink); text-underline-offset: 2px; }

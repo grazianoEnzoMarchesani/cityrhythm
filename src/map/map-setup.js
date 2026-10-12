@@ -243,7 +243,7 @@ export function initializeMap(containerId) {
         // La freccia del Nord si inclina con la mappa (visualizePitch): si vede se la vista è in 3D
         mapInstance.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
         mapInstance.addControl(new ElementControl(document.getElementById('map-tools')), 'top-right');
-        mapInstance.addControl(new maplibregl.AttributionControl({ compact: true }), 'top-right');
+        mapInstance.addControl(new maplibregl.AttributionControl({ compact: true, customAttribution: '<a href="#privacy">Privacy</a>' }), 'top-right');
         // Con la mappa caricata i crediti partono chiusi: li apre solo il tasto "i"
         mapInstance.once('load', () => {
             mapContainerEl(containerId)?.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');

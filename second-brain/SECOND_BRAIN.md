@@ -2,7 +2,7 @@
 
 > Memoria condivisa del progetto. **Ogni agente legge questo indice prima di iniziare**, poi i file di argomento che servono al lavoro (elenco nella sezione 4). Si aggiorna a fine sessione col comando `/second-brain` (vedi `.claude/skills/second-brain/SKILL.md`). Sintetico: decisioni e stato, non cronaca.
 
-Ultimo aggiornamento: 2026-10-12 (sessione 32: dati legali per luoghi e affluenza, uniti su `main`)
+Ultimo aggiornamento: 2026-10-12 (sessione 33: avviso e informativa privacy, su `main`)
 
 ## 1. Progetto in breve
 - **CityRhythm**: dashboard geospaziale (**MapLibre GL 6.12** + PMTiles, ECharts 5.5, Turf 7, D3, PapaParse, Litepicker) su affollamento, demografia, POI, LCZ/UHI. 3 dimensioni spaziali + 1 temporale (timeline).
@@ -40,6 +40,7 @@ Aggiungere una **dimensione sonora** attivabile ("mappa sonora") con quattro mod
 - **Intercambiabilità**: UI e grafici sostituibili; bussola e audio parlano solo tramite lo store.
 - **Microdati con licenza mai su GitHub** (`IPUMS/`, `UsoTempo_*/`, `Lcz_neurali 2/` in `.gitignore`); nel sito solo aggregati, con le citazioni (dettagli in `persone.md`).
 - **Interfaccia**: una lingua (italiano), numeri all'italiana, niente riquadri né fili intorno a grafici e sezioni; le spiegazioni secondarie in un blocco «Dettagli» chiuso all'avvio (richiesta dell'utente); Aree KML e affollamento solo in `DEBUG_MODE`; nessun framework; obiettivo Chrome 110+, Safari 16.4+, Firefox 115+ (`interfaccia.md`).
+- **Privacy**: il sito non deve chiamare servizi esterni (font, tessere, statistiche). Se serve uno, prima consenso per funzione e prova di rete (`privacy.md`).
 - **Pubblicazione**: Pages pubblica solo da `main` (`deploy.yml`). Unire su `main` vuol dire pubblicare: solo col sì dell'utente. I branch si vedono in locale con `npm run dev -- --host 0.0.0.0`.
 - **Dati legali (dal 2026-10-12)**: nel repository solo dati con licenza chiara. Spot e affollamento Outscraper sono **stati tolti da tutta la cronologia** (riscrittura con force push, ordinata dall'utente) e sostituiti da luoghi OSM e diari ISTAT (`dati-legali.md`); copie solo in `~/Documents/CityRhythm-archivio-locale/` (anche backup completo della cronologia precedente), in `.gitignore`. Non rimetterli. Blimp (acquisto dell'Università) e LCZ (lavoro dell'autore) dichiarati utilizzabili dall'utente.
 - **Mai i paper nel repository**: i PDF (copyright degli editori) stanno fuori dal progetto, in `~/Documents/CityRhythm-paper/`. Non si aggiungono mai al repository né si committano, neanche per sbaglio: prima di ogni commit si controlla che non ci siano PDF. Anche le clip generate (`sound-lab/*/clip/`) e `sound-lab/metronomi/` restano fuori da git: si rigenerano con gli script.
@@ -57,6 +58,7 @@ Aggiungere una **dimensione sonora** attivabile ("mappa sonora") con quattro mod
 | `interfaccia.md` | layout a tutto schermo, Livelli, Celle della città (Cosa mostrare, legenda cliccabile), comandi della mappa in alto a destra, Mappa sonora, timeline e Periodo, scheda Area (statistiche, Chi frequenta, Tipi di luogo, Dettaglio), crediti, telefono, lingua, browser, accessibilità, nomi vecchi → nuovi, decisioni da prendere |
 | `decisioni-superate.md` | tutte le decisioni non più valide, col perché |
 | `dati-legali.md` | **regola «solo dati legali»**: da dove vengono i dati (OSM, diari ISTAT/IPUMS, Blimp, Open-Meteo…), perché ci sono e come agiscono, calcolo dell'affluenza, copertura, confronto della bussola, **inventario delle licenze di `public/data/`**, pulizia della cronologia del 2026-10-12, limiti, cose da fare |
+| `privacy.md` | **avviso e informativa privacy** (non è un banner del consenso), email offuscata, verifica di rete (nessuna richiesta esterna), cosa rifare se si aggiunge un servizio esterno |
 | `strumenti.md` | script di `sound-lab/` (analisi, taratura, estrazioni, Sottotraccia, prove nel browser), avvio |
 | `prompts.md` | prompt musicali per finetuning.ai |
 | `presentazione.md` | presentazione del branch alla collega: deck, scaletta, aspetto, demo |
@@ -83,6 +85,8 @@ Aggiungere una **dimensione sonora** attivabile ("mappa sonora") con quattro mod
 - **2026-10-11 (31)**: gruppo **Luoghi** tolto dai Livelli (spot e affollamento non visibili; dati ancora pubblici per decisione dell'utente). I bar «in piazza» sono spot veri. Rettangolo LCZ: convergenza di 0,95°, non raddrizzato. Commit su `ui-redesign`, non su `main`.
 - **2026-10-11 (32)**: branch **`dati-legali`** da `origin/main` (`27da705`), poi approvato e unito (vedi sotto): 1.469 luoghi OpenStreetMap (ODbL) con orari al posto degli spot, profili orari per tipo di luogo dai diari ISTAT via IPUMS MTUS al posto degli affollamenti Outscraper, regola della notte, taratura nuova (stesso stato nel 71,8% dei casi), CSV di spot e affollamento tolti dal branch, gist e pulsante di debug tolti, crediti con OSM e Open-Meteo. Prova Chromium 30/30. Tutto in `dati-legali.md`.
 - **2026-10-12 (32, seguito)**: l'utente ha provato e approvato `dati-legali`: **unito su `main`** (`5f023d4`); sito pubblicato senza i CSV Outscraper (404). **Cronologia riscritta** su tutti i branch e il tag (tolti i 2 CSV e lo zip storico; force push fatto a mano dall'utente); gist con dati Outscraper cancellati; copie e backup in `~/Documents/CityRhythm-archivio-locale/`; gruppo Luoghi resta nascosto; Open-Meteo nei crediti. Tutto in `dati-legali.md`.
+
+- **2026-10-12 (33)**: **privacy**: avviso in basso a sinistra alla prima visita, poi tasto «Privacy» sempre visibile; informativa in un pannello; email offuscata come sul sito personale. Verificato che il sito non fa nessuna richiesta esterna. Pubblicato su `main` (`privacy.md`).
 
 ## 7. Prompt per la prossima sessione
 ```

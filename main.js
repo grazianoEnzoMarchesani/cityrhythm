@@ -16,6 +16,7 @@ import { setupTimelineControls, getCurrentHour, setHour } from './src/ui/ui-time
 import { setupLayerControls } from './src/ui/ui-layer-controls.js';
 import { setupCasaPanel } from './src/ui/ui-casa.js';
 import { setupMapTools } from './src/ui/ui-map-tools.js';
+import { setupPrivacy } from './src/ui/ui-privacy.js';
 import { startCompass } from './src/compass/compass.js';
 import { initCompassUI } from './src/ui/ui-compass.js';
 import { initAudioEngine } from './src/audio/audio-engine.js';
@@ -213,6 +214,7 @@ async function startApp() {
         setupLayerControls();
         setupCasaPanel(); // Chi sta a casa: curva ISTAT dell'ora della timeline
         setupMapTools(); // stile e 3D in alto a destra
+        setupPrivacy(); // avviso della prima visita e informativa
         setupLayersPanel();
 
         map.on('load', async () => {
