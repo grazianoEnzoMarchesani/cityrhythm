@@ -1,0 +1,17 @@
+{
+  "title": "CityRhythm",
+  "description": "<p>CityRhythm is an interactive map of how a city breathes through the week: footfall, demographics, places, local climate and a sound layer that turns the mood of each part of the city into music. Data cover the Comune di Ascoli Piceno.</p>",
+  "upload_type": "software",
+  "license": "GPL-3.0-only",
+  "access_right": "open",
+  "keywords": ["urban dynamics", "geospatial visualisation", "footfall", "local climate zones", "sonification", "Ascoli Piceno"],
+  "creators": [
+    {"name": "Marchesani, Graziano Enzo", "orcid": "0000-0002-4723-5099"},
+    {"name": "Cocci Grifoni, Roberta", "affiliation": "Università di Camerino", "orcid": "0000-0002-7092-6293"},
+    {"name": "Bernabei, Maria Simonetta", "affiliation": "Università di Camerino", "orcid": "0000-0003-4542-1178"},
+    {"name": "Malavolta, Simone", "affiliation": "Università di Camerino", "orcid": "0009-0009-5273-7972"},
+    {"name": "Riera, Dajla", "orcid": "0000-0003-4349-1471"},
+    {"name": "Khodaparast, Mohammadjavad", "affiliation": "Università di Camerino", "orcid": "0009-0005-9019-616X"},
+    {"name": "Rosalba, D'Onofrio", "orcid": "0000-0003-3630-579X"}
+  ]
+}

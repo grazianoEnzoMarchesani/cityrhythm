@@ -1,0 +1,37 @@
+cff-version: 1.2.0
+message: "If you use CityRhythm, please cite it as below."
+title: "CityRhythm"
+abstract: "Interactive map of how a city breathes through the week: footfall, demographics, places, local climate and a sound layer that turns the mood of each part of the city into music. Comune di Ascoli Piceno."
+type: software
+version: 2.0.0
+date-released: 2026-10-12
+license: GPL-3.0-only
+repository-code: "https://github.com/grazianoEnzoMarchesani/cityrhythm"
+url: "https://cityrhythm.it"
+doi: 10.5281/zenodo.15641270
+authors:
+  - family-names: Marchesani
+    given-names: Graziano Enzo
+    orcid: "https://orcid.org/0000-0002-4723-5099"
+  - family-names: Cocci Grifoni
+    given-names: Roberta
+    affiliation: "Università di Camerino"
+    orcid: "https://orcid.org/0000-0002-7092-6293"
+  - family-names: Bernabei
+    given-names: Maria Simonetta
+    affiliation: "Università di Camerino"
+    orcid: "https://orcid.org/0000-0003-4542-1178"
+  - family-names: Malavolta
+    given-names: Simone
+    affiliation: "Università di Camerino"
+    orcid: "https://orcid.org/0009-0009-5273-7972"
+  - family-names: Riera
+    given-names: Dajla
+    orcid: "https://orcid.org/0000-0003-4349-1471"
+  - family-names: Khodaparast
+    given-names: Mohammadjavad
+    affiliation: "Università di Camerino"
+    orcid: "https://orcid.org/0009-0005-9019-616X"
+  - family-names: "D'Onofrio"
+    given-names: Rosalba
+    orcid: "https://orcid.org/0000-0003-3630-579X"
