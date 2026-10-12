@@ -2,14 +2,33 @@
 
 > Parte del second brain di CityRhythm: **indice in `SECOND_BRAIN.md`**, da leggere per primo. Questo file si legge quando il lavoro tocca i luoghi della città, la loro affluenza o le licenze dei dati, e si aggiorna col comando `/second-brain`.
 
-**Stato (2026-10-12): approvato dall'utente e unito su `main` (`5f023d4`). Cronologia riscritta per togliere i due CSV e lo zip.** `main` e `ui-redesign` usano ancora spot e affollamenti estratti con Outscraper (`persone.md`). Il branch parte da `origin/main` (`27da705`), sessione 32 del 2026-10-11.
+**Stato (2026-10-12): in uso su `main`** (commit `5f023d4`), approvato dall'utente dopo la prova in locale (mappa, puntini, scheda Area; l'ascolto dell'audio con i dati nuovi **non è stato fatto da me**). Sessione 32. La cronologia di tutto il repository è stata riscritta per togliere i dati senza licenza (sezione «Pulizia del 2026-10-12»).
+
+## La regola (ordinata dall'utente il 2026-10-12)
+> «Deve essere tutto legale: nuovo, vecchio, futuro, passato, presente.»
+
+Nel repository, nel sito e nella cronologia ci sono **solo dati con licenza chiara** o dati già in licenza all'autore secondo le regole di quella licenza. Vietati: Google Maps e Popular Times (scraping), servizi che li rivendono (Outscraper), librerie che leggono le pagine Google, API con chiave personale senza licenza chiara, dati senza licenza chiara. Ogni file di `public/data/` ha una riga nell'inventario qui sotto: **un file nuovo si aggiunge solo con la sua riga** (fonte, licenza, data, attribuzione). Il sito non chiama servizi esterni a runtime: i dati si preparano una volta con gli script di `sound-lab/` e finiscono in `public/data/`.
 
 ## In breve
-Gli spot (1.186 punti) e i 87 profili di affollamento tipo Popular Times, estratti con Outscraper da Google, sono sostituiti da dati che il progetto può pubblicare:
+Prima c'erano 1.186 spot e 87 profili di affollamento tipo Popular Times, estratti dall'utente con Outscraper (da Google, senza licenza di pubblicazione). Sono stati **sostituiti** da dati che il progetto può pubblicare:
 - **luoghi** da **OpenStreetMap** (ODbL): 1.469 luoghi nel Comune, in 17 categorie italiane, con gli orari di apertura (`opening_hours`);
 - **profili orari per tipo di luogo** dai **diari ISTAT Uso del tempo 2008-09 via IPUMS MTUS** (già in licenza all'autore, solo aggregati, ogni valore da almeno 30 diari).
 
 L'affluenza di un luogo in un'ora della settimana tipo = quota di persone che a quell'ora sta in quel tipo di luogo (diari) × quota dell'ora in cui il luogo è aperto (OSM) ÷ apertura media dei luoghi dello stesso tipo, riportata a 100 nell'ora più piena del luogo. Il sito la calcola da sé (`src/data/luoghi-core.js`); i puntini, la bussola e la scheda Area la leggono come prima leggevano lo spot sintetico.
+
+## Ogni dato del sito: perché c'è e come agisce
+| Dato | Perché c'è | Come agisce nel sito |
+|---|---|---|
+| **Luoghi OSM** (`luoghi_osm.geojson`) | Servono luoghi veri dove la gente si raccoglie (bar, negozi, chiese, scuole…) con licenza libera: sostituiscono gli spot. | Sono i «poliattrattori»: nei puntini, il 30% delle presenze di un quartiere va ai luoghi aperti in proporzione alla loro affluenza (entro 10 m); il 10% sta «in giro» sulle strade; il resto in casa o diffuso. Sono anche la «folla attesa» della taratura dell'energia. |
+| **Orari di apertura** (campo `opening_hours` di OSM, nello stesso file) | Dicono quando un luogo è aperto, quindi quando può attirare gente: senza orari tutti i luoghi avrebbero la stessa gente a ogni ora. | Entrano nell'affluenza come quota di ore aperte (media di 35 settimane con le festività). Senza orari propri (77,4% dei luoghi): media dei luoghi dello stesso tipo nelle Marche. |
+| **Profili dei diari ISTAT** (`profili_luoghi.json`) | Dicono, ora per ora, quanta gente in Italia sta in quel tipo di luogo: danno la forma della giornata (bar pieno la sera, chiesa la domenica mattina). Sostituiscono i profili Popular Times. | Moltiplicano l'apertura: affluenza = profilo × apertura ÷ apertura media del tipo, 100 nell'ora più piena del luogo. Comandano dove vanno i puntini a ogni ora e quindi l'**energia** della bussola e la musica. |
+| **Quota in casa** (`quota_in_casa.json`) | Chi è in casa non conta come presenza fuori. | Toglie dai puntini la quota di persone a casa (stessa fonte ISTAT/IPUMS). |
+| **Presenze Blimp** (`cityrhythm_blimp.csv`, KML) | Quante persone ci sono in ogni quartiere ogni ora (dati acquistati dall'Università). | Fissano il **totale** dei puntini per quartiere e ora; i luoghi decidono solo dove stanno. |
+| **LCZ** (`lcz_ascoli.geojson`) | Clima urbano per cella da 30 m. | UTCI e piacevolezza della bussola; scelta delle celle di strada per la gente «in giro». |
+| **Meteo Open-Meteo** | Clima orario reale. | UTCI e stato della bussola, ogni ora. |
+| **Mappa** (OSM/Protomaps, TUM, Meta HRSL, Mapterhorn) | Base cartografica, edifici, residenti, rilievo. | Disegno, residenti per edificio, ombra/SVF. |
+
+Il filo: **dove** sta la gente (luoghi + orari), **quando** (diari), **quanta** (Blimp, meno chi è a casa) → energia della bussola → musica. Cambiare luoghi o profili cambia la musica: per questo il confronto prima/dopo di sotto è stato fatto.
 
 ## Fonti scelte
 | Fonte | Cosa dà | Licenza e attribuzione | Accesso | Copertura del Comune |
@@ -90,11 +109,11 @@ Data di accesso: quella scritta nel second brain; se manca, il giorno in cui il 
 | `luoghi_osm.geojson` | 1.469 luoghi con categoria, profilo, orari | OpenStreetMap (Geofabrik, dati fino al 2026-10-08) | **ODbL 1.0** (database derivato, stessa licenza) | 2026-10-11 | «© OpenStreetMap contributors» nei crediti della mappa (`LUOGHI_CREDITO`) e nel file |
 | `profili_luoghi.json` | 11 profili orari per tipo di luogo | ISTAT Uso del tempo 2008-09 via IPUMS MTUS v1.5 | licenza IPUMS dell'autore: aggregati con citazione, ≥ 30 casi | 2026-10-11 | due citazioni nel file, nei crediti della mappa e nel README |
 | `quota_in_casa.json` | curva in casa per giorno e ora | come sopra (`casa_mtus.py`) | come sopra | 2026-10-05 | come sopra (`persone.md`) |
-| `bussola.json` | parametri della bussola | lavoro del progetto, fonti nel campo `fonti` | del repository (GPL-3.0) | 2026-10-04; `energia_cella` riscritta il 2026-10-11 su questo branch | — |
-| `meteo_ascoli.json` | meteo orario 2024-06-01 → 2025-02-01 | Open-Meteo, archivio storico | **CC BY 4.0** | 2026-10-04 | **mancava**: aggiunta su questo branch nei crediti («Meteo: Open-Meteo.com, CC BY 4.0») |
-| `cityrhythm_blimp.csv` | presenze per quartiere e ora | Blimp (dati acquistati dall'Università di Camerino, anonimizzati da Blimp) | acquisto: uso da parte dell'Università (dichiarazione dell'utente, 2026-10-12; contratto non nel repository) | 2026-10-04 (nel repository) | da citare Blimp nei crediti (non ancora fatto) |
+| `bussola.json` | parametri della bussola | lavoro del progetto, fonti nel campo `fonti` | del repository (GPL-3.0) | 2026-10-04; `energia_cella` riscritta il 2026-10-11 | — |
+| `meteo_ascoli.json` | meteo orario 2024-06-01 → 2025-02-01 | Open-Meteo, archivio storico | **CC BY 4.0** | 2026-10-04 | aggiunta ai crediti della mappa il 2026-10-12 («Meteo: Open-Meteo.com, CC BY 4.0»); mancava prima |
+| `cityrhythm_blimp.csv` | presenze per quartiere e ora | Blimp (dati acquistati dall'Università di Camerino, anonimizzati da Blimp) | acquisto: uso da parte dell'Università (dichiarazione dell'utente, 2026-10-12; contratto non nel repository) | 2026-10-04 (nel repository) | **da fare**: citare Blimp nei crediti |
 | `cityrhythm_blimp_areas.kml` | 11 aree | Blimp (stesso acquisto) | come sopra (dichiarazione dell'utente, 2026-10-12) | 2026-10-04 (nel repository) | come sopra |
-| `lcz_ascoli.geojson` | 12.496 celle LCZ da 30 m | progetto QGIS di terzi (`Lcz_neurali 2`, non nel repository) | licenza dell'autore, dichiarata dall'utente il 2026-10-12 (le celle sono suo lavoro) | 2026-10-04 | da scrivere la licenza scelta nel repository |
+| `lcz_ascoli.geojson` | 12.496 celle LCZ da 30 m | progetto QGIS di terzi (`Lcz_neurali 2`, non nel repository) | licenza dell'autore, dichiarata dall'utente il 2026-10-12 (le celle sono suo lavoro) | 2026-10-04 | **da fare**: scrivere nel repository la licenza scelta dall'autore |
 | `quartieri_disegno.geojson` | confini di disegno | in parte sezioni ISTAT 2021, in parte disegno originale | CC BY 4.0 (parte ISTAT) | 2026-10-11 | `QUARTIERI_CREDITO` nei crediti (`quartieri.md`) |
 | `mappa/ascoli_base.pmtiles` | mappa di base | Protomaps Basemap 4.15.2 (OSM fino al 2026-10-04, Natural Earth) | ODbL (OSM); Natural Earth pubblico dominio | 2026-10-04 | «© OpenStreetMap · Protomaps» |
 | `mappa/ascoli_terreno.pmtiles` | rilievo | Mapterhorn | licenze per fonte (pagina https://mapterhorn.com/attribution) | 2026-10-04 | «© Mapterhorn» con il link |
@@ -104,7 +123,7 @@ Data di accesso: quella scritta nel second brain; se manca, il giorno in cui il 
 | `mappa/sprites/toner*` | trame del verde | openmaptiles/maptiler-toner-gl-style | BSD (da `mappa.md`) | 2026-10-05 | «Stile Toner: Stamen, MapTiler» |
 | `mappa/sprites/tinta*` | trame ricavate da toner (`tinta_sprite.py`) | come toner | come toner | 2026-10-11 | come toner |
 
-Tolti su questo branch (restano nella storia di `main` e `ui-redesign`): `cityrhythm_spotMapper.csv`, `cityrhythm_crowded_data.csv`.
+Tolti (anche dalla cronologia, vedi sotto): `cityrhythm_spotMapper.csv`, `cityrhythm_crowded_data.csv`, `cityrhythm1.0.zip`. Le copie stanno solo in `~/Documents/CityRhythm-archivio-locale/` e sono in `.gitignore`.
 
 ## Interfacce dei moduli cambiate
 - `data-loader.js`: `loadLuoghi()` e `getLuoghi()` al posto di `loadCrowdedData`/`getCrowdedData` e `loadSpotMapperData`/`getSpotMapperData`.
@@ -118,7 +137,7 @@ Tolti su questo branch (restano nella storia di `main` e `ui-redesign`): `cityrh
 - `npm run build` passa; `npm run dev -- --host 0.0.0.0` parte.
 - Playwright con Chromium (headless shell 1248, fuori dal repository), desktop 1440×900 e telefono 390×844: **30/30** — mappa caricata, 1.469 luoghi con affluenza, puntini, freccia, Play, cambio giorno, notte feriale (martedì 03:00: tutti a casa), scheda Area aperta col clic sul Centro Storico, «Tipi di luogo» con le categorie nuove e che cambiano con l'ora (domenica 11:00: Chiese in testa), frase della notte, crediti, nessun errore in console, nessuna richiesta fallita. Gli avvisi di MapLibre sul livello KML (`Expected value to be of type number, but found null`) ci sono uguali su `main`.
 - Puntini alla stessa ora su `main` e sul branch: stessi totali (es. martedì 10:00 10.356 e 10.349); cambiano solo i posti.
-- Nessun riferimento a `cityrhythm_spotMapper`, `cityrhythm_crowded_data`, Outscraper, populartimes o `gist.githubusercontent` nel codice, nei dati e nella build; restano nel second brain (la storia delle decisioni) e dentro `cityrhythm1.0.zip` (compresso, vedi domande).
+- Nessun riferimento a `cityrhythm_spotMapper`, `cityrhythm_crowded_data`, Outscraper, populartimes o `gist.githubusercontent` nel codice, nei dati e nella build; restano solo nel second brain (la storia delle decisioni). Lo zip storico è stato tolto.
 - Ogni file di `public/data/` (33) ha una riga nell'inventario qui sopra.
 - Nessun PDF, microdato o clip in git (`git ls-files | grep -i -E "\.pdf$|IPUMS|UsoTempo|clip/"` vuoto).
 - **Non verificato**: Safari, Firefox, iPhone reale; ascolto della musica con i dati nuovi.
@@ -135,13 +154,30 @@ Tolti su questo branch (restano nella storia di `main` e `ui-redesign`): `cityrh
 - Il venerdì notte usa i diari feriali: la movida del venerdì è sottostimata.
 
 ## Risposte dell'utente (2026-10-12)
-1. **Blimp**: `cityrhythm_blimp.csv` e il KML delle aree sono dati venduti da Blimp all'Università di Camerino, anonimizzati da Blimp; l'utente li dichiara utilizzabili. Il contratto non è nel repository. Resta da fare: citare Blimp nei crediti.
-2. **`lcz_ascoli.geojson`**: l'utente dichiara che le celle sono suo lavoro e la licenza è sua. Resta da scegliere e scrivere la licenza.
-3. **Gruppo Luoghi**: resta **nascosto**.
-4. **`cityrhythm1.0.zip`**: tolto dal branch (copia solo in `~/Documents/CityRhythm-archivio-locale/`, in `.gitignore`). Anche i due CSV Outscraper sono in `.gitignore`. I gist con dati Outscraper sono scaricati in locale.
-5. **Open-Meteo**: da portare anche su `main` (sì dell'utente, ma la pubblicazione su `main` resta da ordinare).
-6. **Unione su `main`**: solo col sì esplicito dell'utente dopo che ha guardato e ascoltato; non decisa.
-7. **`IPUMS/DDI.md`**: il DDI originale va riscaricato da IPUMS se serve.
+1. **Blimp**: `cityrhythm_blimp.csv` e il KML delle aree sono dati venduti da Blimp all'Università di Camerino, anonimizzati da Blimp; l'utente li dichiara utilizzabili («hanno già apprezzato i nostri lavori»). Il contratto non è nel repository.
+2. **`lcz_ascoli.geojson`**: l'utente dichiara che le celle sono suo lavoro e che la licenza è sua.
+3. **Gruppo Luoghi**: resta **nascosto** (il livello c'è, colorato per categoria, ma non appare nei Livelli).
+4. **`cityrhythm1.0.zip` e gist**: tolti tutti; scaricati prima in locale.
+5. **Open-Meteo**: credito portato su `main` (con l'unione).
+6. **Cronologia**: riscritta, con force push, per toglierli da tutto GitHub. «Più che intendevo, l'importante è che non ci siano dati illegali nel nostro repo. Nuovo, vecchio, futuro, passato, presente.»
+7. **Gist non Google** (`aggiornato e corretto` con `cityrhythm_blimp.csv`, KML Blimp, `toner.json`, `lcz_vitality`): l'utente ha detto «tutto ok così», restano online (sono privati/segreti).
+8. **`IPUMS/DDI.md`**: il DDI originale va riscaricato da IPUMS se serve.
+
+## Pulizia del 2026-10-12 (cosa è stato fatto davvero)
+- **Copie in locale** in `~/Documents/CityRhythm-archivio-locale/` (fuori da git): 7 gist (cartella `gist/`), i due CSV e lo zip (`repo/`), **backup completo** del repository online com'era prima (`cityrhythm-backup-prima-della-pulizia.git`, 45 MB). Se serve rivedere i vecchi dati, sono solo lì.
+- **Gist cancellati**: i tre con dati Outscraper (spot, affollamenti, punti sintetici).
+- **`.gitignore`**: aggiunti i due CSV e lo zip, così non rientrano per sbaglio.
+- **Cronologia riscritta** con `git filter-repo` (copia di lavoro fuori dal progetto), togliendo solo `public/data/cityrhythm_spotMapper.csv`, `public/data/cityrhythm_crowded_data.csv` e `cityrhythm1.0.zip` da tutti i commit; controllato prima che non ci fossero altri PDF, microdati o file simili. Force push di `main`, `Music`, `ui-redesign`, `dati-legali` e del tag `v1.0.0`, eseguito **a mano dall'utente** (il sistema ha bloccato il push all'agente). `main` = `dati-legali` (fast-forward) = `5f023d4`, poi `63e824c` (second brain). Controllo online: copia nuova di origin senza tracce dei tre file; sito su Pages 200, `luoghi_osm.geojson` e `profili_luoghi.json` 200, i due CSV 404; pubblicazione riuscita.
+- **Conseguenze**: tutti i codici dei commit sono cambiati: le copie clonate prima vanno riscaricate. GitHub può mostrare i vecchi commit dal loro indirizzo diretto finché non si chiede la pulizia all'assistenza (GitHub Support): **da fare dall'utente**, il testo può prepararlo l'agente. I token Mapbox restano nella cronologia pubblica (`SECOND_BRAIN.md`, punto 0).
+- Server locali spenti (porte 5190 e 5174).
+
+## Da fare (aperti)
+- Citare **Blimp** nei crediti del sito e nel README.
+- Scegliere e scrivere la **licenza delle celle LCZ** nel repository.
+- Aggiungere i testi mancanti delle licenze: **OFL** per i font Noto Sans, **MIT** per le icone `sprites/light*` (o toglierle).
+- **Ascoltare** la mappa sonora con i dati nuovi (soprattutto fuori dal centro) e dare il giudizio; **Safari, Firefox, iPhone** non provati.
+- Chiedere a **GitHub Support** la rimozione dei vecchi commit in cache.
+- Facoltativo: confronto con Eurostat HETUS.
 
 ## Come si rigenera
 ```bash
