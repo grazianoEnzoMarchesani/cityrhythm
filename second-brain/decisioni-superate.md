@@ -165,4 +165,5 @@ Decisioni che non valgono più, barrate, con il perché e cosa le sostituisce. N
 - ~~Pallina del raggio sempre a destra del cerchio~~ → gira sul bordo come sole e luna con l'ora (2026-10-12, `cerchio.md`). Primo tentativo con mezzogiorno in alto (nord): sbagliato, corretto dall'utente (il sole sta a sud).
 - ~~Zoom all'accensione di +0,7 livelli, poi a livello fisso 17~~ → raggio = 0,25 del lato corto dello schermo: il +0,7 si accumulava a ogni accensione, il 17 era più largo del telefono (tessere da 512 px) (2026-10-12).
 - ~~Selettore della musica nascosto fuori da `DEBUG_MODE` (sempre Sottotraccia) e visibile solo a musica accesa~~ → dal 2026-10-12 il pubblico sceglie fra **Scale** e **Classica**, anche a musica spenta, su richiesta di una collega; IA e metronomi restano in debug (`audio.md`).
+- ~~Modo di partenza Sottotraccia (Scale)~~ → **Classica** dal 2026-10-13; le Scale restano scelta opzionale (richiesta dell'utente).
 - ~~Dettagli «Come suona» con una frase unica su Sottotraccia («IA e classica sono brani già registrati»)~~ → un blocco per modo (2026-10-12).

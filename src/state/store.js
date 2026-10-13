@@ -18,8 +18,8 @@ export const time = writable({ index: 0, date: null });
 export const viewport = writable(null);
 export const audioEnabled = writable(false);
 // Da dove viene la musica della mappa sonora: 'ia' (brani finetuning.ai), 'classica' (Musopen), 'metronomi', 'sottotraccia' (regole).
-// Parte da 'sottotraccia': è la modalità con cui si avvia la musica. La scrive solo il selettore in src/ui/ui-compass.js; la legge src/audio/audio-engine.js.
-export const musicMode = writable('sottotraccia');
+// Parte da 'classica' (dal 2026-10-13): è la modalità con cui si avvia la musica; le scale ('sottotraccia') sono una scelta. La scrive solo il selettore in src/ui/ui-compass.js; la legge src/audio/audio-engine.js.
+export const musicMode = writable('classica');
 // Volume della mappa sonora, da 0 a 1 (posizione dello slider; il motore lo porta al quadrato, più vicino all'orecchio).
 // Parte da 1: il mix è calcolato a quel livello. Lo scrive solo src/ui/ui-compass.js; lo legge src/audio/audio-engine.js.
 export const volume = writable(1);
